@@ -4,17 +4,20 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'HelloWorld',
-  mounted() {
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+import { browser } from 'webextension-polyfill-ts'
+
+@Component
+export default class App extends Vue {
+  name = 'HelloWorld'
+  mounted(): void {
     browser.runtime.sendMessage({})
-  },
-  computed: {
-    defaultText() {
-      return browser.i18n.getMessage('extName')
-    },
-  },
+  }
+
+  get defaultText(): string {
+    return browser.i18n.getMessage('extName')
+  }
 }
 </script>
 
