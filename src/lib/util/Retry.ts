@@ -12,7 +12,13 @@ import * as delay from 'delay'
 export default async function retry<T>(func: () => T | Promise<T>, maxTry: number | 10 = 10, interval: number | 1000 = 1000): Promise<T | undefined> {
   for (let i = 0; i < maxTry; i++) {
     const res = await func()
-    if (res) return res
+
+    // 配列なら要素があるか、それ以外は値があるか
+    if (Array.isArray(res)) {
+      if (res.length > 0) return res
+    } else if (res) {
+      return res
+    }
 
     await delay(interval)
   }

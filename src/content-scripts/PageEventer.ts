@@ -16,7 +16,7 @@ export default class PageEventer {
   }
 
   public async init(): Promise<void> {
-    console.log('> init')
+    console.log('⚙️[init]')
 
     // ページに event listener を付与する
     await this.attachEventListener()
@@ -37,17 +37,20 @@ export default class PageEventer {
     return true
   }
 
-  protected async onConnected(e: HTMLElement): Promise<void> {
-    this.handler.findInvoke(e)
-
+  protected async onConnected(e: Element): Promise<void> {
+    console.log('⚙️[start] ovserver')
     this.observer.observe(e, {
       childList: true,
       subtree: true,
     })
+
+    // 今表示されてるものを処理する (promise はスルー)
+    // コメント追加にラグがあるのでいい感じに全部取れるはず
+    this.handler.findInvoke(e)
   }
 
   protected async onDeleted(): Promise<void> {
-    console.log('> stop ovserver')
+    console.log('⚙️[stop] ovserver')
     this.observer.disconnect()
   }
 
@@ -65,7 +68,7 @@ export default class PageEventer {
 
       // parent に remove event を付与する
       const parentRemovedEvent = async (e: Event) => {
-        console.log('> DOMNodeRemoved')
+        console.log('🔥<DOMNodeRemoved> chat parent')
         if (e.target === parent) {
           parent.removeEventListener('DOMNodeRemoved', parentRemovedEvent)
 
@@ -81,14 +84,14 @@ export default class PageEventer {
 
       // iframe がロードされ次第処理する
       iframe.addEventListener('load', async () => {
-        console.log('> load chat iframe')
+        console.log('🔥<load> chat iframe')
 
         // iframe document を取得
         const iframeDoc = iframe.contentWindow?.document
         if (!iframeDoc) throw new Error('missing chat iframe document')
 
         // chatapp を取得
-        const chatapp = await retry(() => iframeDoc.querySelector<HTMLElement>('yt-live-chat-app'))
+        const chatapp = await retry(() => iframeDoc.querySelector<Element>('yt-live-chat-app'))
         if (!chatapp) throw new Error('missing chat app dom')
 
         // 監視開始
@@ -97,6 +100,9 @@ export default class PageEventer {
     }
     await init()
 
-    window.addEventListener('yt-page-data-updated', init)
+    window.addEventListener('yt-page-data-updated', async () => {
+      console.log('🔥<yt-page-data-updated>')
+      await init()
+    })
   }
 }
