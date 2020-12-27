@@ -1,25 +1,28 @@
-const webpack = require('webpack');
-const ejs = require('ejs');
-const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const CopyPlugin = require('copy-webpack-plugin');
-const ExtensionReloader = require('webpack-extension-reloader');
-const { VueLoaderPlugin } = require('vue-loader');
-const { version } = require('./package.json');
+/* eslint-disable @typescript-eslint/no-var-requires */
+const path = require('path')
+const webpack = require('webpack')
+const ejs = require('ejs')
+const MiniCssExtractPlugin = require('mini-css-extract-plugin')
+const CopyPlugin = require('copy-webpack-plugin')
+const ExtensionReloader = require('webpack-extension-reloader')
+const { VueLoaderPlugin } = require('vue-loader')
+const { version } = require('./package.json')
 
 const config = {
   mode: process.env.NODE_ENV,
-  context: __dirname + '/src',
+  context: path.resolve(__dirname, 'src'),
   entry: {
-    'background': './background.js',
-    'popup/popup': './popup/popup.js',
-    'options/options': './options/options.js',
+    background: './background.ts',
+    contentscript: './content-scripts/content-script.ts',
+    'popup/popup': './popup/popup.ts',
+    'options/options': './options/options.ts',
   },
   output: {
-    path: __dirname + '/dist',
+    path: path.resolve(__dirname, 'dist'),
     filename: '[name].js',
   },
   resolve: {
-    extensions: ['.js', '.vue'],
+    extensions: ['.js', '.vue', '.ts'],
   },
   module: {
     rules: [
@@ -30,6 +33,18 @@ const config = {
       {
         test: /\.js$/,
         loader: 'babel-loader',
+        exclude: /node_modules/,
+      },
+      {
+        test: /\.ts$/,
+        use: [
+          {
+            loader: 'ts-loader',
+            options: {
+              appendTsSuffixTo: [/\.vue$/],
+            },
+          },
+        ],
         exclude: /node_modules/,
       },
       {
@@ -76,25 +91,25 @@ const config = {
     }),
     new CopyPlugin([
       { from: 'icons', to: 'icons', ignore: ['icon.xcf'] },
-      { from: 'popup/popup.html', to: 'popup/popup.html', transform: transformHtml },
-      { from: 'options/options.html', to: 'options/options.html', transform: transformHtml },
+      // { from: 'popup/popup.html', to: 'popup/popup.html', transform: transformHtml },
+      // { from: 'options/options.html', to: 'options/options.html', transform: transformHtml },
       {
         from: 'manifest.json',
         to: 'manifest.json',
-        transform: (content) => {
-          const jsonContent = JSON.parse(content);
-          jsonContent.version = version;
+        transform: content => {
+          const jsonContent = JSON.parse(content)
+          jsonContent.version = version
 
           if (config.mode === 'development') {
-            jsonContent['content_security_policy'] = "script-src 'self' 'unsafe-eval'; object-src 'self'";
+            jsonContent.content_security_policy = "script-src 'self' 'unsafe-eval'; object-src 'self'"
           }
 
-          return JSON.stringify(jsonContent, null, 2);
+          return JSON.stringify(jsonContent, null, 2)
         },
       },
     ]),
   ],
-};
+}
 
 if (config.mode === 'production') {
   config.plugins = (config.plugins || []).concat([
@@ -103,21 +118,21 @@ if (config.mode === 'production') {
         NODE_ENV: '"production"',
       },
     }),
-  ]);
+  ])
 }
 
 if (process.env.HMR === 'true') {
   config.plugins = (config.plugins || []).concat([
     new ExtensionReloader({
-      manifest: __dirname + '/src/manifest.json',
+      manifest: path.resolve(__dirname, 'src/manifest.json'),
     }),
-  ]);
+  ])
 }
 
 function transformHtml(content) {
   return ejs.render(content.toString(), {
     ...process.env,
-  });
+  })
 }
 
-module.exports = config;
+module.exports = config

@@ -1,15 +1,16 @@
 <template>
   <div>
-    <p>Hello world!</p>
+    <p>{{ message }}</p>
   </div>
 </template>
 
-<script>
-export default {
-  data() {
-    return {};
-  },
-};
+<script lang="ts">
+import { Component, Vue } from 'vue-property-decorator'
+
+@Component
+export default class App extends Vue {
+  message = 'Hello world with TypeScript!'
+}
 </script>
 
 <style lang="scss" scoped>
