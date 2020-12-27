@@ -1,5 +1,5 @@
-import * as delay from 'delay'
 import VideoObjectInterface from '../../interface/VideoObjectInterface'
+import retry from './Retry'
 
 export default class PageHelper {
   /**
@@ -22,7 +22,7 @@ export default class PageHelper {
    */
   public static async getVideoData(): Promise<VideoObjectInterface | undefined> {
     // notice: ytInitialData は毎回更新がかからないので使えない
-    const script = await this.retry(() => document.querySelector('#scriptTag'))
+    const script = await retry(() => document.querySelector('#scriptTag'))
     if (script) {
       const text = script.textContent
       if (text) {
@@ -37,27 +37,6 @@ export default class PageHelper {
 
         return json
       }
-    }
-    return undefined
-  }
-
-  ///
-
-  /**
-   * 値が取得できるまで繰り返す処理.
-   *
-   * @static
-   * @param {() => T | Promise<T>} func 繰り返したい処理
-   * @param {number | 10} maxTry 最大実行回数
-   * @param {number | 1000} interval 待機時間
-   * @return {T | undefined} func() で取得した値, 失敗時は undefined
-   */
-  protected static async retry<T>(func: () => T | Promise<T>, maxTry = 10, interval = 1000): Promise<T | undefined> {
-    for (let i = 0; i < maxTry; i++) {
-      const res = await func()
-      if (res) return res
-
-      await delay(interval)
     }
     return undefined
   }
