@@ -30,7 +30,9 @@ export default class ChatHandler {
   }
 
   public removeVideo(): boolean {
-    console.log(`✋[Handler] remove video (${this.video?.dump()})`)
+    const text = this.video ? this.video.dump() : 'undefined'
+    console.log(`✋[Handler] remove video (${text})`)
+
     if (this.video) {
       this.video = undefined
       return true

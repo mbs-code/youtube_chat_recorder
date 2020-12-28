@@ -32,13 +32,19 @@ export default class PageEventer {
     const videoId = PageHelper.getPageVideoId()
     console.log('> VideoID:', videoId)
 
+    // video を変換する
     const videoData = await PageHelper.getVideoData()
     if (!videoData) throw new Error('missing video data')
 
     const video = await Video.createByElement(videoData)
     this.handler.setVideo(video)
 
-    return true
+    // 配信かどうか確認する
+    if (video.isBroadcast) {
+      return true
+    }
+
+    return false
   }
 
   protected async onConnected(e: Element): Promise<void> {
@@ -50,7 +56,9 @@ export default class PageEventer {
 
     // 今表示されてるものを処理する (promise はスルー)
     // コメント追加にラグがあるのでいい感じに全部取れるはず
-    this.handler.findInvoke(e)
+    this.handler.findInvoke(e).then(() => {
+      console.log('⚙️Finish displayed chats')
+    })
   }
 
   protected async onDeleted(): Promise<void> {
@@ -63,9 +71,12 @@ export default class PageEventer {
 
   protected async attachEventListener(): Promise<void> {
     const init = async () => {
-      // 前処理
+      // 前処理 (return false で処理中断)
       const res = await this.beforeConnect()
-      if (!res) throw new Error('return false of beforeConnect()')
+      if (!res) {
+        console.log('⚙[stop] This video is not a target')
+        return
+      }
 
       // 親の dom を取得
       const parent = await retry(() => document.querySelector('ytd-live-chat-frame#chat'))
