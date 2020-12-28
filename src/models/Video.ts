@@ -23,6 +23,10 @@ export default class Video {
   createdAt?: Date // 作成日時
   updatedAt?: Date // 更新日時
 
+  constructor(init?: Partial<Video>) {
+    if (init) Object.assign(this, init)
+  }
+
   public static async createByElement(json: VideoObjectInterface): Promise<Video> {
     return await VideoParser.parse(json)
   }

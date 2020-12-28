@@ -37,7 +37,7 @@ export default class PageEventer {
     if (!videoData) throw new Error('missing video data')
 
     const video = await Video.createByElement(videoData)
-    this.handler.setVideo(video)
+    await this.handler.setVideo(video)
 
     // 配信かどうか確認する
     if (video.isBroadcast) {
@@ -62,10 +62,10 @@ export default class PageEventer {
   }
 
   protected async onDeleted(): Promise<void> {
-    if (this.handler.getVideo()) {
+    if (this.handler.hasVideo()) {
       console.log('⚙️[stop] observer')
       this.observer.disconnect()
-      this.handler.removeVideo()
+      await this.handler.removeVideo()
     }
   }
 
@@ -74,7 +74,7 @@ export default class PageEventer {
   protected async attachEventListener(): Promise<void> {
     const init = async () => {
       // もし読み込んでたら監視終了
-      if (this.handler.getVideo()) {
+      if (this.handler.hasVideo()) {
         await this.onDeleted()
       }
 

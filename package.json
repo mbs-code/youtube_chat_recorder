@@ -20,6 +20,7 @@
     "hooks": {}
   },
   "dependencies": {
+    "array-sort": "^1.0.0",
     "date-fns": "^2.16.1",
     "delay": "^4.4.0",
     "text-ellipsis": "^1.0.3",
@@ -35,6 +36,7 @@
     "@babel/plugin-proposal-optional-chaining": "^7.0.0",
     "@babel/preset-env": "^7.1.0",
     "@babel/runtime-corejs3": "^7.4.0",
+    "@types/array-sort": "^1.0.0",
     "@types/chrome": "0.0.127",
     "@types/node": "^14.14.16",
     "@typescript-eslint/eslint-plugin": "^4.11.0",

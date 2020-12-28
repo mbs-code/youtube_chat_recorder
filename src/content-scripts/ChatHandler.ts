@@ -1,3 +1,4 @@
+import VideoStorage from '../lib/chrome/VideoStorage'
 import retry from '../lib/util/Retry'
 import Chat from '../models/Chat'
 import Video from '../models/Video'
@@ -23,13 +24,21 @@ export default class ChatHandler {
     return this.video
   }
 
-  public setVideo(video: Video): void {
+  public hasVideo(): boolean {
+    return Boolean(this.video)
+  }
+
+  public async setVideo(video: Video): Promise<void> {
     console.log(`✋[Handler] set video (${video.dump()})`)
     console.log('> ' + JSON.stringify(video))
     this.video = video
+
+    // storage に保存
+    await VideoStorage.save(video)
+    console.log(await VideoStorage.getAll())
   }
 
-  public removeVideo(): boolean {
+  public async removeVideo(): Promise<boolean> {
     const text = this.video ? this.video.dump() : 'undefined'
     console.log(`✋[Handler] remove video (${text})`)
 
