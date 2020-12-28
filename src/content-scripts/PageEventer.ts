@@ -48,7 +48,7 @@ export default class PageEventer {
   }
 
   protected async onConnected(e: Element): Promise<void> {
-    console.log('⚙️[start] ovserver')
+    console.log('⚙️[start] observer')
     this.observer.observe(e, {
       childList: true,
       subtree: true,
@@ -57,20 +57,27 @@ export default class PageEventer {
     // 今表示されてるものを処理する (promise はスルー)
     // コメント追加にラグがあるのでいい感じに全部取れるはず
     this.handler.findInvoke(e).then(() => {
-      console.log('⚙️Finish displayed chats')
+      console.log('⚙️[finish] handle display chats')
     })
   }
 
   protected async onDeleted(): Promise<void> {
-    console.log('⚙️[stop] ovserver')
-    this.observer.disconnect()
-    this.handler.removeVideo()
+    if (this.handler.getVideo()) {
+      console.log('⚙️[stop] observer')
+      this.observer.disconnect()
+      this.handler.removeVideo()
+    }
   }
 
   /// ////////////////////////////////////////////////////////////
 
   protected async attachEventListener(): Promise<void> {
     const init = async () => {
+      // もし読み込んでたら監視終了
+      if (this.handler.getVideo()) {
+        await this.onDeleted()
+      }
+
       // 前処理 (return false で処理中断)
       const res = await this.beforeConnect()
       if (!res) {
@@ -89,7 +96,7 @@ export default class PageEventer {
           parent.removeEventListener('DOMNodeRemoved', parentRemovedEvent)
 
           // 監視終了
-          this.onDeleted()
+          await this.onDeleted()
         }
       }
       parent.addEventListener('DOMNodeRemoved', parentRemovedEvent)
@@ -99,7 +106,7 @@ export default class PageEventer {
       if (!iframe) throw new Error('missing chat iframe')
 
       // iframe がロードされ次第処理する
-      iframe.addEventListener('load', async () => {
+      const iframeLoadEvent = async () => {
         console.log('🔥<load> chat iframe')
 
         // iframe document を取得
@@ -112,7 +119,9 @@ export default class PageEventer {
 
         // 監視開始
         await this.onConnected(chatapp)
-      })
+        iframe.removeEventListener('load', iframeLoadEvent)
+      }
+      iframe.addEventListener('load', iframeLoadEvent)
     }
     await init()
 
