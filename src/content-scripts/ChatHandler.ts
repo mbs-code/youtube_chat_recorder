@@ -1,4 +1,5 @@
 import VideoStorage from '../lib/chrome/VideoStorage'
+import SaveChatQueue from '../lib/queue/SaveChatQueue'
 import retry from '../lib/util/Retry'
 import Chat from '../models/Chat'
 import Video from '../models/Video'
@@ -12,9 +13,11 @@ const COMMENT_NODE_NAMES = [
 ]
 
 export default class ChatHandler {
+  protected saveChatQueue: SaveChatQueue
   protected video?: Video
 
   constructor() {
+    this.saveChatQueue = new SaveChatQueue()
     this.video = undefined
   }
 
@@ -32,6 +35,7 @@ export default class ChatHandler {
     console.log(`✋[Handler] set video (${video.dump()})`)
     console.log('> ' + JSON.stringify(video))
     this.video = video
+    this.saveChatQueue.setVideo(video)
 
     // storage に保存
     await VideoStorage.save(video)
@@ -44,6 +48,7 @@ export default class ChatHandler {
 
     if (this.video) {
       this.video = undefined
+      this.saveChatQueue.removeVideo()
       return true
     }
     return false
@@ -78,11 +83,19 @@ export default class ChatHandler {
       return false
     }
 
-    // チャット model に変換 (videoが無くても取得はする？)
-    const chat = await Chat.createByElement(node, this.video)
+    // video とIDが無ければ失敗
+    if (!this.video || !this.video.id) {
+      return false
+    }
 
-    console.log([node, chat])
-    console.log('> ' + chat.dump())
+    // チャット model に変換 (videoが無くても取得はする？)
+    const chat = await Chat.createByElement(this.video, node)
+
+    // テストで「あ」が入ってたら追加
+    if (chat.message?.includes('あ')) {
+      console.log('> ' + chat.dump())
+      this.saveChatQueue.push(chat)
+    }
 
     return true
   }

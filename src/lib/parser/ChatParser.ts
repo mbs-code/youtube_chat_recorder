@@ -7,7 +7,7 @@ import Util from '../util/Util'
 import retry from '../util/Retry'
 
 export default class ChatParser {
-  public static async parse(node: Element, video?: Video): Promise<Chat> {
+  public static async parse(video: Video, node: Element): Promise<Chat> {
     const chat = new Chat()
     chat.id = node.getAttribute('id') || undefined
 
@@ -120,7 +120,6 @@ export default class ChatParser {
         }
 
         // もし、現在時刻との差分が一定以下だったら現在時刻を使用 (自環境で66くらいが max)
-        console.log('diff', differenceInSeconds(new Date(), chatDate))
         if (differenceInSeconds(new Date(), chatDate) < 90) {
           chatDate = new Date()
         }
