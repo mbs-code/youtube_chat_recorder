@@ -1,5 +1,6 @@
 import textEllipsis from 'text-ellipsis'
 import ChatParser from '../lib/parser/ChatParser'
+import Video from './Video'
 
 export default class Chat {
   id?: string // CjkK...
@@ -22,16 +23,16 @@ export default class Chat {
   money?: number
   moneyUnit?: string // 通貨単位
 
-  // timestamp?: number // TODO: 配信中は秒が取得できない(仕様), 通信を取得すればできなくはないが…
-  // seconds?: number // 開始からの経過秒
+  timestamp?: Date // !! 配信中は秒が取得できない(仕様)
+  seconds?: number // 開始からの経過秒
 
   pngUrl?: string // use generatePng()
 
   createdAt?: Date // 作成日時
   updatedAt?: Date // 更新日時
 
-  public static async createByElement(node: Element): Promise<Chat> {
-    return await ChatParser.parse(node)
+  public static async createByElement(node: Element, video?: Video): Promise<Chat> {
+    return await ChatParser.parse(node, video)
   }
 
   public dump(): string {
@@ -43,10 +44,11 @@ export default class Chat {
     if (this.isJoinMember) emojis.push('🌟')
     if (this.money) emojis.push('💰')
 
+    const date = this.timestamp?.toLocaleString()
     const emoji = emojis.join('')
     const author = this.authorName || '<unknown>'
     const message = this.altMessage || '<notext>'
     const money = this.money ? ` (${this.moneyUnit} ${this.money})` : ''
-    return `${emoji}[${textEllipsis(author, 16)}]${textEllipsis(message, 24)}${money}`
+    return `${date}(${this.seconds}) ${emoji}[${textEllipsis(author, 16)}]${textEllipsis(message, 24)}${money}`
   }
 }

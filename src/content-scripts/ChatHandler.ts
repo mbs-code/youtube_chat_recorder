@@ -78,8 +78,8 @@ export default class ChatHandler {
       return false
     }
 
-    // チャット model に変換
-    const chat = await Chat.createByElement(node)
+    // チャット model に変換 (videoが無くても取得はする？)
+    const chat = await Chat.createByElement(node, this.video)
 
     console.log([node, chat])
     console.log('> ' + chat.dump())

@@ -23,9 +23,8 @@ export default class VideoParser {
         const type = pub['@type']
         if (type === 'BroadcastEvent') {
           video.isBroadcast = true
-          video.isLive = Boolean(pub.startDate && !pub.endDate)
-          if (pub.startDate) video.actualStartDate = new Date(pub.startDate)
-          if (pub.endDate) video.actualEndDate = new Date(pub.endDate)
+          if (pub.startDate) video.startDate = new Date(pub.startDate)
+          if (pub.endDate) video.endDate = new Date(pub.endDate)
         }
       }
     }

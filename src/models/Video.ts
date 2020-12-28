@@ -13,10 +13,8 @@ export default class Video {
   viewCount = 0
 
   isBroadcast = false // 配信かどうか
-  isLive = false // 配信中かどうか
-
-  actualStartDate?: Date
-  actualEndDate?: Date
+  startDate?: Date // 配信予定開始か実開始時間
+  endDate?: Date // 配信終了時間
 
   publishedAt?: Date
 

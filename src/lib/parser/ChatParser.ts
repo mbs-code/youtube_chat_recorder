@@ -1,12 +1,25 @@
+import { addSeconds, differenceInSeconds, subDays } from 'date-fns'
+import parseDatetime from 'date-fns/parse'
 import Chat from '../../models/Chat'
+import Video from '../../models/Video'
 import DomQueryHelper from '../util/DomQueryHelper'
+import Util from '../util/Util'
 import retry from '../util/Retry'
 
 export default class ChatParser {
-  public static async parse(node: Element): Promise<Chat> {
+  public static async parse(node: Element, video?: Video): Promise<Chat> {
     const chat = new Chat()
     chat.id = node.getAttribute('id') || undefined
 
+    // 時刻 ///
+    const timestamp = DomQueryHelper.getTextContent(node, '#timestamp')
+    if (timestamp) {
+      const times = this.parseTimestamp(timestamp, video)
+      chat.timestamp = times.datetime
+      chat.seconds = times.seconds
+    }
+
+    // 投稿者 ///
     chat.authorName = await retry(() => DomQueryHelper.getTextContent(node, '#author-name')) // 稀に時間がかかる
     chat.authorPhoto = DomQueryHelper.getAttribute(node, '#author-photo #img', 'src')
 
@@ -26,7 +39,7 @@ export default class ChatParser {
       if (type === 'verified') chat.isVerified = true
       if (type === 'member') {
         chat.isMember = true
-        const areaLabel = DomQueryHelper.getAttribute(authorBadge, null, 'aria-label')
+        const areaLabel = DomQueryHelper.getAttribute(authorBadge, null, 'aria-label') // メッセージを取っておく
         chat.memberMonths = this.parseMemberMonth(areaLabel)
       }
     }
@@ -50,15 +63,13 @@ export default class ChatParser {
       chat.altMessage = await retry(() => DomQueryHelper.getAttribute(node, '#sticker #img', 'alt'))
     }
 
-    /// メンバー加入系 ///
-    if (node.tagName.toLowerCase() === 'yt-live-chat-membership-item-renderer') { // これが最適解
+    // メンバー加入系 ///
+    if (node.tagName.toLowerCase() === 'yt-live-chat-membership-item-renderer') {
+      // これが最適解
       const headerSubtext = DomQueryHelper.getTextContent(node, '#header-subtext')
       chat.altMessage = headerSubtext
       chat.isJoinMember = true
     }
-
-    /// 時刻系 ///
-    // TODO: 未実装 (video が必須のため)
 
     return chat
   }
@@ -89,6 +100,45 @@ export default class ChatParser {
       return message
     }
     return undefined
+  }
+
+  protected static parseTimestamp(timestamp?: string, video?: Video): { datetime?: Date; seconds?: number } {
+    // "hh:mm AM"（予約, 配信中とメンバー加入時）, [-]h:m:ss（アーカイブ）
+    if (timestamp) {
+      const startDate = video ? video.startDate : undefined // nullable
+      const timeStr = timestamp.toLowerCase()
+
+      // hh:mm [AM|PM] パターン (現在時刻で補完する)
+      if (timeStr.includes('am') || timeStr.includes('pm')) {
+        // str から時刻を推定する
+        let chatDate = parseDatetime(timeStr, 'hh:mm a', new Date())
+
+        // 文字列が pm のとき、現在時刻が am なら一日引く (日付またぎ処理)
+        // TODO: youtube が 12時間以上動作しない前提
+        if (timeStr.includes('pm') && chatDate.getHours() < 12) {
+          chatDate = subDays(chatDate, 1)
+        }
+
+        // もし、現在時刻との差分が一定以下だったら現在時刻を使用 (自環境で66くらいが max)
+        console.log('diff', differenceInSeconds(new Date(), chatDate))
+        if (differenceInSeconds(new Date(), chatDate) < 90) {
+          chatDate = new Date()
+        }
+
+        const sec = startDate ? differenceInSeconds(chatDate, startDate) : undefined
+        return { datetime: chatDate, seconds: sec }
+      }
+
+      // [-]h:m:ss パターン (上より正確, 基本的にアーカイブのみ)
+      if (timeStr.indexOf(':') && startDate) {
+        // 時刻から秒数を算出して、開始時刻から引く
+        const sec = Util.hmsToSeconds(timeStr)
+        const date = addSeconds(startDate, sec)
+        return { datetime: date, seconds: sec }
+      }
+    }
+
+    return {}
   }
 
   protected static parseMemberMonth(areaLabel?: string): number | undefined {
