@@ -27,8 +27,8 @@ export default class Chat {
 
   pngUrl?: string // use generatePng()
 
-  createdAt?: number // 作成日時
-  updatedAt?: number // 更新日時
+  createdAt?: Date // 作成日時
+  updatedAt?: Date // 更新日時
 
   public static async createByElement(node: Element): Promise<Chat> {
     return await ChatParser.parse(node)

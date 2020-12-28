@@ -20,6 +20,7 @@
     "hooks": {}
   },
   "dependencies": {
+    "date-fns": "^2.16.1",
     "delay": "^4.4.0",
     "text-ellipsis": "^1.0.3",
     "ts-loader": "^8.0.12",

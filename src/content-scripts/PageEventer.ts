@@ -1,5 +1,6 @@
 import PageHelper from '../lib/util/PageHelper'
 import retry from '../lib/util/Retry'
+import Video from '../models/Video'
 import ChatHandler from './ChatHandler'
 
 export default class PageEventer {
@@ -29,10 +30,13 @@ export default class PageEventer {
     this.observer.disconnect()
 
     const videoId = PageHelper.getPageVideoId()
-    console.log('videoID:', videoId)
+    console.log('> VideoID:', videoId)
 
     const videoData = await PageHelper.getVideoData()
-    console.log(videoData)
+    if (!videoData) throw new Error('missing video data')
+
+    const video = await Video.createByElement(videoData)
+    this.handler.setVideo(video)
 
     return true
   }
@@ -52,6 +56,7 @@ export default class PageEventer {
   protected async onDeleted(): Promise<void> {
     console.log('⚙️[stop] ovserver')
     this.observer.disconnect()
+    this.handler.removeVideo()
   }
 
   /// ////////////////////////////////////////////////////////////
