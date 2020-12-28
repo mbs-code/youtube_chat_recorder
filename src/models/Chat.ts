@@ -31,8 +31,12 @@ export default class Chat {
   createdAt?: Date // 作成日時
   updatedAt?: Date // 更新日時
 
-  public static async createByElement(node: Element, video?: Video): Promise<Chat> {
-    return await ChatParser.parse(node, video)
+  constructor(init?: Partial<Video>) {
+    if (init) Object.assign(this, init)
+  }
+
+  public static async createByElement(video: Video, node: Element): Promise<Chat> {
+    return await ChatParser.parse(video, node)
   }
 
   public dump(): string {
