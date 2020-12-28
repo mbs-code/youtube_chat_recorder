@@ -9,16 +9,16 @@ export default class Chat {
   message?: string
   altMessage?: string // 画像要素を展開した文
 
-  isOwner?: boolean
-  isModerator?: boolean
-  isMember?: boolean
-  isVerified?: boolean
+  isOwner = false
+  isModerator = false
+  isMember = false
+  isVerified = false
 
   memberMonths?: number // undefined, 0(0ヶ月目), 1, 2, ...
 
-  isJoinMember?: boolean
-  isSuperChat?: boolean
-  isSuperStickers?: boolean
+  isJoinMember = false
+  isSuperChat = false
+  isSuperStickers = false
   money?: number
   moneyUnit?: string // 通貨単位
 

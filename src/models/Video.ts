@@ -6,14 +6,14 @@ export default class Video {
   id?: string // 76KDBk...
 
   title?: string
-  duration?: number // seconds 配信中は 0
-  // description?: string // 容量削減
   thumbnailUrl?: string
+  // description?: string // 容量削減
+  duration = 0 // seconds 配信中は 0
 
-  viewCount?: number
+  viewCount = 0
 
-  isBroadcast?: boolean // 配信かどうか
-  isLive?: boolean // 配信中かどうか
+  isBroadcast = false // 配信かどうか
+  isLive = false // 配信中かどうか
 
   actualStartDate?: Date
   actualEndDate?: Date
