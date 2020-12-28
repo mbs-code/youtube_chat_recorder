@@ -32,17 +32,18 @@ export default class VideoStorage {
   }
 
   public static async save(video: Video): Promise<void> {
-    // 更新日時の付与
-    video.createdAt = video.createdAt || new Date()
-    video.updatedAt = new Date()
-
     const videos = await this.getAll()
 
     // 配列中に存在するなら消しとく
     const index = videos.findIndex(v => v.id === video.id)
     if (index >= 0) {
-      videos.splice(index, 1)
+      const del = videos.splice(index, 1)[0]
+      video.createdAt = del.createdAt
     }
+
+    // 更新日時の付与
+    video.createdAt = video.createdAt || new Date()
+    video.updatedAt = new Date()
 
     // 閲覧時間の降順で追加 (とりあえず先頭)
     videos.unshift(video)
