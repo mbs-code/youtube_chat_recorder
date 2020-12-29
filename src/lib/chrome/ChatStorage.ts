@@ -1,24 +1,25 @@
+import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
 import Chat from '../../models/Chat'
-
 export default class ChatStorage {
   // chat のキーは 動画ID
 
   public static async get(videoId: string): Promise<Chat[]> {
     const value = await browser.storage.local.get(videoId)
-    const partialChats: Partial<Chat>[] | undefined = value[videoId]
+    const plains: any[] | undefined = value[videoId]
 
-    if (partialChats) {
-      // model にマッピングする
-      const chats = partialChats.map(partial => new Chat(partial))
+    // デシリアライズする
+    if (plains) {
+      const chats = plains.map(plain => plainToClass(Chat, plain))
       return chats
     }
     return []
   }
 
   protected static async replace(videoId: string, chats: Chat[]): Promise<void> {
-    // 値の置き換え
-    await browser.storage.local.set({ [videoId]: chats })
+    // シリアライズする
+    const plains = chats ? chats.map(e => classToPlain(e)) : null
+    await browser.storage.local.set({ [videoId]: plains })
   }
 
   public static async save(videoId: string, chats: Chat[]): Promise<void> {

@@ -1,4 +1,5 @@
 import arraySort from 'array-sort'
+import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
 import Video from '../../models/Video'
 import ChatStorage from './ChatStorage'
@@ -9,11 +10,11 @@ export default class VideoStorage {
 
   public static async getAll(): Promise<Video[]> {
     const value = await browser.storage.local.get(this.STORAGE_KEY)
-    const partialVideos: Partial<Video>[] | undefined = value[this.STORAGE_KEY]
+    const plains: any[] | undefined = value[this.STORAGE_KEY]
 
-    if (partialVideos) {
-      // model にマッピングする
-      const videos = partialVideos.map(partial => new Video(partial))
+    // デシリアライズする
+    if (plains) {
+      const videos = plains.map(plain => plainToClass(Video, plain))
       return videos
     }
     return []
@@ -27,9 +28,10 @@ export default class VideoStorage {
     return video
   }
 
-  protected static async replace(value: Video[] | undefined): Promise<void> {
-    // 値の置き換え
-    await browser.storage.local.set({ [this.STORAGE_KEY]: value })
+  protected static async replace(videos: Video[] | undefined): Promise<void> {
+    // シリアライズする
+    const plains = videos ? videos.map(e => classToPlain(e)) : null
+    await browser.storage.local.set({ [this.STORAGE_KEY]: plains })
   }
 
   public static async save(video: Video): Promise<void> {

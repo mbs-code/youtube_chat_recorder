@@ -21,8 +21,10 @@
   },
   "dependencies": {
     "array-sort": "^1.0.0",
+    "class-transformer": "^0.3.1",
     "date-fns": "^2.16.1",
     "delay": "^4.4.0",
+    "reflect-metadata": "^0.1.13",
     "text-ellipsis": "^1.0.3",
     "ts-loader": "^8.0.12",
     "typescript": "^4.1.3",

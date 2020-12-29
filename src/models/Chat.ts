@@ -1,4 +1,6 @@
+import 'reflect-metadata'
 import textEllipsis from 'text-ellipsis'
+import TransformDate from '../lib/decorator/TransformDate'
 import ChatParser from '../lib/parser/ChatParser'
 import Video from './Video'
 
@@ -23,17 +25,17 @@ export default class Chat {
   money?: number
   moneyUnit?: string // 通貨単位
 
-  timestamp?: Date // !! 配信中は秒が取得できない(仕様)
+  pngUrl?: string // use generatePng()
   seconds?: number // 開始からの経過秒
 
-  pngUrl?: string // use generatePng()
+  @TransformDate()
+  timestamp?: Date // !! 配信中は秒が取得できない(仕様)
 
+  @TransformDate()
   createdAt?: Date // 作成日時
-  updatedAt?: Date // 更新日時
 
-  constructor(init?: Partial<Video>) {
-    if (init) Object.assign(this, init)
-  }
+  @TransformDate()
+  updatedAt?: Date // 更新日時
 
   public static async createByElement(video: Video, node: Element): Promise<Chat> {
     return await ChatParser.parse(video, node)
