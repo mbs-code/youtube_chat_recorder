@@ -39,12 +39,13 @@ export default class ChatParser {
       if (type === 'verified') chat.isVerified = true
     }
 
-    const authorBadges = Array.from(node.querySelectorAll('#chat-badges yt-live-chat-author-badge-renderer'))
-    for (const authorBadge of authorBadges) {
-      const type = DomQueryHelper.getAttribute(authorBadge, null, 'type') // member   // TODO: moderator は未確認
+    const chatBadges = Array.from(node.querySelectorAll('#chat-badges yt-live-chat-author-badge-renderer'))
+    for (const chatBadge of chatBadges) {
+      const type = DomQueryHelper.getAttribute(chatBadge, null, 'type') // member, moderator
+      if (type === 'moderator') chat.isModerator = true
       if (type === 'member') {
         chat.isMember = true
-        const areaLabel = DomQueryHelper.getAttribute(authorBadge, null, 'aria-label') // メッセージを取っておく
+        const areaLabel = DomQueryHelper.getAttribute(chatBadge, null, 'aria-label') // メッセージを取っておく
         chat.memberMonths = this.parseMemberMonth(areaLabel)
       }
     }
