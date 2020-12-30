@@ -1,5 +1,8 @@
+import ConfigStorage from '../lib/chrome/Configstorage'
+import VideoStorage from '../lib/chrome/VideoStorage'
 import PageHelper from '../lib/util/PageHelper'
 import retry from '../lib/util/Retry'
+import Config from '../models/Config'
 import Video from '../models/Video'
 import ChatHandler from './ChatHandler'
 
@@ -7,17 +10,27 @@ export default class PageEventer {
   protected handler: ChatHandler
   protected observer: MutationObserver
 
+  protected config?: Config
+
   constructor(handler: ChatHandler) {
     this.handler = handler
     this.observer = new MutationObserver(records => {
       records.forEach(record => {
-        record.addedNodes.forEach(node => this.handler.invoke(node as HTMLElement))
+        record.addedNodes.forEach(node => this.handler.invoke(node as HTMLElement, this.config))
       })
     })
   }
 
   public async init(): Promise<void> {
     console.log('⚙️[init]')
+
+    // 初期化
+    this.handler.removeVideo()
+
+    // config を読み込む
+    const config = await ConfigStorage.get()
+    this.config = config
+    VideoStorage.MAX_LENGTH = this.config?.maxVideoLength || 10
 
     // ページに event listener を付与する
     await this.attachEventListener()
@@ -56,7 +69,7 @@ export default class PageEventer {
 
     // 今表示されてるものを処理する (promise はスルー)
     // コメント追加にラグがあるのでいい感じに全部取れるはず
-    this.handler.findInvoke(e).then(() => {
+    this.handler.findInvoke(e, this.config).then(() => {
       console.log('⚙️[finish] handle display chats')
     })
   }
