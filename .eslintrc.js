@@ -28,14 +28,21 @@ module.exports = {
       'error',
       {
         'singleQuote': true,
-        'semi': false
+        'semi': false,
+        "htmlWhitespaceSensitivity": "ignore",
       }
     ],
-    "vue/max-attributes-per-line": [
-      "error",
-      {
-        "singleline": 3,
-      }
-    ],
+    'vue/html-indent': ['error', 2],
+    "vue/max-attributes-per-line": off,
+    // "vue/max-attributes-per-line": [
+    //   "error",
+    //   {
+    //     "singleline": 3,
+    //     "multiline": {
+    //       "max": 1,
+    //       "allowFirstLine": false
+    //     },
+    //   }
+    // ],
   }
 }
