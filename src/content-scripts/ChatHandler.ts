@@ -1,4 +1,5 @@
 import VideoStorage from '../lib/chrome/VideoStorage'
+import DrawDomQueue from '../lib/queue/DrawDomQueue'
 import SaveChatQueue from '../lib/queue/SaveChatQueue'
 import retry from '../lib/util/Retry'
 import Chat from '../models/Chat'
@@ -14,10 +15,12 @@ const COMMENT_NODE_NAMES = [
 
 export default class ChatHandler {
   protected saveChatQueue: SaveChatQueue
+  protected drawDomQueue: DrawDomQueue
   protected video?: Video
 
   constructor() {
     this.saveChatQueue = new SaveChatQueue()
+    this.drawDomQueue = new DrawDomQueue(this.saveChatQueue)
     this.video = undefined
   }
 
@@ -66,17 +69,17 @@ export default class ChatHandler {
     if (!doms) return
 
     for (const node of doms) {
-      await this.invoke(node)
+      await this.invoke(node as HTMLElement)
     }
   }
 
   /**
    * handler を実行する.
    *
-   * @param {Element} node 対象のルートノード, COMMENT_NODE_NAMES を参照
+   * @param {HTMLElement} node 対象のルートノード, COMMENT_NODE_NAMES を参照
    * @return {boolean} 成功可否
    */
-  public async invoke(node: Element): Promise<boolean> {
+  public async invoke(node: HTMLElement): Promise<boolean> {
     // コメント対象の DOM か判定する
     const nodeName = node.nodeName.toLowerCase()
     if (COMMENT_NODE_NAMES.indexOf(nodeName) === -1) {
@@ -94,7 +97,7 @@ export default class ChatHandler {
     // テストで「あ」が入ってたら追加
     if (chat.message?.includes('あ')) {
       console.log('> ' + chat.dump())
-      this.saveChatQueue.push(chat)
+      this.drawDomQueue.push({ node, chat })
     }
 
     return true
