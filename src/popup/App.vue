@@ -61,6 +61,18 @@
           <span>結合して保存</span>
         </button>
       </p>
+      <p class="control">
+        <button
+          class="button is-danger"
+          :disabled="selectedChats.length === 0"
+          @click="handleDeleteChats"
+        >
+          <span class="icon">
+            <i class="mdi mdi-comment" />
+          </span>
+          <span>選択削除</span>
+        </button>
+      </p>
     </div>
 
     <div class="field">
@@ -152,7 +164,7 @@ export default class App extends Vue {
     }
   }
 
-  async handlerSaveToMerge(): Promise<void> {
+  handlerSaveToMerge(): void {
     const selected = this.selectedChats
     if (selected.length > 0) {
       try {
@@ -163,6 +175,20 @@ export default class App extends Vue {
         Download.image(mergeUrl)
       } catch(err) {
         window.alert(err)
+      }
+    }
+  }
+
+  async handleDeleteChats(): Promise<void> {
+    const videoId = this.selectedVideo?.id
+    const selected = this.selectedChats
+
+    if (selected.length > 0) {
+      const result = window.confirm(`選択されている ${selected.length}個 のチャットを削除します。`)
+      if (result && videoId) {
+        await ChatStorage.remove(videoId, selected)
+        this.selectedChats = []
+        this.chats = await ChatStorage.get(videoId)
       }
     }
   }
