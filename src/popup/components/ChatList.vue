@@ -42,7 +42,7 @@ export default class ChatList extends Vue {
     return chat && Boolean(find)
   }
 
-  handleSelected(chat: Chat) {
+  handleSelected(chat: Chat): void {
     const index = this.selecteds.findIndex(selected => chat && chat?.id === selected?.id)
     if (index >= 0) {
       // 選択していたら削除する
@@ -53,6 +53,17 @@ export default class ChatList extends Vue {
       this.selecteds.push(chat)
       this.$emit('change', this.selecteds)
     }
+  }
+
+  selectedAll(): void {
+    this.selecteds.splice(0, this.selecteds.length)
+    this.selecteds.push(...this.chats)
+    this.$emit('change', this.selecteds)
+  }
+
+  unselectedAll(): void {
+    this.selecteds.splice(0, this.selecteds.length)
+    this.$emit('change', this.selecteds)
   }
 }
 </script>

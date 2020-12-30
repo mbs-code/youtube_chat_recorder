@@ -51,6 +51,22 @@
     <div class="field is-grouped">
       <p class="control">
         <button
+          class="button"
+          @click="handleSelectAll"
+        >
+          <span>すべて選択</span>
+        </button>
+      </p>
+      <p class="control">
+        <button
+          class="button"
+          @click="handleUnselectAll"
+        >
+          <span>選択解除</span>
+        </button>
+      </p>
+      <p class="control">
+        <button
           class="button is-success"
           :disabled="selectedChats.length === 0"
           @click="handlerSaveToMerge"
@@ -81,7 +97,7 @@
     </div>
 
     <div class="field">
-      <ChatList v-if="chats.length" :chats="chats" @change="handleChatSelected" />
+      <ChatList v-if="chats.length" ref="chatList" :chats="chats" @change="handleChatSelected" />
       <div v-else>チャットがありません。</div>
     </div>
   </section>
@@ -110,6 +126,10 @@ export default class App extends Vue {
 
   chats: Chat[] = []
   selectedChats: Chat[] = []
+
+  $refs!: {
+    chatList: ChatList,
+  }
 
   async mounted(): Promise<void> {
     const videos = await VideoStorage.getAll()
@@ -141,6 +161,8 @@ export default class App extends Vue {
     window.scrollTo(0, 0)
   }
 
+  ///
+
   async handleOpenUrl(url?: string): Promise<void> {
     if (url) {
       // 現在表示されていないページならタブを作成する
@@ -162,6 +184,16 @@ export default class App extends Vue {
         // TODO: 現在取得中のものが削除されていたときの処理
       }
     }
+  }
+
+  ///
+
+  handleSelectAll(): void {
+    this.$refs.chatList.selectedAll()
+  }
+
+  handleUnselectAll(): void {
+    this.$refs.chatList.unselectedAll()
   }
 
   handlerSaveToMerge(): void {
