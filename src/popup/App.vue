@@ -32,6 +32,19 @@
             </span>
           </button>
         </p>
+        <p class="control">
+          <button
+            class="button is-danger is-light"
+            :disabled="!selectedVideo.thumbnailUrl"
+            :href="selectedVideo.thumbnailUrl || ''"
+            @click="handleDeleteVideo(selectedVideo)"
+          >
+            <span class="icon">
+              <i class="mdi mdi-movie" />
+            </span>
+            <span>削除</span>
+          </button>
+        </p>
       </template>
     </div>
 
@@ -107,6 +120,17 @@ export default class App extends Vue {
 
       if (url !== activeTab?.url) {
         await BrowserTabs.windowOpen(url, activeTab)
+      }
+    }
+  }
+
+  async handleDeleteVideo(video?: Video): Promise<void> {
+    if (video) {
+      const result = window.confirm(`「${video.title}」を削除します。`)
+      if (result) {
+        const del = await VideoStorage.remove(video)
+        window.location.reload() // 面倒だからリセット
+        // TODO: 現在取得中のものが削除されていたときの処理
       }
     }
   }
