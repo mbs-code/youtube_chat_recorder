@@ -36,7 +36,7 @@ import { Component, Prop, Vue, Watch } from 'vue-property-decorator'
 import { directive as onClickaway } from 'vue-clickaway'
 import VideoPanel from '../components/VideoPanel.vue'
 import Video from '../models/Video'
-import Tabs from '../lib/chrome/Tabs'
+import BrowserTabs from '../lib/chrome/BrowserTabs'
 import PageHelper from '../lib/util/PageHelper'
 
 @Component({
@@ -44,7 +44,7 @@ import PageHelper from '../lib/util/PageHelper'
   directives: { onClickaway },
 })
 export default class App extends Vue {
-  isActive = true
+  isActive = false
   selected: Video | null = null
 
   @Prop({ default: [] })
@@ -53,11 +53,14 @@ export default class App extends Vue {
   @Watch('videos')
   async onVideosChanged(): Promise<void> {
     // 初期に選択される動画を探す
-    const tab = await Tabs.getActiveTab()
-    const videoId = await PageHelper.getPageVideoId(tab.url)
+    const activeTab = await BrowserTabs.getActiveTab()
+    const videoId = await PageHelper.getPageVideoId(activeTab?.url)
     if (videoId) {
       const find = this.videos.find(v => v?.id && (v?.id === videoId))
-      if (find) this.selected = find
+      if (find) {
+        this.selected = find
+        this.$emit('change', this.selected)
+      }
     }
   }
 
@@ -76,6 +79,7 @@ export default class App extends Vue {
 
   handleSelected(video: Video): void {
     this.selected = video
+    this.$emit('change', this.selected)
     this.handleClose()
   }
 }

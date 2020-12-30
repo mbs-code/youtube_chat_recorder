@@ -1,7 +1,38 @@
 <template>
   <section class="section">
     <div class="field">
-      <VideoDropdown :videos="videos" @close="handleClose" />
+      <VideoDropdown :videos="videos" @change="handleChange" @close="handleClose"/>
+    </div>
+
+    <div class="field is-grouped">
+      <template v-if="selected">
+        <p class="control">
+          <button
+            class="button"
+            data-tooltip="動画ページを開く"
+            :disabled="!selected.url"
+            :href="selected.url || ''"
+            @click="handleOpenUrl(selected.url)"
+          >
+            <span class="icon has-text-danger">
+              <i class="mdi mdi-youtube" />
+            </span>
+          </button>
+        </p>
+        <p class="control">
+          <button
+            class="button"
+            data-tooltip="サムネイルを開く"
+            :disabled="!selected.thumbnailUrl"
+            :href="selected.thumbnailUrl || ''"
+            @click="handleOpenUrl(selected.thumbnailUrl)"
+          >
+            <span class="icon has-text-success">
+              <i class="mdi mdi-image" />
+            </span>
+          </button>
+        </p>
+      </template>
     </div>
   </section>
 </template>
@@ -9,24 +40,42 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import VideoDropdown from '../components/VideoDropdown.vue'
+import BrowserTabs from '../lib/chrome/BrowserTabs'
 
 import VideoStorage from '../lib/chrome/VideoStorage'
+import PageHelper from '../lib/util/PageHelper'
 import Video from '../models/Video'
 
 @Component({
   components: { VideoDropdown }
 })
 export default class App extends Vue {
-  message = 'Hello world with TypeScript!'
   videos: Video[] = []
+  selected: Video | null = null
 
   async mounted(): Promise<void> {
     const videos = await VideoStorage.getAll()
     this.videos = videos
   }
 
+  handleChange(video?: Video): void {
+    this.selected = video || null
+  }
+
   handleClose(): void {
     window.scrollTo(0, 0)
+  }
+
+  async handleOpenUrl(url?: string): Promise<void> {
+    if (url) {
+      // 現在表示されていないページならタブを作成する
+      const activeTab = await BrowserTabs.getActiveTab()
+      const videoId = await PageHelper.getPageVideoId(activeTab?.url)
+
+      if (url !== activeTab?.url) {
+        await BrowserTabs.windowOpen(url, activeTab)
+      }
+    }
   }
 }
 </script>

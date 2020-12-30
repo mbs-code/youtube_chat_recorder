@@ -47,6 +47,11 @@ export default class Video {
     return 'video'
   }
 
+  @Exclude()
+  get url(): string | undefined {
+    return this.id ? `https://www.youtube.com/watch?v=${this.id}` : undefined
+  }
+
   public dump(): string {
     const title = this.title || '<notitle>'
     return `[${this.id}]${textEllipsis(title, 24)}`
