@@ -34,10 +34,11 @@
 <script lang="ts">
 import { Component, Prop, Vue, Watch } from 'vue-property-decorator'
 import { directive as onClickaway } from 'vue-clickaway'
-import VideoPanel from '../components/VideoPanel.vue'
-import Video from '../models/Video'
-import BrowserTabs from '../lib/chrome/BrowserTabs'
-import PageHelper from '../lib/util/PageHelper'
+import VideoPanel from './VideoPanel.vue'
+
+import Video from '../../models/Video'
+import BrowserTabs from '../../lib/chrome/BrowserTabs'
+import PageHelper from '../../lib/util/PageHelper'
 
 @Component({
   components: { VideoPanel },

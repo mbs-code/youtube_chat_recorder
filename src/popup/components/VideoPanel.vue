@@ -24,12 +24,11 @@
 </template>
 
 <script lang="ts">
-import dateFormat from 'date-fns/format'
-import formatDistanceToNow from 'date-fns/formatDistanceToNow'
+import { format as dateFormat, formatDistanceToNow } from 'date-fns'
 import jaLocale from 'date-fns/locale/ja'
 
 import { Component, Prop, Vue } from 'vue-property-decorator'
-import Video from '../models/Video'
+import Video from '../../models/Video'
 
 @Component({
   filters: {

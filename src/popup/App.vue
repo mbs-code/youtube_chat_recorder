@@ -39,9 +39,10 @@
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
-import VideoDropdown from '../components/VideoDropdown.vue'
-import BrowserTabs from '../lib/chrome/BrowserTabs'
+import VideoDropdown from './components/VideoDropdown.vue'
 
+import BrowserTabs from '../lib/chrome/BrowserTabs'
+import ChatStorage from '../lib/chrome/ChatStorage'
 import VideoStorage from '../lib/chrome/VideoStorage'
 import PageHelper from '../lib/util/PageHelper'
 import Video from '../models/Video'
