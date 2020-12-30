@@ -6,11 +6,12 @@ export default class PageHelper {
    * ページの videoID を取得する.
    *
    * @static
+   * @param {string} [url] 対象の url
    * @return {string | undefined} youtube video id
    */
-  public static getPageVideoId(): string | undefined {
-    const url = new URL(window.location.href)
-    const videoId = url.searchParams.get('v') || undefined
+  public static getPageVideoId(url?: string): string | undefined {
+    const uri = new URL(url || window.location.href)
+    const videoId = uri.searchParams.get('v') || undefined
     return videoId
   }
 

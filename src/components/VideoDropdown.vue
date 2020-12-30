@@ -18,7 +18,13 @@
     <div class="dropdown-menu" role="menu">
       <div class="dropdown-content">
         <template v-for="video in videos">
-          <VideoPanel :key="video.id" :video="video" class="dropdown-item" @click="handleSelected(video)" />
+          <VideoPanel
+            :key="video.id"
+            :video="video"
+            class="dropdown-item"
+            :class="{ 'is-active': isSelectedVideo(video) }"
+            @click="handleSelected(video)"
+          />
         </template>
       </div>
     </div>
@@ -26,10 +32,12 @@
 </template>
 
 <script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator'
+import { Component, Prop, Vue, Watch } from 'vue-property-decorator'
 import { directive as onClickaway } from 'vue-clickaway'
 import VideoPanel from '../components/VideoPanel.vue'
 import Video from '../models/Video'
+import Tabs from '../lib/chrome/Tabs'
+import PageHelper from '../lib/util/PageHelper'
 
 @Component({
   components: { VideoPanel },
@@ -41,6 +49,21 @@ export default class App extends Vue {
 
   @Prop({ default: [] })
   videos!: Video[]
+
+  @Watch('videos')
+  async onVideosChanged(): Promise<void> {
+    // 初期に選択される動画を探す
+    const tab = await Tabs.getActiveTab()
+    const videoId = await PageHelper.getPageVideoId(tab.url)
+    if (videoId) {
+      const find = this.videos.find(v => v?.id && (v?.id === videoId))
+      if (find) this.selected = find
+    }
+  }
+
+  isSelectedVideo(video: Video): boolean {
+    return video && (video?.id === this.selected?.id)
+  }
 
   handleOpen(): void {
     this.isActive = true
@@ -90,8 +113,12 @@ export default class App extends Vue {
 .dropdown-item {
   font-size: 1rem;
 
+  &.is-active {
+    background: aliceblue;
+  }
+
   &:hover {
-    background: gainsboro;
+    background: gainsboro !important;
     // color: white;
   }
 
