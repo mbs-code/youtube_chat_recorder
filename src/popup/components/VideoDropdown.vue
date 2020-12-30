@@ -53,6 +53,9 @@ export default class VideoDropdown extends Vue {
 
   @Watch('videos')
   async onVideosChanged(): Promise<void> {
+    // select の初期化
+    this.selected = null
+
     // 初期に選択される動画を探す
     const activeTab = await BrowserTabs.getActiveTab()
     const videoId = await PageHelper.getPageVideoId(activeTab?.url)

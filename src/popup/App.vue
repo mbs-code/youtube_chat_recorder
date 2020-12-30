@@ -1,18 +1,18 @@
 <template>
   <section class="section">
     <div class="field">
-      <VideoDropdown :videos="videos" @change="handleChange" @close="handleClose"/>
+      <VideoDropdown :videos="videos" @change="handleVideoChange" @close="handleDropdownClose"/>
     </div>
 
     <div class="field is-grouped">
-      <template v-if="selected">
+      <template v-if="selectedVideo">
         <p class="control">
           <button
             class="button"
             data-tooltip="動画ページを開く"
-            :disabled="!selected.url"
-            :href="selected.url || ''"
-            @click="handleOpenUrl(selected.url)"
+            :disabled="!selectedVideo.url"
+            :href="selectedVideo.url || ''"
+            @click="handleOpenUrl(selectedVideo.url)"
           >
             <span class="icon has-text-danger">
               <i class="mdi mdi-youtube" />
@@ -23,9 +23,9 @@
           <button
             class="button"
             data-tooltip="サムネイルを開く"
-            :disabled="!selected.thumbnailUrl"
-            :href="selected.thumbnailUrl || ''"
-            @click="handleOpenUrl(selected.thumbnailUrl)"
+            :disabled="!selectedVideo.thumbnailUrl"
+            :href="selectedVideo.thumbnailUrl || ''"
+            @click="handleOpenUrl(selectedVideo.thumbnailUrl)"
           >
             <span class="icon has-text-success">
               <i class="mdi mdi-image" />
@@ -36,7 +36,13 @@
     </div>
 
     <div class="field">
-      <ChatList :chats="chats" />
+      <span>{{ chats.length }}件 (全{{ chats.length }}件)</span>
+      <span v-if="selectedChats.length"> - {{ selectedChats.length }}件 選択中</span>
+    </div>
+
+    <div class="field">
+      <ChatList v-if="chats.length" :chats="chats" @change="handleChatSelected" />
+      <div v-else>チャットがありません。</div>
     </div>
   </section>
 </template>
@@ -58,21 +64,24 @@ import Video from '../models/Video'
 })
 export default class App extends Vue {
   videos: Video[] = []
+  selectedVideo: Video | null = null
 
-  selected: Video | null = null
   chats: Chat[] = []
+  selectedChats: Chat[] = []
 
   async mounted(): Promise<void> {
     const videos = await VideoStorage.getAll()
     this.videos = videos
   }
 
-  async handleChange(video?: Video): Promise<void> {
-    this.selected = video || null
+  async handleVideoChange(video?: Video): Promise<void> {
+    this.selectedVideo = video || null
+    this.chats = []
+    this.selectedChats = []
 
     // chat を読み込む
-    if (this.selected) {
-      const videoId = this.selected.id
+    if (this.selectedVideo) {
+      const videoId = this.selectedVideo.id
       if (videoId) {
         const chats = await ChatStorage.get(videoId)
         this.chats = chats
@@ -82,7 +91,11 @@ export default class App extends Vue {
     }
   }
 
-  handleClose(): void {
+  handleChatSelected(chats: Chat[]): void {
+    this.selectedChats = chats
+  }
+
+  handleDropdownClose(): void {
     window.scrollTo(0, 0)
   }
 

@@ -24,23 +24,12 @@
 </template>
 
 <script lang="ts">
-import { format as dateFormat, formatDistanceToNow } from 'date-fns'
-import jaLocale from 'date-fns/locale/ja'
-
 import { Component, Prop, Vue } from 'vue-property-decorator'
+import displayFilter from '../../filters/displayFilter'
 import Video from '../../models/Video'
 
 @Component({
-  filters: {
-    datetimeString(date?: Date): string {
-      if (date) return dateFormat(date, 'yyyy-MM-dd HH:mm:ss')
-      return '-'
-    },
-    distanceHumanized(date?: Date): string {
-      if (date) return formatDistanceToNow(date, { addSuffix: true, locale: jaLocale })
-      return '-'
-    }
-  }
+  filters: displayFilter,
 })
 export default class VideoPanel extends Vue {
   @Prop({ default: null })

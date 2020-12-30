@@ -4,6 +4,8 @@
       <ChatPanel
         :key="chat.id"
         :chat="chat"
+        :isSelected="isSelectedChat(chat)"
+        class="list-item"
         :class="{ 'is-active': isSelectedChat(chat) }"
         @click="handleSelected(chat)"
       />
@@ -24,11 +26,16 @@ import Chat from '../../models/Chat'
   components: { ChatPanel },
 })
 export default class ChatList extends Vue {
-  // isActive = false
   selecteds: Chat[] = []
 
   @Prop({ default: [] })
   chats!: Chat[]
+
+  @Watch('chats')
+  async onChatsChanged(): Promise<void> {
+    // select の初期化
+    this.selecteds = []
+  }
 
   isSelectedChat(chat: Chat): boolean {
     const find = this.selecteds.find(selected => chat && chat?.id === selected?.id)
@@ -51,7 +58,17 @@ export default class ChatList extends Vue {
 </script>
 
 <style lang="scss" scoped>
-.is-active {
-  background: blue !important;
+.list-item {
+  border: solid 1px gainsboro;
+
+  &.is-active {
+    background: aliceblue;
+    border: solid 1px dodgerblue;
+  }
+
+  &:hover {
+    background: gainsboro !important;
+    // color: white;
+  }
 }
 </style>
