@@ -1,4 +1,5 @@
 import arraySort from 'array-sort'
+import { compareDesc } from 'date-fns'
 import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
 import Video from '../../models/Video'
@@ -53,9 +54,12 @@ export default class VideoStorage {
     dbs.unshift(video)
 
     // 更新日時ソートからの個数制限 (削除があるのでソートを厳格に)
-    const sorts = arraySort(dbs, 'updatedAt')
-    // const limits = sorts.slice(0, this.MAX_LENGTH)
-    const limits = sorts.splice(0, this.MAX_LENGTH) // 破壊的に先頭から取り出す
+    const sorts = arraySort(dbs, (a: Video, b: Video) => {
+      return compareDesc(a.updatedAt || 0, b.updatedAt || 0) // 降順の最低値 0
+    })
+
+    // 破壊的に先頭から取り出す
+    const limits = sorts.splice(0, this.MAX_LENGTH)
 
     // 値の置き換え
     console.log(`💾[save] videos: ${limits.length} (db:${oldLength}, +add:1, -dup:${Number(index >= 0)})`)
