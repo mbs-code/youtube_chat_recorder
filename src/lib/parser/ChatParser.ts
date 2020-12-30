@@ -33,10 +33,15 @@ export default class ChatParser {
     const authorIsOwner = DomQueryHelper.hasAttribute(node, null, 'author-is-owner')
     if (authorIsOwner) chat.isOwner = true
 
+    const chipBadges = Array.from(node.querySelectorAll('#chip-badges yt-live-chat-author-badge-renderer'))
+    for (const chipBadge of chipBadges) {
+      const type = DomQueryHelper.getAttribute(chipBadge, null, 'type') // verified   // TODO: チャンネル主以外の verified は未確認
+      if (type === 'verified') chat.isVerified = true
+    }
+
     const authorBadges = Array.from(node.querySelectorAll('#chat-badges yt-live-chat-author-badge-renderer'))
     for (const authorBadge of authorBadges) {
-      const type = DomQueryHelper.getAttribute(authorBadge, null, 'type') // verified, member   // TODO: もでれたは未確認
-      if (type === 'verified') chat.isVerified = true
+      const type = DomQueryHelper.getAttribute(authorBadge, null, 'type') // member   // TODO: moderator は未確認
       if (type === 'member') {
         chat.isMember = true
         const areaLabel = DomQueryHelper.getAttribute(authorBadge, null, 'aria-label') // メッセージを取っておく
