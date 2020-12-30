@@ -69,27 +69,27 @@ export default class VideoStorage {
     // TODO: 設定次第！
     if (sorts.length) {
       for (const sort of sorts) {
-        if (sort.id) await ChatStorage.remove(sort.id)
+        if (sort.id) await ChatStorage.clear(sort.id)
       }
     }
   }
 
   public static async remove(video: Video): Promise<Video | undefined> {
-    const videos = await this.getAll()
+    const dbs = await this.getAll()
 
     // 配列中に存在するなら消しとく
-    const index = videos.findIndex(v => v.id === video.id)
+    const index = dbs.findIndex(v => v.id === video.id)
     if (index >= 0) {
-      const del = videos.splice(index, 1)[0]
+      const del = dbs.splice(index, 1)[0]
 
       if (del.id) {
         // 値の置き換え
         console.log(`💾[remove] video: ${del.id}`)
-        await this.replace(videos)
+        await this.replace(dbs)
 
         // video を消したら chat も消しとく
         // TODO: 設定次第！
-        await ChatStorage.remove(del.id)
+        await ChatStorage.clear(del.id)
       }
       return del
     }

@@ -50,14 +50,38 @@ export default class ChatStorage {
     await this.replace(videoId, dbs)
   }
 
-  public static async remove(videoId: string): Promise<Chat[] | undefined> {
-    const videos = await this.get(videoId)
+  public static async remove(videoId: string, chats: Chat[]): Promise<Chat[]> {
+    const dbs = await this.get(videoId)
+
+    const dels = []
+    for (const chat of chats) {
+      // 配列中に存在するなら消しとく
+      const index = dbs.findIndex(c => c.id === chat.id)
+      if (index >= 0) {
+        const del = dbs.splice(index, 1)[0]
+        if (del.id) {
+          console.log(`💾[remove] chat: ${videoId} - ${del.id}`)
+          dels.push(del)
+        }
+      }
+    }
+
+    // 値の置き換え
+    if (dels.length > 0) {
+      await this.replace(videoId, dbs)
+    }
+
+    return dels
+  }
+
+  public static async clear(videoId: string): Promise<Chat[] | undefined> {
+    const chats = await this.get(videoId)
 
     // 値があったら消しとく
-    if (videos) {
+    if (chats) {
       console.log(`💾[remove] chats: ${videoId}`)
       await browser.storage.local.remove(videoId)
     }
-    return videos
+    return chats
   }
 }
