@@ -1,7 +1,7 @@
 <template>
-  <div>
+  <section class="section">
     <p>{{ message }}</p>
-  </div>
+  </section>
 </template>
 
 <script lang="ts">
@@ -12,9 +12,3 @@ export default class App extends Vue {
   message = 'Hello world with TypeScript!'
 }
 </script>
-
-<style scoped>
-p {
-  font-size: 20px;
-}
-</style>

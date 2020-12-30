@@ -18,6 +18,17 @@
           </select>
         </div>
       </div>
+      <p class="control">
+        <button
+          class="button is-light"
+          @click="handleOpenOptionPage"
+        >
+          <span class="icon">
+            <i class="mdi mdi-cog" />
+          </span>
+          <span>設定</span>
+        </button>
+      </p>
 
       <template v-if="selectedVideo">
         <p class="control">
@@ -133,6 +144,7 @@ import BrowserTabs from '../lib/chrome/BrowserTabs'
 import ChatStorage from '../lib/chrome/ChatStorage'
 import VideoStorage from '../lib/chrome/VideoStorage'
 import Download from '../lib/chrome/Download'
+import Runtime from '../lib/chrome/Runtime'
 import PageHelper from '../lib/util/PageHelper'
 import Chat from '../models/Chat'
 import Video from '../models/Video'
@@ -195,6 +207,10 @@ export default class App extends Vue {
   }
 
   ///
+
+  async handleOpenOptionPage(): Promise<void> {
+    await Runtime.openOptionPage()
+  }
 
   async handleOpenUrl(url?: string): Promise<void> {
     if (url) {
