@@ -31,12 +31,6 @@ export default class ChatList extends Vue {
   @Prop({ default: [] })
   chats!: Chat[]
 
-  @Watch('chats')
-  async onChatsChanged(): Promise<void> {
-    // select の初期化
-    this.selecteds = []
-  }
-
   isSelectedChat(chat: Chat): boolean {
     const find = this.selecteds.find(selected => chat && chat?.id === selected?.id)
     return chat && Boolean(find)
@@ -54,6 +48,9 @@ export default class ChatList extends Vue {
       this.$emit('change', this.selecteds)
     }
   }
+
+  ///
+  // 外部操作用
 
   selectedAll(): void {
     this.selecteds.splice(0, this.selecteds.length)

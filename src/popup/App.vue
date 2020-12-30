@@ -5,6 +5,20 @@
     </div>
 
     <div class="field is-grouped">
+      <div class="control">
+        <div class="select">
+          <select v-model="selectedFilter">
+            <option
+              v-for="filter in chatFilters"
+              :key="filter.key"
+              :value="filter.func"
+            >
+              {{ filter.title }}
+            </option>
+          </select>
+        </div>
+      </div>
+
       <template v-if="selectedVideo">
         <p class="control">
           <button
@@ -92,18 +106,25 @@
     </div>
 
     <div class="field">
-      <span>{{ chats.length }}件 (全{{ chats.length }}件)</span>
+      <span>{{ filteredChats.length }}件 (全{{ chats.length }}件)</span>
       <span v-if="selectedChats.length"> - {{ selectedChats.length }}件 選択中</span>
     </div>
 
     <div class="field">
-      <ChatList v-if="chats.length" ref="chatList" :chats="chats" @change="handleChatSelected" />
+      <ChatList
+        v-if="filteredChats.length"
+        ref="chatList"
+        :chats="filteredChats"
+        :filter="selectedFilter"
+        @change="handleChatSelected"
+      />
       <div v-else>チャットがありません。</div>
     </div>
   </section>
 </template>
 
 <script lang="ts">
+import arraySort from 'array-sort'
 import { Component, Vue } from 'vue-property-decorator'
 import VideoDropdown from './components/VideoDropdown.vue'
 import ChatList from './components/ChatList.vue'
@@ -117,6 +138,8 @@ import Chat from '../models/Chat'
 import Video from '../models/Video'
 import NodeToPng from '../lib/util/NodeToPng'
 
+import chatFilters, { ChatFilterInterface } from '../configs/chatFilters'
+
 @Component({
   components: { VideoDropdown, ChatList }
 })
@@ -127,8 +150,17 @@ export default class App extends Vue {
   chats: Chat[] = []
   selectedChats: Chat[] = []
 
+  chatFilters = chatFilters
+  selectedFilter: ((chats: Chat[]) => Chat[]) = this.chatFilters[0].func
+
   $refs!: {
     chatList: ChatList,
+  }
+
+  get filteredChats() {
+    // 表示用 cahts (時間順にソート)
+    const filtered = this.selectedFilter ? this.selectedFilter(this.chats) : this.chats
+    return arraySort(filtered, 'seconds')
   }
 
   async mounted(): Promise<void> {
@@ -147,6 +179,7 @@ export default class App extends Vue {
       if (videoId) {
         const chats = await ChatStorage.get(videoId)
         this.chats = chats
+        this.$refs.chatList.unselectedAll()
       }
     } else {
       this.chats = []
