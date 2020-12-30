@@ -42,7 +42,7 @@ import Video from '../../models/Video'
     }
   }
 })
-export default class App extends Vue {
+export default class VideoPanel extends Vue {
   @Prop({ default: null })
   video!: Video | null
 

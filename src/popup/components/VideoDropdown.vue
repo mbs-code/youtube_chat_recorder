@@ -4,7 +4,7 @@
       <button
         class="button"
         aria-haspopup="true"
-        @click.stop="handleOpen"
+        @click.stop="handleToggle"
       >
         <span v-if="selected">
           <VideoPanel :key="selected.id" :video="selected" />
@@ -44,7 +44,7 @@ import PageHelper from '../../lib/util/PageHelper'
   components: { VideoPanel },
   directives: { onClickaway },
 })
-export default class App extends Vue {
+export default class VideoDropdown extends Vue {
   isActive = false
   selected: Video | null = null
 
@@ -69,13 +69,15 @@ export default class App extends Vue {
     return video && (video?.id === this.selected?.id)
   }
 
-  handleOpen(): void {
-    this.isActive = true
+  handleToggle(): void {
+    this.isActive = !this.isActive
   }
 
   handleClose(): void {
-    this.isActive = false
-    this.$emit('close')
+    if (this.isActive) {
+      this.isActive = false
+      this.$emit('close')
+    }
   }
 
   handleSelected(video: Video): void {
