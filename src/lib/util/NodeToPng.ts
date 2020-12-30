@@ -96,6 +96,49 @@ export default class NodeToPng {
     })
   }
 
+  /**
+   * 複数の画像を結合する.
+   *
+   * @param {string[]} urls 画像 url 配列
+   * @return {string} png data url
+   */
+  public static merge(urls: string[]): string {
+    let canvasWidth = 0
+    let canvasHeight = 0
+
+    // 画像の生成をしながら、キャンバスサイズ計算
+    const images = urls.map(url => {
+      const img = new Image()
+      img.src = url
+      const [iw, ih] = [img.width, img.height]
+
+      if (canvasWidth < iw) canvasWidth = iw
+      canvasHeight += ih
+      return img
+    })
+
+    // キャンバスの生成
+    const canvas = document.createElement('canvas')
+    canvas.width = canvasWidth
+    canvas.height = canvasHeight
+    const ctx = canvas.getContext('2d')
+    if (!ctx) {
+      throw new Error('Canvas generation failurea')
+    }
+
+    // 一枚ずつ vertical に貼っていく
+    let heightCnt = 0
+    for (const img of images) {
+      const ih = img.height
+      ctx.drawImage(img, 0, heightCnt)
+      heightCnt += ih
+    }
+
+    // 画像の生成
+    const dataUrl = canvas.toDataURL('image/png')
+    return dataUrl
+  }
+
   ///
 
   protected static calcNodeDisplaySize(node: HTMLElement): { width: number, height: number } {
