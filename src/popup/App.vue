@@ -34,33 +34,52 @@
         </p>
       </template>
     </div>
+
+    <div class="field">
+      <ChatList :chats="chats" />
+    </div>
   </section>
 </template>
 
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import VideoDropdown from './components/VideoDropdown.vue'
+import ChatList from './components/ChatList.vue'
 
 import BrowserTabs from '../lib/chrome/BrowserTabs'
 import ChatStorage from '../lib/chrome/ChatStorage'
 import VideoStorage from '../lib/chrome/VideoStorage'
 import PageHelper from '../lib/util/PageHelper'
+import Chat from '../models/Chat'
 import Video from '../models/Video'
 
 @Component({
-  components: { VideoDropdown }
+  components: { VideoDropdown, ChatList }
 })
 export default class App extends Vue {
   videos: Video[] = []
+
   selected: Video | null = null
+  chats: Chat[] = []
 
   async mounted(): Promise<void> {
     const videos = await VideoStorage.getAll()
     this.videos = videos
   }
 
-  handleChange(video?: Video): void {
+  async handleChange(video?: Video): Promise<void> {
     this.selected = video || null
+
+    // chat を読み込む
+    if (this.selected) {
+      const videoId = this.selected.id
+      if (videoId) {
+        const chats = await ChatStorage.get(videoId)
+        this.chats = chats
+      }
+    } else {
+      this.chats = []
+    }
   }
 
   handleClose(): void {
