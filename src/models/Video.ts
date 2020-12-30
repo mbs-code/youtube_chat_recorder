@@ -1,3 +1,4 @@
+import { Exclude } from 'class-transformer'
 import 'reflect-metadata'
 import textEllipsis from 'text-ellipsis'
 import VideoObjectInterface from '../interface/VideoObjectInterface'
@@ -31,6 +32,19 @@ export default class Video {
 
   public static async createByElement(json: VideoObjectInterface): Promise<Video> {
     return await VideoParser.parse(json)
+  }
+
+  @Exclude()
+  get type(): 'video' | 'live' | 'archive' {
+    // TODO: 現状 upcomig が分からない
+    if (this.startDate) {
+      if (this.endDate) {
+        return 'archive'
+      } else {
+        return 'live'
+      }
+    }
+    return 'video'
   }
 
   public dump(): string {

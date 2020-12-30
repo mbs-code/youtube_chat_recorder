@@ -30,6 +30,7 @@
     "typescript": "^4.1.3",
     "vue": "^2.6.10",
     "vue-class-component": "^7.2.6",
+    "vue-clickaway": "^2.2.2",
     "vue-property-decorator": "^9.1.2",
     "webextension-polyfill-ts": "^0.22.0"
   },
@@ -41,6 +42,7 @@
     "@types/array-sort": "^1.0.0",
     "@types/chrome": "0.0.127",
     "@types/node": "^14.14.16",
+    "@types/vue-clickaway": "^2.2.0",
     "@typescript-eslint/eslint-plugin": "^4.11.0",
     "@typescript-eslint/parser": "^4.11.0",
     "@vue/cli-plugin-babel": "^4.5.9",
