@@ -32,8 +32,8 @@ export default class ConfigStorage {
     }
 
     // 更新日時の付与
-    config.createdAt = config.createdAt || new Date()
     config.updatedAt = new Date()
+    config.createdAt = config.createdAt || config.updatedAt
 
     // 値の置き換え
     console.log(`💾[save] config: ${JSON.stringify(config)}`)

@@ -47,8 +47,8 @@ export default class VideoStorage {
     }
 
     // 更新日時の付与
-    video.createdAt = video.createdAt || new Date()
     video.updatedAt = new Date()
+    video.createdAt = video.createdAt ||　video.updatedAt
 
     // 閲覧時間の降順で追加 (とりあえず先頭)
     dbs.unshift(video)

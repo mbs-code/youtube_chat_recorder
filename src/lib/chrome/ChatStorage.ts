@@ -38,8 +38,8 @@ export default class ChatStorage {
       }
 
       // 更新日時の付与
-      chat.createdAt = chat.createdAt || new Date()
       chat.updatedAt = new Date()
+      chat.createdAt = chat.createdAt || chat.updatedAt
 
       // 末尾に追加しとく (軽さ重視でソートは見るときに)
       dbs.push(chat)
