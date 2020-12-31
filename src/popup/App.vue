@@ -257,6 +257,10 @@ export default class App extends Vue {
   async handlerSaveToMerge(): Promise<void> {
     const video = this.selectedVideo
     const selected = this.selectedChats
+
+    // 設定を読み込む
+    const config = await ConfigStorage.get()
+
     if (video && selected.length > 0) {
       try {
         // url を取得していく
@@ -266,21 +270,21 @@ export default class App extends Vue {
             // url があるならそれ
             urls.push(chat.pngUrl)
           } else {
+            if (config.complementImage) {
             // 無いなら生成する
-            const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"]`)
-            if (node) {
-              const url = await NodeToPng.generage(node as HTMLElement)
-              urls.push(url)
+              const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"]`)
+              if (node) {
+                const url = await NodeToPng.generage(node as HTMLElement)
+                urls.push(url)
+              }
             }
           }
         }
 
         if (urls.length === 0) throw new Error('No image urls')
 
-        // 設定からファイル名を読み込む
-        const config = await ConfigStorage.get()
+        // ファイル名を生成して保存する
         const filename = config.formatFilename(video, selected)
-
         const mergeUrl = await NodeToPng.merge(urls)
         Download.image(mergeUrl, filename)
       } catch(err) {

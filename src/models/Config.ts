@@ -11,6 +11,9 @@ export default class Config {
   // 結合ファイル名
   mergeImageFileName: string
 
+  // 画像を保管する
+  complementImage: boolean
+
   // 最大保存video数
   maxVideoLength: number
 
@@ -24,6 +27,7 @@ export default class Config {
     // 初期値
     this.chatFilters = ChatFilters.generateConfigChatFilters()
     this.mergeImageFileName = '%now%'
+    this.complementImage = false
     this.maxVideoLength = 10
   }
 

@@ -94,6 +94,13 @@
         </div>
 
         <div class="field">
+          <label class="checkbox">
+            <input v-model="complementImage" type="checkbox" />
+            &nbsp;取得できていないチャット画像を独自に生成する
+          </label>
+        </div>
+
+        <div class="field">
           <div class="notification">
             <code>%title%</code>: 動画のタイトル, <code>%id%</code>: 動画のID, <code>%count%</code>: 結合するチャットの数, 
             <code>%now%</code>: 現在時刻, <code>%upload%</code>: 動画の投稿時刻
@@ -147,6 +154,7 @@ export default class App extends Vue {
   // 初期値は適当 (絶対に上書きするので)
   chatFilters: ChatConfigFilterInterface[] = []
   mergeImageFileName: string = ''
+  complementImage: boolean = false
   maxVideoLength: number = 0
 
   async mounted(): Promise<void> {
@@ -165,6 +173,7 @@ export default class App extends Vue {
 
     this.chatFilters = config.chatFilters
     this.mergeImageFileName = config.mergeImageFileName
+    this.complementImage = config.complementImage
     this.maxVideoLength = config.maxVideoLength
   }
 
@@ -173,7 +182,8 @@ export default class App extends Vue {
     const config = new Config()
     config.chatFilters = this.chatFilters
     config.mergeImageFileName = this.mergeImageFileName || config.mergeImageFileName
-    config.maxVideoLength = this.maxVideoLength || config.maxVideoLength
+    config.complementImage = this.complementImage
+    config.maxVideoLength = this.maxVideoLength
 
     // リミット確認
     if (config.maxVideoLength < 5) {
