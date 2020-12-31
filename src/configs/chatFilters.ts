@@ -3,45 +3,75 @@ import Chat from '../models/Chat'
 export interface ChatFilterInterface {
   key: string
   title: string
-  func: (chats: Chat[]) => Chat[]
+  filter: (chats: Chat[]) => Chat[]
 }
 
-const chatFilters: ChatFilterInterface[] = [
+export interface ChatConfigFilterInterface {
+  key: string
+  title: string
+  doSave: boolean
+  doImage: boolean
+}
+
+const BASE_FILTERS: ChatFilterInterface[] = [
   {
     key: 'all',
     title: 'すべて表示',
-    func: (chats: Chat[]) => chats,
+    filter: (chats: Chat[]) => chats,
   },
   {
     key: 'owner',
     title: '🟨 チャンネルの所有者',
-    func: (chats: Chat[]) => chats.filter(c => c.isOwner),
+    filter: (chats: Chat[]) => chats.filter(c => c.isOwner),
   },
   {
     key: 'verified',
     title: '✅ 確認済み(登録10万)',
-    func: (chats: Chat[]) => chats.filter(c => c.isVerified),
+    filter: (chats: Chat[]) => chats.filter(c => c.isVerified),
   },
   {
     key: 'moderator',
     title: '🔧 モデレーター',
-    func: (chats: Chat[]) => chats.filter(c => c.isModerator),
+    filter: (chats: Chat[]) => chats.filter(c => c.isModerator),
   },
   {
     key: 'superchat',
     title: '💰 スーパーチャット',
-    func: (chats: Chat[]) => chats.filter(c => c.isSuperChat || c.isSuperStickers),
+    filter: (chats: Chat[]) => chats.filter(c => c.isSuperChat || c.isSuperStickers),
   },
   {
     key: 'member',
     title: '🟩 メンバー',
-    func: (chats: Chat[]) => chats.filter(c => c.isMember),
+    filter: (chats: Chat[]) => chats.filter(c => c.isMember),
   },
   {
     key: 'joinmember',
     title: '➕ メンバー加入',
-    func: (chats: Chat[]) => chats.filter(c => c.isJoinMember),
+    filter: (chats: Chat[]) => chats.filter(c => c.isJoinMember),
   },
 ]
 
-export default chatFilters
+export default class ChatFilters {
+  public static generateChatFilters(): ChatFilterInterface[] {
+    return BASE_FILTERS.map(e => {
+      return {
+        key: e.key,
+        title: e.title,
+        filter: e.filter
+      }
+    })
+  }
+
+  public static generateConfigChatFilters(): ChatConfigFilterInterface[] {
+    return BASE_FILTERS
+      .map(e => {
+        return {
+          key: e.key,
+          title: e.title,
+          doSave: false,
+          doImage: false,
+        }
+      })
+      .filter(e => e.key !== 'all')
+  }
+}

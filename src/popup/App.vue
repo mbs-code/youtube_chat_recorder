@@ -11,7 +11,7 @@
             <option
               v-for="filter in chatFilters"
               :key="filter.key"
-              :value="filter.func"
+              :value="filter.key"
             >
               {{ filter.title }}
             </option>
@@ -150,8 +150,8 @@ import Chat from '../models/Chat'
 import Video from '../models/Video'
 import NodeToPng from '../lib/util/NodeToPng'
 
-import chatFilters, { ChatFilterInterface } from '../configs/chatFilters'
 import ConfigStorage from '../lib/chrome/Configstorage'
+import ChatFilters, { ChatFilterInterface } from '../configs/ChatFilters'
 
 @Component({
   components: { VideoDropdown, ChatList }
@@ -163,8 +163,8 @@ export default class App extends Vue {
   chats: Chat[] = []
   selectedChats: Chat[] = []
 
-  chatFilters = chatFilters
-  selectedFilter: ((chats: Chat[]) => Chat[]) = this.chatFilters[0].func
+  chatFilters: ChatFilterInterface[] = []
+  selectedFilter: string| null = null
 
   $refs!: {
     chatList: ChatList,
@@ -172,13 +172,17 @@ export default class App extends Vue {
 
   get filteredChats() {
     // 表示用 cahts (時間順にソート)
-    const filtered = this.selectedFilter ? this.selectedFilter(this.chats) : this.chats
+    const chatFilter = this.chatFilters.find(c => c.key === this.selectedFilter)
+    const filtered = chatFilter ? chatFilter.filter(this.chats) : this.chats
     return arraySort(filtered, 'seconds')
   }
 
   async mounted(): Promise<void> {
     const videos = await VideoStorage.getAll()
     this.videos = videos
+
+    this.chatFilters = ChatFilters.generateChatFilters()
+    this.selectedFilter = this.chatFilters[0].key
   }
 
   async handleVideoChange(video?: Video): Promise<void> {
