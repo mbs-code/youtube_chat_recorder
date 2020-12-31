@@ -151,6 +151,7 @@ import Video from '../models/Video'
 import NodeToPng from '../lib/util/NodeToPng'
 
 import chatFilters, { ChatFilterInterface } from '../configs/chatFilters'
+import ConfigStorage from '../lib/chrome/Configstorage'
 
 @Component({
   components: { VideoDropdown, ChatList }
@@ -245,15 +246,20 @@ export default class App extends Vue {
     this.$refs.chatList.unselectedAll()
   }
 
-  handlerSaveToMerge(): void {
+  async handlerSaveToMerge(): Promise<void> {
+    const video = this.selectedVideo
     const selected = this.selectedChats
-    if (selected.length > 0) {
+    if (video && selected.length > 0) {
       try {
         const urls = selected.map(e => e.pngUrl || '')
         if (urls.length === 0) throw new Error('No image urls')
 
+        // 設定からファイル名を読み込む
+        const config = await ConfigStorage.get()
+        const filename = config.formatFilename(video, selected)
+
         const mergeUrl = NodeToPng.merge(urls)
-        Download.image(mergeUrl)
+        Download.image(mergeUrl, filename)
       } catch(err) {
         window.alert(err)
       }

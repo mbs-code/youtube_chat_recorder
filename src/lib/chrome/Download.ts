@@ -8,7 +8,7 @@ export default class Download {
    * @param {string} [filename] 保存する名前
    */
   public static image(dataUrl: string, filename?: string): void {
-    const name = (filename || dateFormat(new Date(), 'yyyyMMddTHHmmss')) + '.png'
+    const name = filename || 'download.png'
 
     const link = document.createElement('a')
     link.download = name

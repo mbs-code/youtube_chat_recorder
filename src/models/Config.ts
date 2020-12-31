@@ -1,13 +1,21 @@
+import FilenameFormatter from '../lib/util/FilenameFormatter'
+import Chat from './Chat'
+import Video from './Video'
 
 export default class Config {
   // 結合ファイル名
-  mergeImageFileName?: string
+  mergeImageFileName: string
 
   // 最大保存video数
-  maxVideoLength?: number
+  maxVideoLength: number
 
   constructor() {
-    this.mergeImageFileName = 'image.png'
+    this.mergeImageFileName = '%now%.png'
     this.maxVideoLength = 10
+  }
+
+  // ファイル名フォーマット
+  public formatFilename(video: Video, chats: Chat[]) {
+    return FilenameFormatter.format(this.mergeImageFileName, video, chats)
   }
 }

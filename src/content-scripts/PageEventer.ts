@@ -28,12 +28,16 @@ export default class PageEventer {
     this.handler.removeVideo()
 
     // config を読み込む
-    const config = await ConfigStorage.get()
-    this.config = config
-    VideoStorage.MAX_LENGTH = this.config?.maxVideoLength || 10
+    await this.loadConfig()
 
     // ページに event listener を付与する
     await this.attachEventListener()
+  }
+
+  public async loadConfig(): Promise<void> {
+    const config = await ConfigStorage.get()
+    this.config = config
+    VideoStorage.MAX_LENGTH = this.config?.maxVideoLength || 10
   }
 
   /// ////////////////////////////////////////////////////////////
