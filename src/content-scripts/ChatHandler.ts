@@ -37,7 +37,7 @@ export default class ChatHandler {
 
   public async setVideo(video: Video): Promise<void> {
     console.log(`✋[Handler] set video (${video.dump()})`)
-    console.log('> ' + JSON.stringify(video))
+    console.log('> video: ' + JSON.stringify(video))
     this.video = video
     this.saveChatQueue.setVideo(video)
 
@@ -102,10 +102,14 @@ export default class ChatHandler {
     // チャット model に変換 (videoが無くても取得はする？)
     const chat = await Chat.createByElement(this.video, node)
 
-    // テストで「あ」が入ってたら追加
-    if (chat.message?.includes('は')) {
-      console.log('> ' + chat.dump())
+    // チャットを処理する
+    const task = config.checkChatTask(chat)
+    if (task === 'image') {
+      console.log('> 🎨 => ' + chat.dump())
       this.drawDomQueue.push({ node, chat })
+    } else if (task === 'save') {
+      console.log('> 💾 => ' + chat.dump())
+      this.saveChatQueue.push(chat)
     }
 
     return true

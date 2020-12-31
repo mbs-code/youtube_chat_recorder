@@ -38,6 +38,9 @@ export default class PageEventer {
     const config = await ConfigStorage.get()
     this.config = config
     VideoStorage.MAX_LENGTH = this.config?.maxVideoLength || 10
+
+    console.log(`⚙️[Load] load config`)
+    console.log('> config: ' + JSON.stringify(config))
   }
 
   /// ////////////////////////////////////////////////////////////

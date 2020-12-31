@@ -173,7 +173,11 @@ export default class App extends Vue {
   get filteredChats() {
     // 表示用 cahts (時間順にソート)
     const chatFilter = this.chatFilters.find(c => c.key === this.selectedFilter)
-    const filtered = chatFilter ? chatFilter.filter(this.chats) : this.chats
+
+    // フィルタリング
+    const filtered = chatFilter
+      ? this.chats.filter(c => chatFilter.func(c))
+      : this.chats
     return arraySort(filtered, 'seconds')
   }
 

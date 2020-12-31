@@ -31,4 +31,9 @@ export default class Config {
   public formatFilename(video: Video, chats: Chat[]) {
     return FilenameFormatter.format(this.mergeImageFileName, video, chats)
   }
+
+  // 処理対象のチャットかどうか
+  public checkChatTask(chat: Chat): 'save' | 'image' | false {
+    return ChatFilters.checkChatTask(this.chatFilters, chat)
+  }
 }
