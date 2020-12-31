@@ -105,10 +105,10 @@ export default class ChatHandler {
     // チャットを処理する
     const task = config.checkChatTask(chat)
     if (task === 'image') {
-      console.log('> 🎨 => ' + chat.dump())
+      console.log('> image: ' + chat.dump())
       this.drawDomQueue.push({ node, chat })
     } else if (task === 'save') {
-      console.log('> 💾 => ' + chat.dump())
+      console.log('> draw : ' + chat.dump())
       this.saveChatQueue.push(chat)
     }
 
