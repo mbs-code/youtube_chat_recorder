@@ -1,9 +1,13 @@
+import ChatFilters, { ChatConfigFilterInterface } from '../configs/ChatFilters'
 import TransformDate from '../lib/decorator/TransformDate'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
 import Chat from './Chat'
 import Video from './Video'
 
 export default class Config {
+  // chat のフィルタリング
+  chatFilters: ChatConfigFilterInterface[]
+
   // 結合ファイル名
   mergeImageFileName: string
 
@@ -17,6 +21,8 @@ export default class Config {
   updatedAt?: Date // 更新日時
 
   constructor() {
+    // 初期値
+    this.chatFilters = ChatFilters.generateConfigChatFilters()
     this.mergeImageFileName = '%now%'
     this.maxVideoLength = 10
   }

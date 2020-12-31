@@ -2,6 +2,34 @@
   <section v-if="config" class="section">
 
     <div class="field">
+      <label class="label">コメントの処理設定</label>
+      <div class="control">
+        <div class="box">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="has-text-centered">項目</th>
+                <th class="has-text-centered">保存する</th>
+                <th class="has-text-centered">画像化する</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="chatFilter in chatFilters" :key="chatFilter.key">
+                <th>{{ chatFilter.title }}</th>
+                <td class="has-text-centered">
+                  <input v-model="chatFilter.doSave" type="checkbox" @change="handleDoSave(chatFilter)" />
+                </td>
+                <td class="has-text-centered">
+                  <input v-model="chatFilter.doImage" type="checkbox" @change="handleDoImage(chatFilter)" />
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="field">
       <label class="label">結合後の画像ファイル名</label>
       <div class="control">
         <div class="field has-addons">
@@ -74,12 +102,14 @@ import { Component, Vue } from 'vue-property-decorator'
 import ConfigStorage from '../lib/chrome/Configstorage'
 import Toast from '../plugins/Toast'
 import Config from '../models/Config'
+import { ChatConfigFilterInterface } from '../configs/ChatFilters'
 
 @Component
 export default class App extends Vue {
   config?: Config | null = null
 
   // 初期値は適当 (絶対に上書きするので)
+  chatFilters: ChatConfigFilterInterface[] = []
   mergeImageFileName: string = ''
   maxVideoLength: number = 0
 
@@ -91,13 +121,16 @@ export default class App extends Vue {
   async loadConfig(): Promise<void> {
     const config = await ConfigStorage.get()
     this.config = config
+
+    this.chatFilters = config.chatFilters
     this.mergeImageFileName = config.mergeImageFileName
     this.maxVideoLength = config.maxVideoLength
   }
 
-  async handleSave() {
+  async handleSave(): Promise<void> {
     // 新しい config に値を追加していく (空白なら前の値)
     const config = new Config()
+    config.chatFilters = this.chatFilters
     config.mergeImageFileName = this.mergeImageFileName || config.mergeImageFileName
     config.maxVideoLength = this.maxVideoLength || config.maxVideoLength
 
@@ -115,7 +148,7 @@ export default class App extends Vue {
     await this.loadConfig()
   }
 
-  async handleReset() {
+  async handleReset(): Promise<void> {
     const result = window.confirm('設定を初期化します。')
     if (result) {
       // config を消して再読み込み
@@ -125,5 +158,30 @@ export default class App extends Vue {
       await this.loadConfig()
     }
   }
+
+  ///
+
+  handleDoSave(chatFilter: ChatConfigFilterInterface): void {
+    // save が false なら image も false にする
+    if (!chatFilter.doSave) chatFilter.doImage = false
+  }
+
+  handleDoImage(chatFilter: ChatConfigFilterInterface): void {
+    // image が true なら save も true にする
+    if (chatFilter.doImage) chatFilter.doSave = true
+  }
 }
 </script>
+
+<style lang="scss" scoped>
+// checkbox を x1.5 に
+input[type="checkbox"] {
+  margin: 3px;
+  transform: scale(1.5);
+}
+
+.box {
+  box-shadow: none;
+  border: solid 1px gainsboro;
+}
+</style>
