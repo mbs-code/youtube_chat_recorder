@@ -1,7 +1,7 @@
 {
   "name": "youtube_chat_recorder",
   "description": "A Vue.js web extension",
-  "version": null,
+  "version": "0.1.0",
   "manifest_version": 2,
   "icons": {
     "48": "icons/icon_48.png",

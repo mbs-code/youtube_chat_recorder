@@ -1,6 +1,6 @@
 {
   "name": "youtube_chat_recorder",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A Vue.js web extension",
   "author": "mabasasi <aoe317293@yahoo.co.jp>",
   "engines": {

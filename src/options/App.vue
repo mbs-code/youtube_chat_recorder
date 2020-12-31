@@ -1,83 +1,14 @@
 <template>
-  <section v-if="config" class="section">
+  <section class="section">
+    <h1 class="title">
+      Youtube Chat Recorder
+      <span class="subtitle is-4">{{ version }}</span>
+    </h1>
+    <h2 class="subtitle">つべくんのチャットをあれこれするやつ</h2>
 
     <div class="field">
-      <label class="label">コメントの処理設定</label>
-      <div class="control">
-        <div class="box">
-          <table class="table">
-            <thead>
-              <tr>
-                <th class="has-text-centered">項目</th>
-                <th class="has-text-centered">保存する</th>
-                <th class="has-text-centered">画像化する</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="chatFilter in chatFilters" :key="chatFilter.key">
-                <th>{{ chatFilter.title }}</th>
-                <td class="has-text-centered">
-                  <input v-model="chatFilter.doSave" type="checkbox" @change="handleDoSave(chatFilter)" />
-                </td>
-                <td class="has-text-centered">
-                  <input v-model="chatFilter.doImage" type="checkbox" @change="handleDoImage(chatFilter)" />
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="label">結合後の画像ファイル名</label>
-      <div class="control">
-        <div class="field has-addons">
-          <p class="control is-expanded">
-            <input
-              v-model="mergeImageFileName"
-              class="input"
-              type="text"
-              name="mergeImageFileName"
-              :placeholder="config.mergeImageFileName"
-            >
-          </p>
-          <p class="control">
-            <a class="button is-static">
-              .png
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
-    <div class="field">
-      <div class="notification">
-        <code>%title%</code>: 動画のタイトル, <code>%id%</code>: 動画のID, <code>%count%</code>: 結合するチャットの数, 
-        <code>%now%</code>: 現在時刻, <code>%upload%</code>: 動画の投稿時刻
-        <br>
-        ※ 時刻系のフォーマットは<code>%now(yyyy-MM-dd_HH_mm_ss)%</code>のように括弧を使用して指定可能。
-        <br>
-        ※ 詳しくはリンク先を参照:
-        <a href="https://date-fns.org/v2.16.0/docs/format" target="_blank">
-          <span class="icon is-small"><i class="mdi mdi-link-variant" /></span>
-          date-fns/format
-        </a>
-        <br>
-        ※ 禁則文字は勝手にエスケープします。
-      </div>
-    </div>
-
-    <div class="field">
-      <label class="label">動画の最大保存数(最低 5)</label>
-      <div class="control">
-        <input
-          v-model="maxVideoLength"
-          class="input"
-          type="number"
-          name="maxVideoLength"
-          min="5"
-          :placeholder="config.maxVideoLength"
-        >
+      <div class="notification is-link is-light">
+        開いているYouTubeのページに適用させる場合は、その<strong>ページを更新</strong>してください。
       </div>
     </div>
 
@@ -88,10 +19,113 @@
         </a>
       </p>
       <p class="control">
-        <a class="button is-light" @click="handleReset">
+        <a class="button" @click="handleReset">
           リセット
         </a>
       </p>
+    </div>
+
+    <hr> <!-- //////////////////////////////////////////////////////////// -->
+
+    <div v-if="config" class="columns is-desktop">
+      <!-- start left panel -->
+      <div class="column">
+        <div class="field">
+          <label class="label">チャットの処理設定</label>
+          <div class="control">
+            <div class="box">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th class="has-text-centered">項目</th>
+                    <th class="has-text-centered">保存する</th>
+                    <th class="has-text-centered">画像化する</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="chatFilter in chatFilters" :key="chatFilter.key">
+                    <th>{{ chatFilter.title }}</th>
+                    <td class="has-text-centered">
+                      <input v-model="chatFilter.doSave" type="checkbox" @change="handleDoSave(chatFilter)" />
+                    </td>
+                    <td class="has-text-centered">
+                      <input v-model="chatFilter.doImage" type="checkbox" @change="handleDoImage(chatFilter)" />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="notification">
+            ※ 「画像化する」は負荷が高いので様子を見て使用してください。
+            <br>
+            ※ 後から画像化するにはもう一度動画チャットを読み込む必要があります。
+          </div>
+        </div>
+
+      </div>
+      <!-- end left panel -->
+
+      <!-- start right panel -->
+      <div class="column">
+        <div class="field">
+          <label class="label">結合後の画像ファイル名</label>
+          <div class="control">
+            <div class="field has-addons">
+              <p class="control is-expanded">
+                <input
+                  v-model="mergeImageFileName"
+                  class="input"
+                  type="text"
+                  name="mergeImageFileName"
+                  :placeholder="config.mergeImageFileName"
+                >
+              </p>
+              <p class="control">
+                <a class="button is-static">
+                  .png
+                </a>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="notification">
+            <code>%title%</code>: 動画のタイトル, <code>%id%</code>: 動画のID, <code>%count%</code>: 結合するチャットの数, 
+            <code>%now%</code>: 現在時刻, <code>%upload%</code>: 動画の投稿時刻
+            <br>
+            ※ 時刻系のフォーマットは<code>%now(yyyy-MM-dd_HH_mm_ss)%</code>のように括弧を使用して指定可能。
+            <br>
+            ※ 詳しくはリンク先を参照:
+            <a href="https://date-fns.org/v2.16.0/docs/format" target="_blank">
+              <span class="icon is-small"><i class="mdi mdi-link-variant" /></span>
+              date-fns/format
+            </a>
+            <br>
+            ※ 禁則文字は勝手にエスケープします。
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">動画の最大保存数(最低 5)</label>
+          <div class="control">
+            <input
+              v-model="maxVideoLength"
+              class="input"
+              type="number"
+              name="maxVideoLength"
+              min="5"
+              :placeholder="config.maxVideoLength"
+            >
+          </div>
+        </div>
+
+      </div>
+      <!-- end right panel -->
     </div>
 
   </section>
@@ -103,9 +137,11 @@ import ConfigStorage from '../lib/chrome/Configstorage'
 import Toast from '../plugins/Toast'
 import Config from '../models/Config'
 import { ChatConfigFilterInterface } from '../configs/ChatFilters'
+import Runtime from '../lib/chrome/Runtime'
 
 @Component
 export default class App extends Vue {
+  version?: string | null = null
   config?: Config | null = null
 
   // 初期値は適当 (絶対に上書きするので)
@@ -114,6 +150,11 @@ export default class App extends Vue {
   maxVideoLength: number = 0
 
   async mounted(): Promise<void> {
+    // manifest を読み込む
+    // TODO: 動いてないかも
+    const manifest = Runtime.getManifest()
+    this.version = manifest.version
+
     // 設定の読み込み
     await this.loadConfig()
   }
