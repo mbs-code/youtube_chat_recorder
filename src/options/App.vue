@@ -60,7 +60,7 @@
 
         <div class="field">
           <div class="notification">
-            ※ 「画像化する」は負荷が高いので様子を見て使用してください。
+            ※ 「画像化する」は負荷が高い＆容量を食うので加減して使用してください。
             <br>
             ※ 後から画像化するにはもう一度動画チャットを読み込む必要があります。
           </div>
@@ -193,7 +193,7 @@ export default class App extends Vue {
 
     // 保存する
     await ConfigStorage.save(config)
-    Toast.success('保存しました。')
+    Toast.success('設定を保存しました。')
 
     // 再読み込み
     await this.loadConfig()
@@ -204,7 +204,7 @@ export default class App extends Vue {
     if (result) {
       // config を消して再読み込み
       await ConfigStorage.clear()
-      Toast.success('リセットしました。')
+      Toast.success('設定をリセットしました。')
 
       await this.loadConfig()
     }
