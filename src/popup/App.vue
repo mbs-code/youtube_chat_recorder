@@ -259,14 +259,29 @@ export default class App extends Vue {
     const selected = this.selectedChats
     if (video && selected.length > 0) {
       try {
-        const urls = selected.map(e => e.pngUrl || '')
+        // url を取得していく
+        const urls = []
+        for (const chat of selected) {
+          if (chat.pngUrl) {
+            // url があるならそれ
+            urls.push(chat.pngUrl)
+          } else {
+            // 無いなら生成する
+            const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"]`)
+            if (node) {
+              const url = await NodeToPng.generage(node as HTMLElement)
+              urls.push(url)
+            }
+          }
+        }
+
         if (urls.length === 0) throw new Error('No image urls')
 
         // 設定からファイル名を読み込む
         const config = await ConfigStorage.get()
         const filename = config.formatFilename(video, selected)
 
-        const mergeUrl = NodeToPng.merge(urls)
+        const mergeUrl = await NodeToPng.merge(urls)
         Download.image(mergeUrl, filename)
       } catch(err) {
         window.alert(err)

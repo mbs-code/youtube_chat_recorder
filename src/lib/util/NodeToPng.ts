@@ -87,7 +87,9 @@ export default class NodeToPng {
           nCanvas = canvas
         }
 
+        // url 生成
         const dataUrl = nCanvas.toDataURL('image/png')
+
         resolve(dataUrl)
       })
       .catch((error: Error) => {
@@ -102,20 +104,20 @@ export default class NodeToPng {
    * @param {string[]} urls 画像 url 配列
    * @return {string} png data url
    */
-  public static merge(urls: string[]): string {
+  public static async merge(urls: string[]): Promise<string> {
     let canvasWidth = 0
     let canvasHeight = 0
 
     // 画像の生成をしながら、キャンバスサイズ計算
-    const images = urls.map(url => {
-      const img = new Image()
-      img.src = url
-      const [iw, ih] = [img.width, img.height]
+    const images = []
+    for (const url of urls) {
+      const image = await this.loadImage(url)
+      const [iw, ih] = [image.width, image.height]
 
       if (canvasWidth < iw) canvasWidth = iw
       canvasHeight += ih
-      return img
-    })
+      images.push(image)
+    }
 
     // キャンバスの生成
     const canvas = document.createElement('canvas')
@@ -125,6 +127,10 @@ export default class NodeToPng {
     if (!ctx) {
       throw new Error('Canvas generation failurea')
     }
+
+    // 背景を白で塗っておく
+    ctx.fillStyle = 'white'
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
 
     // 一枚ずつ vertical に貼っていく
     let heightCnt = 0
@@ -140,6 +146,15 @@ export default class NodeToPng {
   }
 
   ///
+
+  protected static async loadImage(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.onload = () => resolve(img)
+      img.onerror = (e) => reject(e)
+      img.src = src
+    })
+  }
 
   protected static calcNodeDisplaySize(node: HTMLElement): { width: number, height: number } {
     const style = window.getComputedStyle(node)

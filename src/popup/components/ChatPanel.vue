@@ -5,7 +5,7 @@
         <!-- display only -->
         <input type="checkbox" :checked="isSelected" />
       </div>
-      <div class="column">
+      <div class="column app-chat" :data-chatid="chat.id">
         <div>
           {{ chat.timestamp | datetimeString }}
           <span class="tag is-info is-light">{{ chat.seconds | hmsString }}</span>

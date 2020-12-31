@@ -1,5 +1,5 @@
 <template>
-  <div v-if="video" @click="handleClick">
+  <div v-if="video" class="app-chat" :data-videoid="video.id" @click="handleClick">
     <div class="columns is-mobile">
       <div class="column is-narrow video-image">
         <img :src="video.thumbnailUrl" alt="thumbnail">
