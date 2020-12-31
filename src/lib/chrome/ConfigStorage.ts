@@ -24,6 +24,17 @@ export default class ConfigStorage {
   }
 
   public static async save(config: Config): Promise<void> {
+    const db = await this.get()
+
+    // db があるなら情報を引き継ぐ
+    if (db) {
+      config.createdAt = db.createdAt
+    }
+
+    // 更新日時の付与
+    config.createdAt = config.createdAt || new Date()
+    config.updatedAt = new Date()
+
     // 値の置き換え
     console.log(`💾[save] config: ${JSON.stringify(config)}`)
     await this.replace(config)
