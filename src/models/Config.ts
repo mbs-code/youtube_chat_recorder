@@ -10,7 +10,7 @@ export default class Config {
   maxVideoLength: number
 
   constructor() {
-    this.mergeImageFileName = '%now%.png'
+    this.mergeImageFileName = '%now%'
     this.maxVideoLength = 10
   }
 
