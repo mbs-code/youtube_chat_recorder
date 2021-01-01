@@ -11,6 +11,11 @@ export interface ChatConfigFilterInterface {
   title: string
   doSave: boolean
   doImage: boolean
+
+  textMode?: 'message' | 'author' | undefined
+  match?: string
+  isRegex?: boolean
+  isExact?: boolean
 }
 
 const BASE_FILTERS: ChatFilterInterface[] = [

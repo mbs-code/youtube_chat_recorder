@@ -40,27 +40,118 @@
                     <th class="has-text-centered">項目</th>
                     <th class="has-text-centered">保存する</th>
                     <th class="has-text-centered">画像化する</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="chatFilter in chatFilters" :key="chatFilter.key">
-                    <th>{{ chatFilter.title }}</th>
+                    <th>
+                      <span v-if="chatFilter.textMode === 'message'">💬</span>
+                      <span v-if="chatFilter.textMode === 'author'">🙋</span>
+                      <span v-if="chatFilter.isExact" class="tag is-link">
+                        <span class="icon is-small">
+                          <i class="mdi mdi-equal" />
+                        </span>
+                      </span>
+                      <span v-if="chatFilter.isRegex" class="tag is-warning">
+                        <span class="icon is-small">
+                          <i class="mdi mdi-regex" />
+                        </span>
+                      </span>
+                      {{ chatFilter.title }}
+                    </th>
                     <td class="has-text-centered">
                       <input v-model="chatFilter.doSave" type="checkbox" @change="handleDoSave(chatFilter)" />
                     </td>
                     <td class="has-text-centered">
                       <input v-model="chatFilter.doImage" type="checkbox" @change="handleDoImage(chatFilter)" />
                     </td>
+                    <td style="padding: 6px;">
+                      <div class="field is-grouped">
+                        <p class="control">
+                          <button class="button is-small is-success is-light" @click="handleFilterEdit(chatFilter)">
+                            <span class="icon is-small">
+                              <i class="mdi mdi-pencil"></i>
+                            </span>
+                          </button>
+                        </p>
+                        <p class="control">
+                          <button class="button is-small is-danger is-light" @click="handleFilterDelete(chatFilter)">
+                            <span class="icon is-small">
+                              <i class="mdi mdi-delete"></i>
+                            </span>
+                          </button>
+                        </p>
+                      </div>
+                    </td>
                   </tr>
                 </tbody>
               </table>
+
+              <div class="field">
+                <label class="label">テキストのマッチングを追加</label>
+                <div class="control">
+                  <div class="field is-grouped">
+                    <div class="control">
+                      <div class="select">
+                        <select v-model="addFilterMode">
+                          <option value="message">💬</option>
+                          <option value="author">🙋</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="control is-expanded">
+                      <input
+                        ref="addFilterInput"
+                        v-model="addFilterText"
+                        class="input"
+                        type="text"
+                        placeholder="マッチング文字列"
+                      />
+                    </div>
+                    <p class="control">
+                      <button class="button is-link" @click="handleAddTextFilter">
+                        追加
+                      </button>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="field is-grouped">
+                <p class="control">
+                  <button class="button" @click="handleAddReset">
+                    リセット
+                  </button>
+                </p>
+                <div class="control">
+                  <div class="field is-horizontal">
+                    <div class="field-label is-normal">
+                      <label class="checkbox">
+                        <input v-model="addFilterExact" type="checkbox" @change="handleAddExact" />
+                        &nbsp;完全一致
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="control">
+                  <div class="field is-horizontal">
+                    <div class="field-label is-normal">
+                      <label class="checkbox">
+                        <input v-model="addFilterRegex" type="checkbox" @change="handleAddRegex" />
+                        &nbsp;正規表現
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div class="field">
           <div class="notification">
-            ※ 「画像化する」は負荷が高い＆容量を食うので加減して使用してください。
+            ※ 「画像化する」は負荷が高い＆容量を食うので加減して使用してください。( 1枚10KBくらい )
             <br>
             ※ 後から画像化するにはもう一度動画チャットを読み込む必要があります。
           </div>
@@ -151,11 +242,21 @@ export default class App extends Vue {
   version?: string | null = null
   config?: Config | null = null
 
+  addFilterKey: string | null = null
+  addFilterMode: 'message' | 'author' = 'message'
+  addFilterText: string = ''
+  addFilterRegex: boolean = false
+  addFilterExact: boolean = false
+
   // 初期値は適当 (絶対に上書きするので)
   chatFilters: ChatConfigFilterInterface[] = []
   mergeImageFileName: string = ''
   complementImage: boolean = false
   maxVideoLength: number = 0
+
+  $refs!: {
+    addFilterInput: HTMLInputElement,
+  }
 
   async mounted(): Promise<void> {
     // manifest を読み込む
@@ -212,6 +313,81 @@ export default class App extends Vue {
 
   ///
 
+  handleFilterEdit(filter: ChatConfigFilterInterface): void {
+    this.addFilterKey = filter.key
+    this.addFilterMode = filter.textMode || 'message'
+    this.addFilterText = filter.match || ''
+    this.addFilterRegex = filter.isRegex || false
+    this.addFilterExact = filter.isExact || false
+
+    this.$refs.addFilterInput.focus()
+  }
+
+  handleFilterDelete(filter: ChatConfigFilterInterface): void {
+    const findIndex = this.chatFilters.findIndex(c => c.key === filter.key)
+    if (findIndex >= 0) {
+      this.chatFilters.splice(findIndex, 1)
+    }
+  }
+
+  handleAddReset(): void {
+    this.addFilterKey = null
+    this.addFilterText = ''
+  }
+
+  handleAddTextFilter(): void {
+    // フィルターを追加する
+    let text = this.addFilterText
+    if (text) {
+      // 優先度は regex > exact
+      let mode = this.addFilterMode
+      let isRegex = this.addFilterRegex
+      let isExact = this.addFilterExact
+
+      // キーの重複を検索する
+      const findIndex = this.chatFilters.findIndex(c => c.key === this.addFilterKey)
+      if (findIndex === -1) {
+        // キーが無いなら重複チェック
+        const find = this.chatFilters.find(c => {
+          return c.textMode === mode && c.match === text && c.isRegex === isRegex && c.isExact === isExact
+        })
+        if (find) {
+          Toast.error('そのフィルタは既に存在します。')
+          return
+        }
+      }
+
+      const filter: ChatConfigFilterInterface = {
+        key: String(new Date().getTime()),
+        title: text,
+        doSave: false,
+        doImage: false,
+
+        textMode: mode,
+        match: text,
+        isRegex: isRegex,
+        isExact: isExact,
+      }
+
+      // 置き換えか保存
+      if (findIndex) {
+        this.chatFilters.splice(findIndex, 1, filter);
+      } else {
+        this.chatFilters.push()
+      }
+
+      this.handleAddReset()
+    }
+  }
+
+  handleAddExact(): void {
+    if (this.addFilterExact) this.addFilterRegex = false
+  }
+
+  handleAddRegex(): void {
+    if (this.addFilterRegex) this.addFilterExact = false
+  }
+
   handleDoSave(chatFilter: ChatConfigFilterInterface): void {
     // save が false なら image も false にする
     if (!chatFilter.doSave) chatFilter.doImage = false
@@ -234,5 +410,10 @@ input[type="checkbox"] {
 .box {
   box-shadow: none;
   border: solid 1px gainsboro;
+}
+
+table {
+  border-top: solid 2px #dbdbdb;
+  border-bottom: solid 1px #dbdbdb;
 }
 </style>
