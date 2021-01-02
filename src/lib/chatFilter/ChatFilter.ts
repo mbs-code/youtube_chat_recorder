@@ -13,6 +13,14 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
     func: (chat: Chat) => true,
   },
   {
+    key: 'plain',
+    title: '⬜ 通常チャット',
+    func: (chat: Chat) => {
+      return !chat.isOwner && !chat.isVerified && !chat.isModerator&& !chat.isSuperChat
+        && !chat.isSuperStickers && !chat.isMember && !chat.isJoinMember
+    }
+  },
+  {
     key: 'owner',
     title: '🟨 チャンネルの所有者',
     func: (chat: Chat) => chat.isOwner,
@@ -43,6 +51,9 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
     func: (chat: Chat) => chat.isJoinMember,
   },
 ]
+
+// 警告を出すフィルターキー
+export const warnFilterKeys = ['plain', 'member']
 
 export default class ChatFilter {
   protected chatFilters: ChatFilterDataInterface[]

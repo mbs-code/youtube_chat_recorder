@@ -41,7 +41,7 @@
 
         <div class="field">
           <div class="notification">
-            ※ 「保存する」「画像化する」の<strong>どちらかを選択</strong>すると処理されます。
+            ※ <strong>「保存する」「画像化する」を選択する</strong>と処理されます。
             <br>
             ※ 「画像化する」は負荷が高い＆容量を食うので加減して使用してください。( 1枚10KBくらい )
             <br>

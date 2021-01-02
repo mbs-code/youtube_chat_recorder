@@ -36,6 +36,12 @@
                 </span>
               </span>
               {{ chatFilter.title }}
+              <span
+                v-if="warnFilterKeys.includes(chatFilter.key)"
+                class="has-text-danger"
+              >
+                (負荷注意)
+              </span>
             </th>
 
             <td class="has-text-centered">
@@ -189,15 +195,16 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
-import ChatFilter from '../../lib/chatFilter/ChatFilter'
+import ChatFilter, { warnFilterKeys } from '../../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../../lib/chatFilter/ChatFilterInterface'
 import Chat from '../../models/Chat'
 import Toast from '../../plugins/Toast'
 
 @Component
 export default class ChatFilterTable extends Vue {
-  editFilterKey: string | null = null
+  warnFilterKeys: string[] = []
 
+  editFilterKey: string | null = null
   editFilterMode: 'message' | 'author' = 'message'
   editFilterMatchText: string = ''
   editFilterIsExact: boolean = false
@@ -216,6 +223,10 @@ export default class ChatFilterTable extends Vue {
 
   $refs!: {
     editFIlterMatchInput: HTMLInputElement,
+  }
+
+  mounted(): void {
+    this.warnFilterKeys = warnFilterKeys
   }
 
   handleFilterDoSave(chatFilter: ChatFilterConfigInterface): void {

@@ -10,6 +10,7 @@ export interface ChatFilterDataInterface {
 
   doSave?: boolean
   doImage?: boolean
+
   func?: ChatFilterFunc
 }
 
