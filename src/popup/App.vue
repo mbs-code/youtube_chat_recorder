@@ -117,7 +117,10 @@
     </div>
 
     <div class="field">
-      <span>{{ filteredChats.length }}件 (全{{ chats.length }}件)</span>
+      <span v-if="isOver" class="has-text-danger has-text-weight-bold">{{ maxChatLength }}件以上</span>
+      <span v-else>{{ filteredChats.length }}件</span>
+
+      <span>(全{{ chats.length }}件)</span>
       <span v-if="selectedChats.length"> - {{ selectedChats.length }}件 選択中</span>
     </div>
 
@@ -167,6 +170,9 @@ export default class App extends Vue {
   chatFilters: ChatFilterDataInterface[] = []
   selectedFilter: string| null = null
 
+  maxChatLength: number = 100 // 最大表示チャット数
+  isOver: boolean = false
+
   $refs!: {
     chatList: ChatList,
   }
@@ -179,7 +185,15 @@ export default class App extends Vue {
     const filtered = chatFilter
       ? this.chats.filter(c => (chatFilter.func ? chatFilter.func(c) : false))
       : this.chats
-    return arraySort(filtered, 'seconds')
+
+    // ソート
+    const sorted = arraySort(filtered, 'seconds')
+
+    // リミット
+    this.isOver = (sorted.length > this.maxChatLength)
+    const limited = sorted.slice(0, this.maxChatLength)
+
+    return limited
   }
 
   async mounted(): Promise<void> {
