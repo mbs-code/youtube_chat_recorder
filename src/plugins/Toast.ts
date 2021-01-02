@@ -10,6 +10,14 @@ export default class Toast {
     })
   }
 
+  public static warn(message: string): void {
+    toast({
+      ...this.commonOptions(),
+      message: this.createIconMessage(message, 'alert'),
+      type: 'is-warning',
+    })
+  }
+
   public static error(message: string): void {
     toast({
       ...this.commonOptions(),

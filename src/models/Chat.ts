@@ -12,16 +12,16 @@ export default class Chat {
   message?: string
   altMessage?: string // 画像要素を展開した文
 
-  isOwner = false
-  isModerator = false
-  isMember = false
-  isVerified = false
+  isOwner: boolean
+  isModerator: boolean
+  isMember: boolean
+  isVerified: boolean
 
   memberMonths?: number // undefined, 0(0ヶ月目), 1, 2, ...
 
-  isJoinMember = false
-  isSuperChat = false
-  isSuperStickers = false
+  isJoinMember: boolean
+  isSuperChat: boolean
+  isSuperStickers: boolean
   money?: number
   moneyUnit?: string // 通貨単位
 
@@ -36,6 +36,18 @@ export default class Chat {
 
   @TransformDate()
   updatedAt?: Date // 更新日時
+
+  constructor() {
+    // 初期値
+    this.isOwner = false
+    this.isModerator = false
+    this.isMember = false
+    this.isVerified = false
+
+    this.isJoinMember = false
+    this.isSuperChat = false
+    this.isSuperStickers = false
+  }
 
   public static async createByElement(video: Video, node: Element): Promise<Chat> {
     return await ChatParser.parse(video, node)

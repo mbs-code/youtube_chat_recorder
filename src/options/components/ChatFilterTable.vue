@@ -1,10 +1,12 @@
 <template>
   <div>
+    <!-- start filter table -->
     <div class="field">
+      <label class="label">チャットフィルター</label>
       <table class="table">
         <thead>
           <tr>
-            <th>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;項目</th>
+            <th class="has-text-centered">項目</th>
             <th class="has-text-centered">保存する</th>
             <th class="has-text-centered">画像化する</th>
             <th></th>
@@ -14,7 +16,11 @@
           <tr
             v-for="chatFilter in chatFilters"
             :key="chatFilter.key"
-            :class="{ 'is-selected': chatFilter.key === editFilterKey }"
+            :class="{
+              'has-background-white-ter': !chatFilter.textMode,
+              'is-selected': chatFilter.key === editFilterKey,
+              'has-background-link-light': chatFilter.key === testMatchFilterKey,
+            }"
           >
             <th>
               <span v-if="chatFilter.textMode === 'message'">💬</span>
@@ -33,11 +39,21 @@
             </th>
 
             <td class="has-text-centered">
-              <input v-model="chatFilter.doSave" type="checkbox" @change="handleFilterDoSave(chatFilter)" />
+              <input
+                v-model="chatFilter.doSave"
+                type="checkbox"
+                :disabled="editFilterKey"
+                @change="handleFilterDoSave(chatFilter)"
+              />
             </td>
 
             <td class="has-text-centered">
-              <input v-model="chatFilter.doImage" type="checkbox" @change="handleFilterDoImage(chatFilter)" />
+              <input
+                v-model="chatFilter.doImage"
+                type="checkbox"
+                :disabled="editFilterKey"
+                @change="handleFilterDoImage(chatFilter)"
+              />
             </td>
 
             <td class="td-in-button">
@@ -46,6 +62,7 @@
                   <button
                     class="button is-small is-success is-light has-tooltip-bottom"
                     data-tooltip="編集"
+                    :disabled="editFilterKey"
                     @click="handleFilterEdit(chatFilter)"
                   >
                     <span class="icon is-small">
@@ -57,6 +74,7 @@
                   <button
                     class="button is-small is-danger is-light has-tooltip-bottom"
                     data-tooltip="削除"
+                    :disabled="editFilterKey"
                     @click="handleFilterDelete(chatFilter)"
                   >
                     <span class="icon is-small">
@@ -70,7 +88,11 @@
         </tbody>
       </table>
     </div>
+    <!-- end filter table -->
 
+    <hr class="has-background-white">
+
+    <!-- start add input -->
     <div class="field">
       <label class="label">テキストのマッチングを追加</label>
       <div class="control">
@@ -105,40 +127,71 @@
 
     <div class="field is-grouped">
       <p class="control">
-        <button class="button" @click="handleFilterReset">
-          リセット
+        <button
+          class="button"
+          :class="{ 'is-warning': editFilterKey }"
+          @click="handleFilterReset"
+        >
+          クリア
         </button>
       </p>
 
       <div class="control">
-        <div class="field is-horizontal">
-          <div class="field-label is-normal">
-            <label class="checkbox">
-              <input v-model="editFilterIsExact" type="checkbox" @change="handleFilterIsExact" />
-              &nbsp;完全一致
-            </label>
-          </div>
-        </div>
+        <label class="checkbox field-into-height">
+          <input v-model="editFilterIsExact" type="checkbox" @change="handleFilterIsExact" />
+          &nbsp;完全一致
+        </label>
       </div>
 
       <div class="control">
-        <div class="field is-horizontal">
-          <div class="field-label is-normal">
-            <label class="checkbox">
-              <input v-model="editFilterIsRegex" type="checkbox" @change="handleFilterIsRegex" />
-              &nbsp;正規表現
-            </label>
+        <label class="checkbox field-into-height">
+          <input v-model="editFilterIsRegex" type="checkbox" @change="handleFilterIsRegex" />
+          &nbsp;正規表現
+        </label>
+      </div>
+    </div>
+    <!-- end add input -->
+
+    <hr>
+
+    <!-- start test input -->
+    <div class="field">
+      <label class="label">マッチングテスト<small>(Enter で自動)</small></label>
+      <div class="control">
+        <div class="field is-grouped">
+          <div class="control is-expanded">
+            <input
+              v-model="testMatchText"
+              class="input"
+              type="text"
+              placeholder="コメント \ 投稿者名"
+              :disabled="editFilterKey"
+              @keydown.enter="handleFilterTest"
+            />
           </div>
+
+          <p class="control">
+            <button
+              class="button is-link is-outlined"
+              :disabled="editFilterKey"
+              @click="handleFilterTest"
+            >
+              テスト
+            </button>
+          </p>
         </div>
       </div>
     </div>
+    <!-- end test field -->
   </div>
 </template>
 
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
+import ChatFilter from '../../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../../lib/chatFilter/ChatFilterInterface'
+import Chat from '../../models/Chat'
 import Toast from '../../plugins/Toast'
 
 @Component
@@ -149,6 +202,9 @@ export default class ChatFilterTable extends Vue {
   editFilterMatchText: string = ''
   editFilterIsExact: boolean = false
   editFilterIsRegex: boolean = false
+
+  testMatchFilterKey: string | null = null
+  testMatchText: string = ''
 
   @Prop({ default: [] })
   value!: ChatFilterConfigInterface[]
@@ -175,8 +231,9 @@ export default class ChatFilterTable extends Vue {
     this.editFilterMatchText = chatFilter.match || ''
     this.editFilterIsExact = chatFilter.isExact || false
     this.editFilterIsRegex = chatFilter.isRegex || false
-
     this.$refs.editFIlterMatchInput.focus()
+
+    this.testMatchFilterKey = null
   }
 
   handleFilterDelete(chatFilter: ChatFilterConfigInterface): void {
@@ -194,6 +251,8 @@ export default class ChatFilterTable extends Vue {
     this.editFilterMatchText = ''
     this.editFilterIsExact = false
     this.editFilterIsRegex = false
+
+    this.testMatchFilterKey = null
   }
 
   handleFilterIsExact(): void {
@@ -258,6 +317,30 @@ export default class ChatFilterTable extends Vue {
     this.editFilterKey = null
     this.editFilterMatchText = ''
   }
+
+  handleFilterTest(): void {
+    const text = this.testMatchText
+
+    // チャットをインスタンス生成
+    const chat = new Chat()
+    chat.message = text
+    chat.altMessage = text
+    chat.authorName = text
+
+    // フィルターをインスタントで作成する
+    const cf = new ChatFilter()
+    cf.setChatFilters(this.chatFilters)
+
+    // 判定する
+    const scf = cf.checkStuckChatFilter(chat)
+    if (scf?.filter) {
+      Toast.success(`「${scf.filter.title}」に一致しました。(task: ${String(scf?.taskType)})`)
+      this.testMatchFilterKey = scf.filter.key
+    } else {
+      Toast.warn('一致しませんでした。')
+      this.testMatchFilterKey = null
+    }
+  }
 }
 </script>
 
@@ -280,5 +363,9 @@ table {
 
 .td-in-button {
   padding: 6px;
+}
+
+.field-into-height {
+  padding: 10px;
 }
 </style>

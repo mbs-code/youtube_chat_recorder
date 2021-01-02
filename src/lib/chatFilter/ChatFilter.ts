@@ -1,6 +1,10 @@
 import arraySort from 'array-sort'
 import Chat from '../../models/Chat'
-import { ChatFilterConfigInterface, ChatFilterDataInterface } from './ChatFilterInterface'
+import {
+  ChatFilterConfigInterface,
+  ChatFilterDataInterface,
+  ChatTaskType,
+} from './ChatFilterInterface'
 
 const BASE_FILTERS: ChatFilterDataInterface[] = [
   {
@@ -103,12 +107,17 @@ export default class ChatFilter {
     this.chatFilters = sorts
   }
 
-
-  public checkChatTaskType(chat: Chat): 'save' | 'image' | false {
+  /**
+   * チャットが引っかかるフィルターを取得する.
+   *
+   * @param {Chat} chat 対象の chat
+   * @return {{ filter: ChatFilterDataInterface, taskType: ChatTaskType } | undefined} 引っかかったフィルター
+   */
+  public checkStuckChatFilter(chat: Chat): { filter: ChatFilterDataInterface, taskType: ChatTaskType } | undefined {
     // 先頭から全部見ていく
     // もし image があったら即決定
     // save は最後まで image 要素が出てこなかったらで
-    let isSave = false
+    let isSaveFilter = null
 
     const chatFilters = this.chatFilters
     for (const cf of chatFilters) {
@@ -116,21 +125,32 @@ export default class ChatFilter {
 
     // フラグが無かったらそもそもスキップする
     // ※ (!isSave) は一度 true になったら条件を飛ばす
-      if ((!isSave && cf.doSave) || cf.doImage) {
+      if ((!isSaveFilter && cf.doSave) || cf.doImage) {
         const isTarget = cf.func(chat)
         if (isTarget) {
           if (cf.doImage) {
-            return 'image'
+            return { filter: cf, taskType: 'image' }
           } else {
-            isSave = true
+            isSaveFilter = cf
           }
         }
       }
     }
 
     // もし isSave が入ってたら
-    if (isSave) return 'save'
-    return false
+    if (isSaveFilter) return { filter: isSaveFilter, taskType: 'save' }
+    return undefined
+  }
+
+  /**
+   * チャットの処理方法を取得する.
+   *
+   * @param {Chat} chat 対象の chat
+   * @return {ChatTaskType} 引っかかった処理方法
+   */
+  public checkChatTaskType(chat: Chat): ChatTaskType {
+    const scf = this.checkStuckChatFilter(chat)
+    return scf?.taskType || false
   }
 
   ///

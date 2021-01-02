@@ -1,6 +1,8 @@
 import Chat from '../../models/Chat'
 
-type ChatFilterFunc = (chat: Chat) => boolean
+export type ChatFilterFunc = (chat: Chat) => boolean
+
+export type ChatTaskType = 'save' | 'image' | false
 
 export interface ChatFilterDataInterface {
   key: string
