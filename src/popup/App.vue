@@ -186,7 +186,7 @@ export default class App extends Vue {
     const videos = await VideoStorage.getAll()
     this.videos = videos
 
-    this.chatFilters = ChatFilter.getPopupChatFilters()
+    this.chatFilters = ChatFilter.generatePopupChatFilters()
     this.selectedFilter = this.chatFilters[0].key
   }
 

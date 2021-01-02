@@ -1,3 +1,4 @@
+import arraySort from 'array-sort'
 import Chat from '../../models/Chat'
 import { ChatFilterConfigInterface, ChatFilterDataInterface } from './ChatFilterInterface'
 
@@ -46,7 +47,13 @@ export default class ChatFilter {
     this.chatFilters = []
   }
 
-  public static getPopupChatFilters(): ChatFilterDataInterface[] {
+  /**
+   * ポップアップで使用するためのチャットフィルターを取得する.
+   *
+   * @static
+   * @return {ChatFilterDataInterface[]} chat filter 配列
+   */
+  public static generatePopupChatFilters(): ChatFilterDataInterface[] {
     return BASE_FILTERS.map(cf => {
       return {
         key: cf.key,
@@ -56,7 +63,13 @@ export default class ChatFilter {
     })
   }
 
-  public static getDefaultChatfilters(): ChatFilterConfigInterface[] {
+  /**
+   * 設定初期値のチャットフィルターを取得する.
+   *
+   * @static
+   * @return {ChatFilterConfigInterface[]} config chat filter 配列
+   */
+  public static generateDefaultChatfilterConfigs(): ChatFilterConfigInterface[] {
     return BASE_FILTERS
       .filter(e => e.key !== 'all') // 全ての条件を除外する
       .map(e => {
@@ -69,11 +82,27 @@ export default class ChatFilter {
       })
   }
 
+  ///
+
+
+  /**
+   * チャットフィルターを設定する.
+   *
+   * @param {ChatFilterConfigInterface[]} configs config chat filter 配列
+   */
   public setChatFilters(configs: ChatFilterConfigInterface[]) {
     // 生成して設定する
     const chatFilters = this.generateChatFilters(configs)
-    this.chatFilters = chatFilters
+
+    // 処理チェックが無いフィルターを除外する
+    const actives = chatFilters.filter(cf => cf.doImage || cf.doSave)
+
+    // isImage = true を上部にソートする (最適化)
+    const sorts = arraySort(actives, 'isImage')
+
+    this.chatFilters = sorts
   }
+
 
   public checkChatTaskType(chat: Chat): 'save' | 'image' | false {
     // 先頭から全部見ていく
@@ -81,7 +110,6 @@ export default class ChatFilter {
     // save は最後まで image 要素が出てこなかったらで
     let isSave = false
 
-    console.log('[]' + chat.dump())
     const chatFilters = this.chatFilters
     for (const cf of chatFilters) {
       if (!cf.func) continue

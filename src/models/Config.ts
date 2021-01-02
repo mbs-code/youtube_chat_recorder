@@ -26,7 +26,7 @@ export default class Config {
 
   constructor() {
     // 初期値
-    this.chatFilters = ChatFilter.getDefaultChatfilters()
+    this.chatFilters = ChatFilter.generateDefaultChatfilterConfigs()
     this.mergeImageFileName = '%now%'
     this.complementImage = false
     this.maxVideoLength = 10
