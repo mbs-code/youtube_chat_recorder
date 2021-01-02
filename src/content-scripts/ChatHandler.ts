@@ -1,9 +1,9 @@
+import ChatFilter from '../lib/chatFilter/ChatFilter'
 import VideoStorage from '../lib/chrome/VideoStorage'
 import DrawDomQueue from '../lib/queue/DrawDomQueue'
 import SaveChatQueue from '../lib/queue/SaveChatQueue'
 import retry from '../lib/util/Retry'
 import Chat from '../models/Chat'
-import Config from '../models/Config'
 import Video from '../models/Video'
 
 const COMMENT_NODE_NAMES = [
@@ -64,14 +64,14 @@ export default class ChatHandler {
    * 対象のノードから対象の DOM を取り出し、実行する.
    *
    * @param {Element} node 対象のルートノード
-   * @param {Config} [config] 設定モデル
+   * @param {ChatFilter} chatFilter チャットフィルター
    */
-  public async findInvoke(node: Element, config?: Config): Promise<void> {
+  public async findInvoke(node: Element, chatFilter: ChatFilter): Promise<void> {
     const doms = await retry(() => Array.from(node.querySelectorAll(COMMENT_NODE_NAMES.join(', '))))
     if (!doms) return
 
     for (const node of doms) {
-      await this.invoke(node as HTMLElement, config)
+      await this.invoke(node as HTMLElement, chatFilter)
     }
   }
 
@@ -79,17 +79,12 @@ export default class ChatHandler {
    * handler を実行する.
    *
    * @param {HTMLElement} node 対象のルートノード, COMMENT_NODE_NAMES を参照
-   * @param {Config} [config] 設定モデル
+   * @param {ChatFilter} chatFilter チャットフィルター
    * @return {boolean} 成功可否
    */
-  public async invoke(node: HTMLElement, config?: Config): Promise<boolean> {
+  public async invoke(node: HTMLElement, chatFilter: ChatFilter): Promise<boolean> {
     // video とIDが無ければ失敗
     if (!this.video || !this.video.id) {
-      return false
-    }
-
-    // config が無ければ失敗
-    if (!config) {
       return false
     }
 
@@ -103,12 +98,12 @@ export default class ChatHandler {
     const chat = await Chat.createByElement(this.video, node)
 
     // チャットを処理する
-    const task = config.checkChatTask(chat)
-    if (task === 'image') {
+    const taskType = chatFilter.checkChatTaskType(chat)
+    if (taskType === 'image') {
       console.log('> image: ' + chat.dump())
       this.drawDomQueue.push({ node, chat })
-    } else if (task === 'save') {
-      console.log('> draw : ' + chat.dump())
+    } else if (taskType === 'save') {
+      console.log('> save: ' + chat.dump())
       this.saveChatQueue.push(chat)
     }
 

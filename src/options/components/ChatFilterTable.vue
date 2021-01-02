@@ -138,7 +138,7 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
-import { ChatConfigFilterInterface, ChatFilterInterface } from '../../configs/ChatFilters'
+import { ChatFilterConfigInterface } from '../../lib/chatFilter/ChatFilterInterface'
 import Toast from '../../plugins/Toast'
 
 @Component
@@ -151,7 +151,7 @@ export default class ChatFilterTable extends Vue {
   editFilterIsRegex: boolean = false
 
   @Prop({ default: [] })
-  value!: ChatConfigFilterInterface[]
+  value!: ChatFilterConfigInterface[]
 
   // TODO: これで動いてるのかなw
   get chatFilters() {
@@ -162,15 +162,15 @@ export default class ChatFilterTable extends Vue {
     editFIlterMatchInput: HTMLInputElement,
   }
 
-  handleFilterDoSave(chatFilter: ChatConfigFilterInterface): void {
+  handleFilterDoSave(chatFilter: ChatFilterConfigInterface): void {
     if (!chatFilter.doSave) chatFilter.doImage = false
   }
 
-  handleFilterDoImage(chatFilter: ChatConfigFilterInterface): void {
+  handleFilterDoImage(chatFilter: ChatFilterConfigInterface): void {
     if (chatFilter.doImage) chatFilter.doSave = true
   }
 
-  handleFilterEdit(chatFilter: ChatConfigFilterInterface): void {
+  handleFilterEdit(chatFilter: ChatFilterConfigInterface): void {
     this.editFilterKey = chatFilter.key
     this.editFilterMatchText = chatFilter.match || ''
     this.editFilterIsExact = chatFilter.isExact || false
@@ -179,7 +179,7 @@ export default class ChatFilterTable extends Vue {
     this.$refs.editFIlterMatchInput.focus()
   }
 
-  handleFilterDelete(chatFilter: ChatConfigFilterInterface): void {
+  handleFilterDelete(chatFilter: ChatFilterConfigInterface): void {
     // 存在するなら削除する
     const findIndex = this.chatFilters.findIndex(c => c.key === chatFilter.key)
     if (findIndex >= 0) {
@@ -235,10 +235,10 @@ export default class ChatFilterTable extends Vue {
     }
 
     // フィルターの組み立て
-    const filter: ChatConfigFilterInterface = {
+    const filter: ChatFilterConfigInterface = {
       key: find?.key || String(new Date().getTime()),
       title: this.editFilterMatchText,
-      doSave: false,
+      doSave: true, // 追加する => 保存はONにしとく
       doImage: false,
 
       textMode: this.editFilterMode,

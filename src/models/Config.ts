@@ -1,4 +1,5 @@
-import ChatFilters, { ChatConfigFilterInterface } from '../configs/ChatFilters'
+import ChatFilter from '../lib/chatFilter/ChatFilter'
+import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 import TransformDate from '../lib/decorator/TransformDate'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
 import Chat from './Chat'
@@ -6,7 +7,7 @@ import Video from './Video'
 
 export default class Config {
   // chat のフィルタリング
-  chatFilters: ChatConfigFilterInterface[]
+  chatFilters: ChatFilterConfigInterface[]
 
   // 結合ファイル名
   mergeImageFileName: string
@@ -25,7 +26,7 @@ export default class Config {
 
   constructor() {
     // 初期値
-    this.chatFilters = ChatFilters.generateConfigChatFilters()
+    this.chatFilters = ChatFilter.getDefaultChatfilters()
     this.mergeImageFileName = '%now%'
     this.complementImage = false
     this.maxVideoLength = 10
@@ -34,10 +35,5 @@ export default class Config {
   // ファイル名フォーマット
   public formatFilename(video: Video, chats: Chat[]) {
     return FilenameFormatter.format(this.mergeImageFileName, video, chats)
-  }
-
-  // 処理対象のチャットかどうか
-  public checkChatTask(chat: Chat): 'save' | 'image' | false {
-    return ChatFilters.checkChatTask(this.chatFilters, chat)
   }
 }

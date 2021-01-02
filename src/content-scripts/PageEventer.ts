@@ -1,3 +1,4 @@
+import ChatFilter from '../lib/chatFilter/ChatFilter'
 import ConfigStorage from '../lib/chrome/Configstorage'
 import VideoStorage from '../lib/chrome/VideoStorage'
 import PageHelper from '../lib/util/PageHelper'
@@ -8,15 +9,19 @@ import ChatHandler from './ChatHandler'
 
 export default class PageEventer {
   protected handler: ChatHandler
+
+  protected chatFilter: ChatFilter
   protected observer: MutationObserver
 
   protected config?: Config
 
   constructor(handler: ChatHandler) {
     this.handler = handler
+
+    this.chatFilter = new ChatFilter()
     this.observer = new MutationObserver(records => {
       records.forEach(record => {
-        record.addedNodes.forEach(node => this.handler.invoke(node as HTMLElement, this.config))
+        record.addedNodes.forEach(node => this.handler.invoke(node as HTMLElement, this.chatFilter))
       })
     })
   }
@@ -37,6 +42,7 @@ export default class PageEventer {
   public async loadConfig(): Promise<void> {
     const config = await ConfigStorage.get()
     this.config = config
+    this.chatFilter.setChatFilters(this.config.chatFilters)
     VideoStorage.MAX_LENGTH = this.config?.maxVideoLength || 10
 
     console.log(`⚙️[Load] load config`)
@@ -76,7 +82,7 @@ export default class PageEventer {
 
     // 今表示されてるものを処理する (promise はスルー)
     // コメント追加にラグがあるのでいい感じに全部取れるはず
-    this.handler.findInvoke(e, this.config).then(() => {
+    this.handler.findInvoke(e, this.chatFilter).then(() => {
       console.log('⚙️[finish] handle display chats')
     })
   }

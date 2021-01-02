@@ -151,7 +151,8 @@ import Video from '../models/Video'
 import NodeToPng from '../lib/util/NodeToPng'
 
 import ConfigStorage from '../lib/chrome/Configstorage'
-import ChatFilters, { ChatFilterInterface } from '../configs/ChatFilters'
+import ChatFilter from '../lib/chatFilter/ChatFilter'
+import { ChatFilterDataInterface } from '../lib/chatFilter/ChatFilterInterface'
 
 @Component({
   components: { VideoDropdown, ChatList }
@@ -163,7 +164,7 @@ export default class App extends Vue {
   chats: Chat[] = []
   selectedChats: Chat[] = []
 
-  chatFilters: ChatFilterInterface[] = []
+  chatFilters: ChatFilterDataInterface[] = []
   selectedFilter: string| null = null
 
   $refs!: {
@@ -176,7 +177,7 @@ export default class App extends Vue {
 
     // フィルタリング
     const filtered = chatFilter
-      ? this.chats.filter(c => chatFilter.func(c))
+      ? this.chats.filter(c => (chatFilter.func ? chatFilter.func(c) : false))
       : this.chats
     return arraySort(filtered, 'seconds')
   }
@@ -185,7 +186,7 @@ export default class App extends Vue {
     const videos = await VideoStorage.getAll()
     this.videos = videos
 
-    this.chatFilters = ChatFilters.generateChatFilters()
+    this.chatFilters = ChatFilter.getPopupChatFilters()
     this.selectedFilter = this.chatFilters[0].key
   }
 

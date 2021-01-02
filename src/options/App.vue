@@ -126,8 +126,8 @@ import ChatFilterTable from './components/ChatFilterTable.vue'
 import ConfigStorage from '../lib/chrome/Configstorage'
 import Toast from '../plugins/Toast'
 import Config from '../models/Config'
-import { ChatConfigFilterInterface } from '../configs/ChatFilters'
 import Runtime from '../lib/chrome/Runtime'
+import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 
 @Component({
   components: { ChatFilterTable },
@@ -137,7 +137,7 @@ export default class App extends Vue {
   config?: Config | null = null
 
   // 初期値は適当 (絶対に上書きするので)
-  chatFilters: ChatConfigFilterInterface[] = []
+  chatFilters: ChatFilterConfigInterface[] = []
   mergeImageFileName: string = ''
   complementImage: boolean = false
   maxVideoLength: number = 0
