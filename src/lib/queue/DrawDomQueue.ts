@@ -28,7 +28,8 @@ export default class DrawDomQueue extends BaseQueue<DrawObjects> {
           obj.chat.pngUrl = dataUrl
         }
       } catch (err) {
-        throw err
+        // TODO: エラーハンドリング
+        console.error(err)
       }
     }
     console.log(`🎨[DRAW] success!`)

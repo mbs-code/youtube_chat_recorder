@@ -61,7 +61,7 @@ export default class NodeToPng {
 
         // ■ 下部に透過部分が発生することが多々あるので修正
         if (!ctx) {
-          throw new Error('No context') // 基本実行されない
+          throw new Error('Canvas generation failure (ctx)')
         }
 
         const colors = ctx?.getImageData(0, 0, 1, height).data
@@ -81,8 +81,13 @@ export default class NodeToPng {
           nCanvas = document.createElement('canvas')
           nCanvas.width = canvas.width
           nCanvas.height = threshold + 1
+
           const nctx = nCanvas.getContext('2d')
-          nctx?.drawImage(canvas, 0, 0, width, threshold + 1, 0, 0, width, threshold + 1)
+          if (!nctx) {
+            throw new Error('Canvas generation failure (nctx)')
+          }
+
+          nctx.drawImage(canvas, 0, 0, width, threshold + 1, 0, 0, width, threshold + 1)
         } else {
           nCanvas = canvas
         }
@@ -125,7 +130,7 @@ export default class NodeToPng {
     canvas.height = canvasHeight
     const ctx = canvas.getContext('2d')
     if (!ctx) {
-      throw new Error('Canvas generation failurea')
+      throw new Error('Canvas generation failure (ctx)')
     }
 
     // 背景を白で塗っておく

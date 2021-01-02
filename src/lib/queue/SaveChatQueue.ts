@@ -23,7 +23,12 @@ export default class SaveChatQueue extends BaseQueue<Chat> {
   protected async invoke(chats: Chat[]): Promise<void> {
     const vid = this.video?.id
     if (vid) {
-      await ChatStorage.save(vid, chats)
+      try {
+        await ChatStorage.save(vid, chats)
+      } catch (err) {
+        // TODO: エラーハンドリング
+        console.error(err)
+      }
     }
   }
 }
