@@ -22,11 +22,8 @@ export default {
     return '-'
   },
 
-  formatByte(val?: number) {
-    if (val) {
-      const bs = byteSize(val)
-      return bs.value + ' ' + bs.unit
-    }
-    return '-'
+  formatByte(val: number = 0): string {
+    const bs = byteSize(val)
+    return bs.value + ' ' + bs.unit
   }
 }

@@ -138,6 +138,14 @@
           </div>
         </div>
 
+        <div class="field is-grouped">
+          <p class="control">
+            <a class="button is-danger is-light" @click="handleAllDelete">
+              全てのデータを削除する
+            </a>
+          </p>
+        </div>
+
       </div>
       <!-- end right panel -->
     </div>
@@ -182,9 +190,6 @@ export default class App extends Vue {
     const manifest = Runtime.getManifest()
     this.version = manifest.version
 
-    // 使用サイズを取得
-    this.byteInUse = await Runtime.getBytesInUseLocalStorage()
-
     // 設定の読み込み
     await this.loadConfig()
   }
@@ -198,6 +203,9 @@ export default class App extends Vue {
     this.complementImage = config.complementImage
     this.maxVideoLength = config.maxVideoLength
     this.showLogLevel = config.showLogLevel
+
+    // 使用サイズを取得
+    this.byteInUse = await Runtime.getBytesInUseLocalStorage()
   }
 
   async handleSave(): Promise<void> {
@@ -230,6 +238,20 @@ export default class App extends Vue {
       Toast.success('設定をリセットしました。')
 
       await this.loadConfig()
+    }
+  }
+
+  async handleAllDelete(): Promise<void> {
+    const result = window.confirm('全てのデータを削除します。')
+    if (result) {
+      const result2 = window.confirm('本当に削除しますか？')
+      if (result2) {
+        // config を消して再読み込み
+        await Runtime.clearLocalStorage()
+        Toast.success('全てのデータを削除しました。')
+
+        await this.loadConfig()
+      }
     }
   }
 }

@@ -33,4 +33,13 @@ export default class Runtime {
       })
     })
   }
+
+  /**
+   * ローカルストレージを空にする.
+   *
+   * @static
+   */
+  public static async clearLocalStorage(): Promise<void> {
+    await browser.storage.local.clear()
+  }
 }
