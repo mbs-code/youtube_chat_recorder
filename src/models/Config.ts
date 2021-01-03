@@ -2,6 +2,7 @@ import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 import TransformDate from '../lib/decorator/TransformDate'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
+import { LogLevel } from '../loggers/Logger'
 import Chat from './Chat'
 import Video from './Video'
 
@@ -18,6 +19,9 @@ export default class Config {
   // 最大保存video数
   maxVideoLength: number
 
+  // ログレベル
+  showLogLevel: LogLevel
+
   @TransformDate()
   createdAt?: Date // 作成日時
 
@@ -30,6 +34,8 @@ export default class Config {
     this.mergeImageFileName = '%now%'
     this.complementImage = false
     this.maxVideoLength = 10
+
+    this.showLogLevel = 'warn'
   }
 
   // ファイル名フォーマット

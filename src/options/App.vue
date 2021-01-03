@@ -114,6 +114,21 @@
           </div>
         </div>
 
+        <div class="field is-grouped">
+          <p class="control">
+            <label class="label field-into-height">出力するログレベル</label>
+          </p>
+          <div class="control">
+            <div class="select">
+              <select v-model="showLogLevel">
+                <option v-for="level of logLevels" :key="level.name" :value="level.name">
+                  {{ level.name.toUpperCase() }}
+                </option>
+              </select>
+            </div>
+          </div>
+        </div>
+
       </div>
       <!-- end right panel -->
     </div>
@@ -130,6 +145,7 @@ import Toast from '../plugins/Toast'
 import Config from '../models/Config'
 import Runtime from '../lib/chrome/Runtime'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
+import { LogLevel, LEVELS } from '../loggers/Logger'
 
 @Component({
   components: { ChatFilterTable },
@@ -143,6 +159,9 @@ export default class App extends Vue {
   mergeImageFileName: string = ''
   complementImage: boolean = false
   maxVideoLength: number = 0
+
+  logLevels = LEVELS
+  showLogLevel: LogLevel = 'info'
 
   async mounted(): Promise<void> {
     // manifest を読み込む
@@ -162,6 +181,7 @@ export default class App extends Vue {
     this.mergeImageFileName = config.mergeImageFileName
     this.complementImage = config.complementImage
     this.maxVideoLength = config.maxVideoLength
+    this.showLogLevel = config.showLogLevel
   }
 
   async handleSave(): Promise<void> {
@@ -209,5 +229,9 @@ input[type="checkbox"] {
 .box {
   box-shadow: none;
   border: solid 1px gainsboro;
+}
+
+.field-into-height {
+  padding: 10px;
 }
 </style>

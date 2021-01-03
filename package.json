@@ -22,7 +22,6 @@
   "dependencies": {
     "array-sort": "^1.0.0",
     "bulma-toast": "^2.2.0",
-    "chalk": "^4.1.0",
     "class-transformer": "^0.3.1",
     "date-fns": "^2.16.1",
     "delay": "^4.4.0",

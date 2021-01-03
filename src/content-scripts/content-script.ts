@@ -1,10 +1,13 @@
+import { format as dateFormat } from 'date-fns'
 import Runtime from '../lib/chrome/Runtime'
-import Logger from '../loggers/Logger'
 import ChatHandler from './ChatHandler'
 import PageEventer from './PageEventer'
 
-const manifest = Runtime.getManifest()
-Logger.info(manifest.name + ` ver ` + manifest.version)
+if (process.env.NODE_ENV === 'development') {
+  const manifest = Runtime.getManifest()
+  const date = dateFormat(new Date(), 'yyyy-MM-dd_HH:mm:ss')
+  console.log(`[dev] ${manifest.name} ver: ${manifest.version}, build: ${date}`)
+}
 
 const init = async () => {
   const handler = new ChatHandler()

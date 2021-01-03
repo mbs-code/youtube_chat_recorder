@@ -1,5 +1,6 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import ConfigStorage from '../lib/chrome/Configstorage'
+import Runtime from '../lib/chrome/Runtime'
 import VideoStorage from '../lib/chrome/VideoStorage'
 import PageHelper from '../lib/util/PageHelper'
 import retry from '../lib/util/Retry'
@@ -28,13 +29,16 @@ export default class PageEventer {
   }
 
   public async init(): Promise<void> {
-    Logger.info('⚙️[init]')
-
-    // 初期化
-    this.handler.removeVideo()
-
     // config を読み込む
     await this.loadConfig()
+
+    // 初期化
+    const manifest = Runtime.getManifest()
+    Logger.info(manifest.name + ` ver:${manifest.version}`)
+    Logger.info('⚙️[init]')
+
+    // 動画を消しとく
+    this.handler.removeVideo()
 
     // ページに event listener を付与する
     await this.attachEventListener()
@@ -45,6 +49,7 @@ export default class PageEventer {
     this.config = config
     this.chatFilter.setChatFilters(this.config.chatFilters)
     VideoStorage.MAX_LENGTH = this.config?.maxVideoLength || 10
+    Logger.SHOW_LOG_LEVEL = this.config?.showLogLevel || 'warn'
 
     Logger.info('⚙️[Load] load config')
     Logger.trace('> config: ' + JSON.stringify(config))
