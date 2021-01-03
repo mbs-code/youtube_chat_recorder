@@ -171,7 +171,7 @@ export default class App extends Vue {
   selectedFilter: string| null = null
 
   maxChatLength: number = 100 // 最大表示チャット数
-  isOver: boolean = false
+  isOver: boolean = false // 最大長を超えたか
 
   $refs!: {
     chatList: ChatList,
@@ -215,7 +215,9 @@ export default class App extends Vue {
       if (videoId) {
         const chats = await ChatStorage.get(videoId)
         this.chats = chats
-        this.$refs.chatList.unselectedAll()
+        if (this.$refs.chatList) {
+          this.$refs.chatList.unselectedAll()
+        }
       }
     } else {
       this.chats = []
