@@ -19,4 +19,18 @@ export default class Runtime {
   public static async openOptionPage(): Promise<void> {
     await browser.runtime.openOptionsPage()
   }
+
+  /**
+   * ローカルストレージの使用量を取得する
+   *
+   * @static
+   * @return {number} 使用量 byte
+   */
+  public static async getBytesInUseLocalStorage(): Promise<number> {
+    return new Promise((resolve) => {
+      chrome.storage.local.getBytesInUse(function (bytesInUse: number) {
+        resolve(bytesInUse)
+      })
+    })
+  }
 }

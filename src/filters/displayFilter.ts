@@ -1,4 +1,5 @@
 import { format as dateFormat, formatDistanceToNow } from 'date-fns'
+import byteSize from 'byte-size'
 import jaLocale from 'date-fns/locale/ja'
 
 import * as TimeFormat from 'hh-mm-ss'
@@ -20,4 +21,12 @@ export default {
     }
     return '-'
   },
+
+  formatByte(val?: number) {
+    if (val) {
+      const bs = byteSize(val)
+      return bs.value + ' ' + bs.unit
+    }
+    return '-'
+  }
 }

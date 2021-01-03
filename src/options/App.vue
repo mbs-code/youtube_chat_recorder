@@ -129,6 +129,15 @@
           </div>
         </div>
 
+        <div class="field is-grouped">
+          <p class="control">
+            <label class="label field-into-height">ストレージ使用量</label>
+          </p>
+          <div class="control">
+            <p class="field-into-height">{{ byteInUse | formatByte }}</p>
+          </div>
+        </div>
+
       </div>
       <!-- end right panel -->
     </div>
@@ -139,6 +148,7 @@
 <script lang="ts">
 import { Component, Vue } from 'vue-property-decorator'
 import ChatFilterTable from './components/ChatFilterTable.vue'
+import displayFilter from '../filters/displayFilter'
 
 import ConfigStorage from '../lib/chrome/Configstorage'
 import Toast from '../plugins/Toast'
@@ -149,9 +159,12 @@ import { LogLevel, LEVELS } from '../loggers/Logger'
 
 @Component({
   components: { ChatFilterTable },
+  filters: displayFilter,
 })
 export default class App extends Vue {
   version?: string | null = null
+  byteInUse: number = 0
+
   config?: Config | null = null
 
   // 初期値は適当 (絶対に上書きするので)
@@ -168,6 +181,9 @@ export default class App extends Vue {
     // TODO: 動いてないかも
     const manifest = Runtime.getManifest()
     this.version = manifest.version
+
+    // 使用サイズを取得
+    this.byteInUse = await Runtime.getBytesInUseLocalStorage()
 
     // 設定の読み込み
     await this.loadConfig()
