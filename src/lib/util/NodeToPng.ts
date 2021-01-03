@@ -1,4 +1,5 @@
 import domToImage from 'dom-to-image-more'
+import Logger from '../../loggers/Logger'
 
 export default class NodeToPng {
   /**
@@ -41,7 +42,7 @@ export default class NodeToPng {
 
       // dom のサイズを取得
       const displays = this.calcNodeDisplaySize(node)
-      // Logger.trace(`🎨[DRAW] dom size: ${dw}x${dh}`)
+      Logger.trace(`> 🎨 [start] dom size: ${displays.width}x${displays.height}`)
 
       // 画像にする
       // TODO: scale にも対応させる
@@ -58,6 +59,7 @@ export default class NodeToPng {
         const ctx = canvas.getContext('2d')
         const width = canvas.width
         const height = canvas.height
+        Logger.trace(`> 🎨 generated canvas: ${width}x${height}`)
 
         // ■ 下部に透過部分が発生することが多々あるので修正
         if (!ctx) {
@@ -74,6 +76,7 @@ export default class NodeToPng {
           }
         }
         const sizeThreshhold = threshold > 0 ? threshold + 1 : threshold // 1~ の数字系に直す
+        Logger.trace(`> 🎨 opaque height: ${sizeThreshhold}, fix: ${sizeThreshhold < height}`)
 
         // 閾値が高さより小さいなら切り取る
         let nCanvas: HTMLCanvasElement
@@ -88,12 +91,14 @@ export default class NodeToPng {
           }
 
           nctx.drawImage(canvas, 0, 0, width, threshold + 1, 0, 0, width, threshold + 1)
+          Logger.trace(`> 🎨 adjusted canvas: ${nCanvas.width}x${nCanvas.height}`)
         } else {
           nCanvas = canvas
         }
 
         // url 生成
         const dataUrl = nCanvas.toDataURL('image/png')
+        Logger.trace(`draw [success]: ${nCanvas.width}x${nCanvas.height}, ${dataUrl.length.toLocaleString()} byte`)
 
         resolve(dataUrl)
       })
@@ -110,6 +115,8 @@ export default class NodeToPng {
    * @return {string} png data url
    */
   public static async merge(urls: string[]): Promise<string> {
+    Logger.trace(`> 🎨 [start] merge images (len: ${urls.length})`)
+
     let canvasWidth = 0
     let canvasHeight = 0
 
@@ -128,6 +135,8 @@ export default class NodeToPng {
     const canvas = document.createElement('canvas')
     canvas.width = canvasWidth
     canvas.height = canvasHeight
+    Logger.trace(`> 🎨 generated canvas: ${canvasWidth}x${canvasHeight}`)
+
     const ctx = canvas.getContext('2d')
     if (!ctx) {
       throw new Error('Canvas generation failure (ctx)')
@@ -147,6 +156,8 @@ export default class NodeToPng {
 
     // 画像の生成
     const dataUrl = canvas.toDataURL('image/png')
+    Logger.trace(`draw [success]: ${canvas.width}x${canvas.height}, ${dataUrl.length.toLocaleString()} byte`)
+
     return dataUrl
   }
 

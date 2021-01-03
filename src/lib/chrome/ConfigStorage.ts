@@ -1,5 +1,6 @@
 import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
+import Logger from '../../loggers/Logger'
 import Config from '../../models/Config'
 
 export default class ConfigStorage {
@@ -36,7 +37,7 @@ export default class ConfigStorage {
     config.createdAt = config.createdAt || config.updatedAt
 
     // 値の置き換え
-    console.log(`💾[save] config: ${JSON.stringify(config)}`)
+    Logger.debug(`> 💾[save] config: ${JSON.stringify(config)}`)
     await this.replace(config)
   }
 
@@ -45,7 +46,7 @@ export default class ConfigStorage {
 
     // 値があったら消しとく
     if (config) {
-      console.log(`💾[remove] config`)
+      Logger.debug(`> 💾[remove] config`)
       await browser.storage.local.remove(this.STORAGE_KEY)
     }
     return config

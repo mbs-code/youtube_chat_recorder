@@ -4,6 +4,7 @@ import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
 import Video from '../../models/Video'
 import ChatStorage from './ChatStorage'
+import Logger from '../../loggers/Logger'
 
 export default class VideoStorage {
   public static readonly STORAGE_KEY = '@videos'
@@ -62,7 +63,8 @@ export default class VideoStorage {
     const limits = sorts.splice(0, this.MAX_LENGTH)
 
     // 値の置き換え
-    console.log(`💾[save] videos: ${limits.length} (db:${oldLength}, +add:1, -dup:${Number(index >= 0)})`)
+    const stat = `db:${oldLength}, +add:1, -dup:${Number(index >= 0)}, -del:${sorts.length}`
+    Logger.debug(`> 💾[save] videos: ${limits.length} (${stat})`)
     await this.replace(limits)
 
     // video を消したら chat も消しとく
@@ -84,7 +86,7 @@ export default class VideoStorage {
 
       if (del.id) {
         // 値の置き換え
-        console.log(`💾[remove] video: ${del.id}`)
+        Logger.debug(`> 💾[remove] video: ${del.id}`)
         await this.replace(dbs)
 
         // video を消したら chat も消しとく

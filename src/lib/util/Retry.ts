@@ -1,4 +1,5 @@
 import * as delay from 'delay'
+import Logger from '../../loggers/Logger'
 
 /**
  * 値が取得できるまで繰り返す処理.
@@ -21,6 +22,7 @@ export default async function retry<T>(func: () => T | Promise<T>, maxTry: numbe
     }
 
     await delay(interval)
+    Logger.trace(`Retry ${i + 1} times (wait: ${interval} msec)`)
   }
   return undefined
 }

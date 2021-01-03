@@ -1,3 +1,4 @@
+import Logger from '../../loggers/Logger'
 import Chat from '../../models/Chat'
 import NodeToPng from '../util/NodeToPng'
 import BaseQueue from './BaseQueue'
@@ -17,7 +18,7 @@ export default class DrawDomQueue extends BaseQueue<DrawObjects> {
   }
 
   protected async invoke(objects: DrawObjects[]): Promise<void> {
-    console.log(`🎨[DRAW] drawing... (item: ${objects.length})`)
+    Logger.debug(`🎨[DRAW] drawing... (item: ${objects.length})`)
 
     // 一枚ずつ書いていく
     for (const obj of objects) {
@@ -28,11 +29,11 @@ export default class DrawDomQueue extends BaseQueue<DrawObjects> {
           obj.chat.pngUrl = dataUrl
         }
       } catch (err) {
-        // TODO: エラーハンドリング
-        console.error(err)
+        Logger.error(err)
       }
     }
-    console.log(`🎨[DRAW] success!`)
+
+    Logger.debug(`🎨[DRAW] success!`)
 
     // チャットを取り出して保存キューへ
     const chats = objects.map(e => e.chat)

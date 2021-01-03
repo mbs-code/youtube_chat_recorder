@@ -1,7 +1,10 @@
+import Runtime from '../lib/chrome/Runtime'
+import Logger from '../loggers/Logger'
 import ChatHandler from './ChatHandler'
 import PageEventer from './PageEventer'
 
-console.log('Hello from the content script', new Date())
+const manifest = Runtime.getManifest()
+Logger.info(manifest.name + ` ver ` + manifest.version)
 
 const init = async () => {
   const handler = new ChatHandler()

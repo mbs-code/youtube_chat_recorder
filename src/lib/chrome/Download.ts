@@ -1,5 +1,3 @@
-import { format as dateFormat } from 'date-fns'
-
 export default class Download {
   /**
    * 画像 url を ダウンロードする (png).

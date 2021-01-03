@@ -1,5 +1,6 @@
 import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
+import Logger from '../../loggers/Logger'
 import Chat from '../../models/Chat'
 export default class ChatStorage {
   // chat のキーは 動画ID
@@ -46,7 +47,7 @@ export default class ChatStorage {
     }
 
     // 値の置き換え
-    console.log(`💾[save] chats: ${dbs.length} (db:${count}, +add:${chats.length}, -dup:${duplicate})`)
+    Logger.debug(`> 💾[save] chats: ${dbs.length} (db:${count}, +add:${chats.length}, -dup:${duplicate})`)
     await this.replace(videoId, dbs)
   }
 
@@ -60,7 +61,7 @@ export default class ChatStorage {
       if (index >= 0) {
         const del = dbs.splice(index, 1)[0]
         if (del.id) {
-          console.log(`💾[remove] chat: ${videoId} - ${del.id}`)
+          Logger.debug(`> 💾[remove] chat: ${videoId} - ${del.id}`)
           dels.push(del)
         }
       }
@@ -79,7 +80,7 @@ export default class ChatStorage {
 
     // 値があったら消しとく
     if (chats) {
-      console.log(`💾[remove] chats: ${videoId}`)
+      Logger.debug(`> 💾[remove] chats: ${videoId}`)
       await browser.storage.local.remove(videoId)
     }
     return chats

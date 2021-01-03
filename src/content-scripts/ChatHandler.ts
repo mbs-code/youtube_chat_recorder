@@ -3,6 +3,7 @@ import VideoStorage from '../lib/chrome/VideoStorage'
 import DrawDomQueue from '../lib/queue/DrawDomQueue'
 import SaveChatQueue from '../lib/queue/SaveChatQueue'
 import retry from '../lib/util/Retry'
+import Logger from '../loggers/Logger'
 import Chat from '../models/Chat'
 import Video from '../models/Video'
 
@@ -36,20 +37,18 @@ export default class ChatHandler {
   }
 
   public async setVideo(video: Video): Promise<void> {
-    console.log(`✋[Handler] set video (${video.dump()})`)
-    console.log('> video: ' + JSON.stringify(video))
+    Logger.debug(`✋[Handler] set video (${video.dump()})`)
+    Logger.trace('video: ' + JSON.stringify(video))
     this.video = video
     this.saveChatQueue.setVideo(video)
 
     // storage に保存
     await VideoStorage.save(video)
-    console.log(await VideoStorage.getAll())
   }
 
   public async removeVideo(): Promise<boolean> {
     if (this.video) {
-      const text = this.video.dump()
-      console.log(`✋[Handler] remove video (${text})`)
+      Logger.debug(`✋[Handler] remove video (${this.video.dump()})`)
 
       this.video = undefined
       this.saveChatQueue.removeVideo()
@@ -83,30 +82,37 @@ export default class ChatHandler {
    * @return {boolean} 成功可否
    */
   public async invoke(node: HTMLElement, chatFilter: ChatFilter): Promise<boolean> {
-    // video とIDが無ければ失敗
-    if (!this.video || !this.video.id) {
-      return false
+    try {
+      // video とIDが無ければ失敗
+      if (!this.video || !this.video.id) {
+        return false
+      }
+
+      // コメント対象の DOM か判定する
+      const nodeName = node.nodeName.toLowerCase()
+      if (COMMENT_NODE_NAMES.indexOf(nodeName) === -1) {
+        return false
+      }
+
+      // チャット model に変換 (videoが無くても取得はする？)
+      const chat = await Chat.createByElement(this.video, node)
+
+      // チャットを処理する
+      const taskType = chatFilter.checkChatTaskType(chat)
+      if (taskType === 'image') {
+        Logger.trace('💬 image: ' + chat.dump())
+        this.drawDomQueue.push({ node, chat })
+      } else if (taskType === 'save') {
+        Logger.trace('💬 save: ' + chat.dump())
+        this.saveChatQueue.push(chat)
+      }
+
+      return true
+    } catch (err) {
+      // 一応 try-catch
+      Logger.error(err)
     }
 
-    // コメント対象の DOM か判定する
-    const nodeName = node.nodeName.toLowerCase()
-    if (COMMENT_NODE_NAMES.indexOf(nodeName) === -1) {
-      return false
-    }
-
-    // チャット model に変換 (videoが無くても取得はする？)
-    const chat = await Chat.createByElement(this.video, node)
-
-    // チャットを処理する
-    const taskType = chatFilter.checkChatTaskType(chat)
-    if (taskType === 'image') {
-      console.log('> image: ' + chat.dump())
-      this.drawDomQueue.push({ node, chat })
-    } else if (taskType === 'save') {
-      console.log('> save: ' + chat.dump())
-      this.saveChatQueue.push(chat)
-    }
-
-    return true
+    return false
   }
 }
