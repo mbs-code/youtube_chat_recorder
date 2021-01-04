@@ -7,6 +7,7 @@ import retry from '../lib/util/Retry'
 import Logger from '../loggers/Logger'
 import Config from '../models/Config'
 import Video from '../models/Video'
+import BadgeManager from './BadgeManager'
 import ChatHandler from './ChatHandler'
 
 export default class PageEventer {
@@ -87,6 +88,10 @@ export default class PageEventer {
       subtree: true,
     })
 
+    // icon をアクティブにする
+    await BadgeManager.activateIcon()
+    await BadgeManager.clearBadgeCounter()
+
     // 今表示されてるものを処理する (promise はスルー)
     // コメント追加にラグがあるのでいい感じに全部取れるはず
     this.handler.findInvoke(e, this.chatFilter).then(() => {
@@ -99,6 +104,10 @@ export default class PageEventer {
       Logger.info('⚙️[stop] observer')
       this.observer.disconnect()
       await this.handler.removeVideo()
+
+      // icon を非アクティブにする
+      await BadgeManager.deactivateIcon()
+      await BadgeManager.clearBadgeCounter()
     }
   }
 

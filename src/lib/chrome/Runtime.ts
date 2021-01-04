@@ -1,4 +1,5 @@
 import { browser, Manifest } from 'webextension-polyfill-ts'
+import RuntimeMessageInterface from '../../interface/RuntimeMessageInterface'
 
 export default class Runtime {
   /**
@@ -18,6 +19,32 @@ export default class Runtime {
    */
   public static async openOptionPage(): Promise<void> {
     await browser.runtime.openOptionsPage()
+  }
+
+  ///
+
+  /**
+   * アイコンバッジに文字を設定する.
+   * @param {string} [str] 付与する文字(5文字以降切り捨て)
+   */
+  public static async sendBadgeText(str?: string): Promise<void> {
+    const message: RuntimeMessageInterface = {
+      type: 'badge',
+      value: str,
+    }
+    await browser.runtime.sendMessage(message)
+  }
+
+  /**
+   * アイコンのアクティブ状態を設定する.
+   * @param {boolean} bool アクティブな状態かどうか
+   */
+  public static async sendIconIsActive(bool: boolean): Promise<void> {
+    const message: RuntimeMessageInterface = {
+      type: 'active',
+      value: Boolean(bool),
+    }
+    await browser.runtime.sendMessage(message)
   }
 
   /**

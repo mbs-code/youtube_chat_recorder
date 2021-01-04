@@ -1,3 +1,4 @@
+import BadgeManager from '../../content-scripts/BadgeManager'
 import Logger from '../../loggers/Logger'
 import Chat from '../../models/Chat'
 import Video from '../../models/Video'
@@ -33,5 +34,8 @@ export default class SaveChatQueue extends BaseQueue<Chat> {
     }
 
     Logger.debug(`💾[SAVE] success!`)
+
+    // icon badge を付与する
+    await BadgeManager.addBadgeCounter(chats.length)
   }
 }

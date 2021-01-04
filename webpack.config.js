@@ -12,7 +12,7 @@ const config = {
   mode: process.env.NODE_ENV,
   context: path.resolve(__dirname, 'src'),
   entry: {
-    background: './background.ts',
+    background: './backgrounds/background.ts',
     contentscript: './content-scripts/content-script.ts',
     'popup/popup': './popup/popup.ts',
     'options/options': './options/options.ts',
