@@ -249,6 +249,7 @@ export default class App extends Vue {
     config.mergeImageFileName = this.mergeImageFileName || config.mergeImageFileName
     config.complementImage = this.complementImage
     config.maxVideoLength = this.maxVideoLength
+    config.showLogLevel = this.showLogLevel
 
     // リミット確認
     if (config.maxVideoLength < 5) {

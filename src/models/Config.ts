@@ -1,4 +1,3 @@
-import { Transform, Type } from 'class-transformer'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 import TransformDate from '../lib/decorator/TransformDate'
