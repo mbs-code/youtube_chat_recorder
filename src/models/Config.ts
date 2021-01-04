@@ -1,3 +1,4 @@
+import { Transform, Type } from 'class-transformer'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 import TransformDate from '../lib/decorator/TransformDate'
@@ -14,7 +15,9 @@ export default class Config {
   mergeImageFileName: string
 
   // 画像を保管する
-  complementImage: boolean
+  // @Transform(value => Boolean(value), { toClassOnly: true })
+  // @Transform(value => value instanceof Boolean ? value : undefined, { toPlainOnly: true })
+  complementImage: boolean = false
 
   // 最大保存video数
   maxVideoLength: number

@@ -114,6 +114,8 @@
           </div>
         </div>
 
+        <hr>
+
         <div class="field is-grouped">
           <p class="control">
             <label class="label field-into-height">出力するログレベル</label>
@@ -134,18 +136,43 @@
             <label class="label field-into-height">ストレージ使用量</label>
           </p>
           <div class="control">
-            <p class="field-into-height">{{ byteInUse | formatByte }}</p>
+            <p class="field-into-height">
+              {{ byteInUse | formatByte }}
+              <span v-if="loadDate">({{ loadDate | datetimeString }} 時点)</span>
+            </p>
           </div>
         </div>
 
         <div class="field is-grouped">
           <p class="control">
+            <a class="button is-danger is-light" @click="handleDeleteVideos">
+              動画とチャットを全て削除する
+            </a>
+          </p>
+          <p class="control">
             <a class="button is-danger is-light" @click="handleAllDelete">
-              全てのデータを削除する
+              ストレージを空にする
             </a>
           </p>
         </div>
 
+        <div class="field is-grouped">
+          <p class="control">
+            <a class="button" @click="handleExportConfig">
+              設定のエクスポート
+            </a>
+          </p>
+          <div class="control">
+            <div class="file">
+              <label class="file-label">
+                <input type="file" class="file-input" accept=".json" @change="handleInportConfig">
+                <span class="file-cta">
+                  <span class="file-label">設定のインポート (上書き)</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
       <!-- end right panel -->
     </div>
@@ -154,6 +181,7 @@
 </template>
 
 <script lang="ts">
+import { format as dateFormat } from 'date-fns'
 import { Component, Vue } from 'vue-property-decorator'
 import ChatFilterTable from './components/ChatFilterTable.vue'
 import displayFilter from '../filters/displayFilter'
@@ -164,6 +192,10 @@ import Config from '../models/Config'
 import Runtime from '../lib/chrome/Runtime'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 import { LogLevel, LEVELS } from '../loggers/Logger'
+import VideoStorage from '../lib/chrome/VideoStorage'
+import ChatStorage from '../lib/chrome/ChatStorage'
+import { classToPlain, deserialize, plainToClass, serialize } from 'class-transformer'
+import Download from '../lib/chrome/Download'
 
 @Component({
   components: { ChatFilterTable },
@@ -174,6 +206,7 @@ export default class App extends Vue {
   byteInUse: number = 0
 
   config?: Config | null = null
+  loadDate?: Date | null = null
 
   // 初期値は適当 (絶対に上書きするので)
   chatFilters: ChatFilterConfigInterface[] = []
@@ -197,6 +230,7 @@ export default class App extends Vue {
   async loadConfig(): Promise<void> {
     const config = await ConfigStorage.get()
     this.config = config
+    this.loadDate = new Date()
 
     this.chatFilters = config.chatFilters
     this.mergeImageFileName = config.mergeImageFileName
@@ -241,8 +275,24 @@ export default class App extends Vue {
     }
   }
 
+  async handleDeleteVideos(): Promise<void> {
+    const result = window.confirm('全ての動画とチャットを削除します。')
+    if (result) {
+      // 動画を全て削除する
+      const videos = await VideoStorage.getAll()
+      for (const video of videos) {
+        if (video.id) {
+          await ChatStorage.clear(video.id)
+        }
+      }
+
+      // 再読み込み
+      await this.loadConfig()
+    }
+  }
+
   async handleAllDelete(): Promise<void> {
-    const result = window.confirm('全てのデータを削除します。')
+    const result = window.confirm('ストレージを空にします。')
     if (result) {
       const result2 = window.confirm('本当に削除しますか？')
       if (result2) {
@@ -250,9 +300,54 @@ export default class App extends Vue {
         await Runtime.clearLocalStorage()
         Toast.success('全てのデータを削除しました。')
 
+        // 再読み込み
         await this.loadConfig()
       }
     }
+  }
+
+  ///
+
+  async handleExportConfig(): Promise<void> {
+    // 設定を取得
+    const config = await ConfigStorage.get()
+    console.log(config)
+
+    // json 化して出力する
+    const text = serialize(classToPlain(config))
+    const blob = new Blob([text], { type: 'octet/stream' })
+    const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_config.json'
+
+    await Download.file(window.URL.createObjectURL(blob), title)
+  }
+
+  async handleInportConfig(event: InputEvent): Promise<void> {
+      const t = event.target as HTMLInputElement
+      const file = t.files ? t.files[0] : null
+
+      if (file) {
+        try {
+          const name = file.name
+          const reader = new FileReader()
+          reader.onload = async () => {
+            // config を読み込む
+            const text = reader.result as string
+            const json = JSON.parse(text)
+            const config = plainToClass(Config, json)
+            // TODO: { excludeExtraneousValues:true } を付けたいが, boolean が確定 false になってしまう
+
+            // 設定を保存
+            await ConfigStorage.save(config)
+            Toast.success(`「${name}」を読み込みました。`)
+
+            // 再読み込み
+            await this.loadConfig()
+          }
+          reader.readAsText(file)
+        } catch (err) {
+          window.alert(err)
+        }
+      }
   }
 }
 </script>

@@ -7,6 +7,17 @@ export default class Download {
    */
   public static image(dataUrl: string, filename?: string): void {
     const name = (filename || 'download') + '.png'
+    this.file(dataUrl, name)
+  }
+
+  /**
+   * ファイルを ダウンロードする.
+   *
+   * @param {string} dataUrl data url
+   * @param {string} [filename] 保存する名前(拡張子も)
+   */
+  public static file(dataUrl: string, filename: string): void {
+    const name = filename
 
     const link = document.createElement('a')
     link.download = name
