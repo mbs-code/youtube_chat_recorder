@@ -62,10 +62,10 @@
             class="button is-danger is-light"
             :disabled="!selectedVideo.thumbnailUrl"
             :href="selectedVideo.thumbnailUrl || ''"
-            @click="handleDeleteVideo(selectedVideo)"
+            @click="handleDeleteChats(selectedVideo)"
           >
             <span class="icon">
-              <i class="mdi mdi-movie" />
+              <i class="mdi mdi-comment" />
             </span>
             <span>削除</span>
           </button>
@@ -106,7 +106,7 @@
         <button
           class="button is-danger"
           :disabled="selectedChats.length === 0"
-          @click="handleDeleteChats"
+          @click="handleDeleteSelectedChats"
         >
           <span class="icon">
             <i class="mdi mdi-comment" />
@@ -205,6 +205,11 @@ export default class App extends Vue {
         .catch(err => { /**/ })
     }
 
+    // 値の読み込み
+    await this.loadData()
+  }
+
+  async loadData(): Promise<void> {
     // 値読み込み
     const videos = await VideoStorage.getAll()
     this.videos = videos
@@ -259,13 +264,14 @@ export default class App extends Vue {
     }
   }
 
-  async handleDeleteVideo(video?: Video): Promise<void> {
+  async handleDeleteChats(video?: Video): Promise<void> {
+    // TODO: 動画を削除しちゃうと色々と不都合なので、とりあえず全チャットを削除
     if (video) {
-      const result = window.confirm(`「${video.title}」を削除します。`)
-      if (result) {
-        const del = await VideoStorage.remove(video)
-        window.location.reload() // 面倒だからリセット
-        // TODO: 現在取得中のものが削除されていたときの処理
+      const result = window.confirm(`「${video.title}」のチャットを全て削除します。`)
+      if (result && video?.id) {
+        await ChatStorage.clear(video.id)
+        this.selectedChats = []
+        this.chats = await ChatStorage.get(video.id)
       }
     }
   }
@@ -319,7 +325,7 @@ export default class App extends Vue {
     }
   }
 
-  async handleDeleteChats(): Promise<void> {
+  async handleDeleteSelectedChats(): Promise<void> {
     const videoId = this.selectedVideo?.id
     const selected = this.selectedChats
 
