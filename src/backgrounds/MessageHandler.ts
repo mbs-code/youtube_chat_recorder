@@ -15,13 +15,13 @@ export default class MessageHandler {
       const value = message.value
 
       switch(type) {
-        case 'LOAD_CONFIG':
+        case 'YCR_LOAD_CONFIG':
           await this.loadHandler(sender)
           return true
-        case 'BADGE':
+        case 'YCR_BADGE':
           await this.badgeHandler(value, sender)
           return true
-        case 'ACTIVE':
+        case 'YCR_ACTIVE':
           await this.activeHandler(value, sender)
           return true
         default:

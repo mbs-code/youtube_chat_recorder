@@ -200,7 +200,9 @@ export default class App extends Vue {
     // badge を 0 にする
     const activeTab = await BrowserTabs.getActiveTab()
     if (activeTab) {
-      await Runtime.sendBadgeText('', activeTab)
+      // 非同期で実行 (失敗してもOK)
+      Runtime.sendBadgeText('', activeTab)
+        .catch(err => { /**/ })
     }
 
     // 値読み込み

@@ -52,7 +52,7 @@ export default class Runtime {
    * @return {boolean} 成功可否
    */
   public static async sendLoadConfig(tab?: Tabs.Tab): Promise<boolean> {
-    return this.sendMessage({ type: 'LOAD_CONFIG' }, tab)
+    return this.sendMessage({ type: 'YCR_LOAD_CONFIG' }, tab)
   }
 
   /**
@@ -65,7 +65,7 @@ export default class Runtime {
    */
   public static async sendBadgeText(str?: string, tab?: Tabs.Tab): Promise<boolean> {
     return this.sendMessage({
-      type: 'BADGE',
+      type: 'YCR_BADGE',
       value: str,
     }, tab)
   }
@@ -79,7 +79,7 @@ export default class Runtime {
    */
   public static async sendIconIsActive(bool: boolean): Promise<boolean> {
     return this.sendMessage({
-      type: 'ACTIVE',
+      type: 'YCR_ACTIVE',
       value: Boolean(bool),
     })
   }

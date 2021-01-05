@@ -1,4 +1,4 @@
 export default interface MessageInterface {
-  type: 'LOAD_CONFIG' | 'BADGE' | 'ACTIVE'
+  type: 'YCR_LOAD_CONFIG' | 'YCR_BADGE' | 'YCR_ACTIVE'
   value?: any
 }
