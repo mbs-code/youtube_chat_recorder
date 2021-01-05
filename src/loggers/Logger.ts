@@ -57,6 +57,10 @@ export default class Logger {
     }
   }
 
+  public static warn(message: any) {
+    this.log('warn', message, 'color: orange')
+  }
+
   public static info(message: any) {
     this.log('info', message, 'color: blue')
   }

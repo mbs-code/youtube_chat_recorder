@@ -1,5 +1,6 @@
 import { browser, Manifest } from 'webextension-polyfill-ts'
-import RuntimeMessageInterface from '../../interface/RuntimeMessageInterface'
+import Logger from '../../loggers/Logger'
+import MessageInterface from './interface/MessageInterface'
 
 export default class Runtime {
   /**
@@ -24,27 +25,47 @@ export default class Runtime {
   ///
 
   /**
-   * アイコンバッジに文字を設定する.
-   * @param {string} [str] 付与する文字(5文字以降切り捨て)
+   * background にメッセージを送信する.
+   *
+   * @static
+   * @param {MessageInterface} message message
+   * @return {boolean} 成功可否
    */
-  public static async sendBadgeText(str?: string): Promise<void> {
-    const message: RuntimeMessageInterface = {
-      type: 'badge',
-      value: str,
+  protected static async sendMessage(message: MessageInterface): Promise<boolean> {
+    const { response } = await browser.runtime.sendMessage(message)
+    if (response !== true) {
+      Logger.warn(response)
+      return false
     }
-    await browser.runtime.sendMessage(message)
+    return true
+  }
+
+  /**
+   * アイコンバッジに文字を設定する.
+   *
+   * @static
+   * @param {string} [str] 付与する文字(5文字以降切り捨て)
+   * @return {boolean} 成功可否
+   */
+  public static async sendBadgeText(str?: string): Promise<boolean> {
+    return this.sendMessage({
+      type: 'BADGE',
+      value: str,
+    })
   }
 
   /**
    * アイコンのアクティブ状態を設定する.
+   *
+   * @static
    * @param {boolean} bool アクティブな状態かどうか
+   * @return {boolean} 成功可否
    */
-  public static async sendIconIsActive(bool: boolean): Promise<void> {
-    const message: RuntimeMessageInterface = {
-      type: 'active',
+  public static async sendIconIsActive(bool: boolean): Promise<boolean> {
+    return this.sendMessage({
+      type: 'ACTIVE',
       value: Boolean(bool),
-    }
-    await browser.runtime.sendMessage(message)
+    })
   }
 
   /**
