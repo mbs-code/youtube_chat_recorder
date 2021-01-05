@@ -1,5 +1,5 @@
 import { browser, Runtime } from 'webextension-polyfill-ts'
-import ConfigStorage from '../lib/chrome/Configstorage'
+import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import MessageInterface from '../lib/chrome/interface/MessageInterface'
 import Logger from '../loggers/Logger'
 

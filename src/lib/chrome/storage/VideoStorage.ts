@@ -2,9 +2,9 @@ import arraySort from 'array-sort'
 import { compareDesc } from 'date-fns'
 import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
-import Video from '../../models/Video'
+import Video from '../../../models/Video'
 import ChatStorage from './ChatStorage'
-import Logger from '../../loggers/Logger'
+import Logger from '../../../loggers/Logger'
 
 export default class VideoStorage {
   public static readonly STORAGE_KEY = '@videos'

@@ -1,7 +1,7 @@
 import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
-import Logger from '../../loggers/Logger'
-import Chat from '../../models/Chat'
+import Logger from '../../../loggers/Logger'
+import Chat from '../../../models/Chat'
 export default class ChatStorage {
   // chat のキーは 動画ID
 

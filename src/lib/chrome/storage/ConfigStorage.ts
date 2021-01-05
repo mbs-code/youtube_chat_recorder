@@ -1,7 +1,7 @@
 import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
-import Logger from '../../loggers/Logger'
-import Config from '../../models/Config'
+import Logger from '../../../loggers/Logger'
+import Config from '../../../models/Config'
 
 export default class ConfigStorage {
   public static readonly STORAGE_KEY = '@config'

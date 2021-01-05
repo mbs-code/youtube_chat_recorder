@@ -1,5 +1,5 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
-import VideoStorage from '../lib/chrome/VideoStorage'
+import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import DrawDomQueue from '../lib/queue/DrawDomQueue'
 import SaveChatQueue from '../lib/queue/SaveChatQueue'
 import retry from '../lib/util/Retry'

@@ -2,7 +2,7 @@ import BadgeManager from '../../content-scripts/BadgeManager'
 import Logger from '../../loggers/Logger'
 import Chat from '../../models/Chat'
 import Video from '../../models/Video'
-import ChatStorage from '../chrome/ChatStorage'
+import ChatStorage from '../chrome/storage/ChatStorage'
 import BaseQueue from './BaseQueue'
 
 export default class SaveChatQueue extends BaseQueue<Chat> {

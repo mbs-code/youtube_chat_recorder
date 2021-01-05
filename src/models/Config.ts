@@ -1,6 +1,6 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
-import VideoStorage from '../lib/chrome/VideoStorage'
+import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import TransformDate from '../lib/decorator/TransformDate'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
 import Logger, { LogLevel } from '../loggers/Logger'
