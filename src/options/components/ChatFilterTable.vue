@@ -25,6 +25,11 @@
             <th>
               <span v-if="chatFilter.textMode === 'message'">💬</span>
               <span v-if="chatFilter.textMode === 'author'">🙋</span>
+              <span v-if="chatFilter.textMode" class="tag is-primary is-light">
+                <span class="icon is-small">
+                  <i class="mdi mdi-format-letter-matches"></i>
+                </span>
+              </span>
               <span v-if="chatFilter.isExact" class="tag is-link">
                 <span class="icon is-small">
                   <i class="mdi mdi-equal"></i>
