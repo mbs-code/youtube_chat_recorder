@@ -196,6 +196,7 @@ import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import { classToPlain, deserialize, plainToClass, serialize } from 'class-transformer'
 import Download from '../lib/chrome/Download'
+import Storage from '../lib/chrome/storage/Storage'
 
 @Component({
   components: { ChatFilterTable },
@@ -239,7 +240,7 @@ export default class App extends Vue {
     this.showLogLevel = config.showLogLevel
 
     // 使用サイズを取得
-    this.byteInUse = await Runtime.getBytesInUseLocalStorage()
+    this.byteInUse = await Storage.getBytesInUseLocalStorage()
 
     // background でも設定を読み込む
     await Runtime.sendLoadConfig()
@@ -301,7 +302,7 @@ export default class App extends Vue {
       const result2 = window.confirm('本当に削除しますか？')
       if (result2) {
         // config を消して再読み込み
-        await Runtime.clearLocalStorage()
+        await Storage.clear()
         Toast.success('全てのデータを削除しました。')
 
         // 再読み込み

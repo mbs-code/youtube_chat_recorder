@@ -77,27 +77,4 @@ export default class Runtime {
       value: Boolean(bool),
     })
   }
-
-  /**
-   * ローカルストレージの使用量を取得する
-   *
-   * @static
-   * @return {number} 使用量 byte
-   */
-  public static async getBytesInUseLocalStorage(): Promise<number> {
-    return new Promise((resolve) => {
-      chrome.storage.local.getBytesInUse(function (bytesInUse: number) {
-        resolve(bytesInUse)
-      })
-    })
-  }
-
-  /**
-   * ローカルストレージを空にする.
-   *
-   * @static
-   */
-  public static async clearLocalStorage(): Promise<void> {
-    await browser.storage.local.clear()
-  }
 }
