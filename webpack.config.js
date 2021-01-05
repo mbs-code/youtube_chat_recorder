@@ -6,13 +6,14 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyPlugin = require('copy-webpack-plugin')
 const ExtensionReloader = require('webpack-extension-reloader')
 const { VueLoaderPlugin } = require('vue-loader')
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 const { version } = require('./package.json')
 
 const config = {
   mode: process.env.NODE_ENV,
   context: path.resolve(__dirname, 'src'),
   entry: {
-    background: './background.ts',
+    background: './backgrounds/background.ts',
     contentscript: './content-scripts/content-script.ts',
     'popup/popup': './popup/popup.ts',
     'options/options': './options/options.ts',
@@ -91,8 +92,8 @@ const config = {
     }),
     new CopyPlugin([
       { from: 'icons', to: 'icons', ignore: ['icon.xcf'] },
-      // { from: 'popup/popup.html', to: 'popup/popup.html', transform: transformHtml },
-      // { from: 'options/options.html', to: 'options/options.html', transform: transformHtml },
+      { from: 'popup/popup.html', to: 'popup/popup.html', transform: transformHtml },
+      { from: 'options/options.html', to: 'options/options.html', transform: transformHtml },
       {
         from: 'manifest.json',
         to: 'manifest.json',
@@ -118,6 +119,12 @@ if (config.mode === 'production') {
         NODE_ENV: '"production"',
       },
     }),
+  ])
+}
+
+if (process.env.ANALYSIS === 'true') {
+  config.plugins = (config.plugins || []).concat([
+    new BundleAnalyzerPlugin(),
   ])
 }
 

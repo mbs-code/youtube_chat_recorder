@@ -1,13 +1,19 @@
 {
-  "name": "youtube_chat_recorder",
-  "description": "A Vue.js web extension",
+  "name": "Youtube Chat Recorder",
+  "description": "App to operate streaming chat.",
   "version": null,
   "manifest_version": 2,
   "icons": {
-    "48": "icons/icon_48.png",
-    "128": "icons/icon_128.png"
+    "16": "icons/icon-16x16.png",
+    "48": "icons/icon-48x48.png",
+    "128": "icons/icon-128x128.png"
   },
   "browser_action": {
+    "default_icon": {
+      "16": "icons/icon-16x16-grey.png",
+      "24": "icons/icon-24x24-grey.png",
+      "32": "icons/icon-32x32-grey.png"
+    },
     "default_title": "youtube_chat_recorder",
     "default_popup": "popup/popup.html"
   },
@@ -16,10 +22,7 @@
       "background.js"
     ]
   },
-  "options_ui": {
-    "page": "options/options.html",
-    "chrome_style": true
-  },
+  "options_page": "options/options.html",
   "content_scripts": [
     {
       "matches": [
@@ -31,5 +34,11 @@
       "run_at": "document_end",
       "all_frames": false
     }
+  ],
+  "permissions": [
+    "tabs",
+    "storage",
+    "unlimitedStorage",
+    "https://*.youtube.com/*"
   ]
 }

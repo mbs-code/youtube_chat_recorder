@@ -2,12 +2,12 @@ module.exports = {
   pages: {
     popup: {
       template: 'public/browser-extension.html',
-      entry: './src/popup/main.js',
+      entry: './src/popup/main.ts',
       title: 'Popup',
     },
     options: {
       template: 'public/browser-extension.html',
-      entry: './src/options/main.js',
+      entry: './src/options/main.ts',
       title: 'Options',
     },
   },
@@ -15,7 +15,7 @@ module.exports = {
     browserExtension: {
       componentOptions: {
         background: {
-          entry: 'src/background.js',
+          entry: 'src/backgrounds/background.ts',
         },
         contentScripts: {
           entries: {
