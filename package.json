@@ -20,7 +20,11 @@
     "hooks": {}
   },
   "dependencies": {
+    "@creativebulma/bulma-tooltip": "^1.2.0",
+    "@mdi/font": "^5.8.55",
+    "animate.css": "^4.1.1",
     "array-sort": "^1.0.0",
+    "bulma": "^0.9.1",
     "bulma-toast": "^2.2.0",
     "byte-size": "^7.0.0",
     "class-transformer": "^0.3.1",

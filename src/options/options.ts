@@ -2,6 +2,10 @@ import Vue, { CreateElement, VNode } from 'vue'
 import App from './App.vue'
 import { browser } from 'webextension-polyfill-ts'
 
+// import css
+import './style.sass'
+
+// bind polyfull
 Vue.prototype.$browser = browser
 
 /* eslint-disable no-new */
