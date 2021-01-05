@@ -6,6 +6,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyPlugin = require('copy-webpack-plugin')
 const ExtensionReloader = require('webpack-extension-reloader')
 const { VueLoaderPlugin } = require('vue-loader')
+const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
 const { version } = require('./package.json')
 
 const config = {
@@ -118,6 +119,12 @@ if (config.mode === 'production') {
         NODE_ENV: '"production"',
       },
     }),
+  ])
+}
+
+if (process.env.ANALYSIS === 'true') {
+  config.plugins = (config.plugins || []).concat([
+    new BundleAnalyzerPlugin(),
   ])
 }
 
