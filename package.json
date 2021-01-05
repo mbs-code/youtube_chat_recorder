@@ -1,7 +1,7 @@
 {
   "name": "youtube_chat_recorder",
   "version": "0.1.0",
-  "description": "A Vue.js web extension",
+  "description": "App to operate streaming chat.",
   "author": "mabasasi <aoe317293@yahoo.co.jp>",
   "engines": {
     "node": ">=10"
