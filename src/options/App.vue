@@ -240,6 +240,9 @@ export default class App extends Vue {
 
     // 使用サイズを取得
     this.byteInUse = await Runtime.getBytesInUseLocalStorage()
+
+    // background でも設定を読み込む
+    await Runtime.sendLoadConfig()
   }
 
   async handleSave(): Promise<void> {

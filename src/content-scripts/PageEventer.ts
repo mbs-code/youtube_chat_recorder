@@ -48,9 +48,8 @@ export default class PageEventer {
   public async loadConfig(): Promise<void> {
     const config = await ConfigStorage.get()
     this.config = config
+    this.config.initApp()
     this.chatFilter.setChatFilters(this.config.chatFilters)
-    VideoStorage.MAX_LENGTH = this.config?.maxVideoLength || 10
-    Logger.SHOW_LOG_LEVEL = this.config?.showLogLevel || 'warn'
 
     Logger.info('⚙️[Load] load config')
     Logger.trace('> config: ' + JSON.stringify(config))

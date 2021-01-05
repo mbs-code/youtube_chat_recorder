@@ -1,8 +1,9 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
+import VideoStorage from '../lib/chrome/VideoStorage'
 import TransformDate from '../lib/decorator/TransformDate'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
-import { LogLevel } from '../loggers/Logger'
+import Logger, { LogLevel } from '../loggers/Logger'
 import Chat from './Chat'
 import Video from './Video'
 
@@ -38,6 +39,14 @@ export default class Config {
     this.maxVideoLength = 10
 
     this.showLogLevel = 'warn'
+  }
+
+  /**
+   * アプリに設定値を付与する.
+   */
+  public initApp() {
+    VideoStorage.MAX_LENGTH = this.maxVideoLength
+    Logger.SHOW_LOG_LEVEL = this.showLogLevel
   }
 
   // ファイル名フォーマット

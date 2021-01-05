@@ -41,6 +41,16 @@ export default class Runtime {
   }
 
   /**
+   * background にて設定を読み込ませる.
+   *
+   * @static
+   * @return {boolean} 成功可否
+   */
+  public static async sendLoadConfig(): Promise<boolean> {
+    return this.sendMessage({ type: 'LOAD_CONFIG' })
+  }
+
+  /**
    * アイコンバッジに文字を設定する.
    *
    * @static

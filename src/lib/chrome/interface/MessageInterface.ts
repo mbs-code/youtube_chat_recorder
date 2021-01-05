@@ -1,4 +1,4 @@
 export default interface MessageInterface {
-  type: 'BADGE' | 'ACTIVE'
-  value: any
+  type: 'LOAD_CONFIG' | 'BADGE' | 'ACTIVE'
+  value?: any
 }
