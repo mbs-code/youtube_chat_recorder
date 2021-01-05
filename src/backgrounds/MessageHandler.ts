@@ -8,7 +8,7 @@ const deactiveIcon = 'icons/icon-32x32-grey.png' // グレーのやつ (デフ�
 
 export default class MessageHandler {
   public static async invoke(message: MessageInterface, sender: Runtime.MessageSender): Promise<boolean | Error> {
-    Logger.debug('message: ' + JSON.stringify(message))
+    Logger.debug('💻[message]: ' + JSON.stringify(message))
 
     try {
       const type = message.type
@@ -35,14 +35,14 @@ export default class MessageHandler {
   ///
 
   public static async loadHandler(sender: Runtime.MessageSender): Promise<void> {
-    Logger.debug('load config')
+    Logger.debug('💻 > load config')
     const config = await ConfigStorage.get()
     config.initApp()
   }
 
   public static async badgeHandler(value: any, sender: Runtime.MessageSender): Promise<void> {
     const text = value ? String(value) : ''
-    Logger.debug('set badge: ' + text)
+    Logger.debug('💻 > set badge: ' + text)
 
     await browser.browserAction.setBadgeText({
       tabId: sender.tab?.id,
@@ -52,7 +52,7 @@ export default class MessageHandler {
 
   public static async activeHandler(value: any, sender: Runtime.MessageSender): Promise<void> {
     const isActive = Boolean(value)
-    Logger.debug('set icon: ' + (isActive ? 'active' : 'deactive'))
+    Logger.debug('💻 > set icon: ' + (isActive ? 'active' : 'deactive'))
 
     await browser.browserAction.setIcon({
       tabId: sender.tab?.id,

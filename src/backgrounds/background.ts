@@ -5,7 +5,7 @@ import ReturnMessageInterface from '../lib/chrome/interface/ReturnMessageInterfa
 import Logger from '../loggers/Logger'
 import MessageHandler from './MessageHandler'
 
-// content script からの値受信
+// popup, content script からの値受信
 browser.runtime.onMessage.addListener(async function (
   message: MessageInterface,
   sender: Runtime.MessageSender

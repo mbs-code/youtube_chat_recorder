@@ -197,6 +197,13 @@ export default class App extends Vue {
   }
 
   async mounted(): Promise<void> {
+    // badge を 0 にする
+    const activeTab = await BrowserTabs.getActiveTab()
+    if (activeTab) {
+      await Runtime.sendBadgeText('', activeTab)
+    }
+
+    // 値読み込み
     const videos = await VideoStorage.getAll()
     this.videos = videos
 
