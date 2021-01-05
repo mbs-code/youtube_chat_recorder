@@ -59,6 +59,19 @@
         </p>
         <p class="control">
           <button
+            class="button"
+            data-tooltip="jsonで出力する"
+            :disabled="!selectedVideo.thumbnailUrl || !chats.length"
+            :href="selectedVideo.thumbnailUrl || ''"
+            @click="handleExportJson()"
+          >
+            <span class="icon has-text-black">
+              <i class="mdi mdi-code-json" />
+            </span>
+          </button>
+        </p>
+        <p class="control">
+          <button
             class="button is-danger is-light"
             :disabled="!selectedVideo.thumbnailUrl"
             :href="selectedVideo.thumbnailUrl || ''"
@@ -138,6 +151,7 @@
 </template>
 
 <script lang="ts">
+import { format as dateFormat } from 'date-fns'
 import arraySort from 'array-sort'
 import { Component, Vue } from 'vue-property-decorator'
 import VideoDropdown from './components/VideoDropdown.vue'
@@ -156,6 +170,7 @@ import NodeToPng from '../lib/util/NodeToPng'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterDataInterface } from '../lib/chatFilter/ChatFilterInterface'
+import { classToPlain, serialize } from 'class-transformer'
 
 @Component({
   components: { VideoDropdown, ChatList }
@@ -261,6 +276,18 @@ export default class App extends Vue {
       if (url !== activeTab?.url) {
         await BrowserTabs.windowOpen(url, activeTab)
       }
+    }
+  }
+
+  async handleExportJson(): Promise<void> {
+    if (this.chats.length) {
+      // json 化して出力する
+      const plains = this.chats.map(c => classToPlain(c))
+      const text = serialize(plains)
+      const blob = new Blob([text], { type: 'octet/stream' })
+      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_' + this.selectedVideo?.id + '.json'
+
+      await Download.file(window.URL.createObjectURL(blob), title)
     }
   }
 
