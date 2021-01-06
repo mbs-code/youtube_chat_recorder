@@ -7,13 +7,14 @@ import SaveChatQueue from './SaveChatQueue'
 export interface DrawObjects {
   chat: Chat
   node: HTMLElement
+  scroller?: HTMLElement
 }
 
 export default class DrawDomQueue extends BaseQueue<DrawObjects> {
   protected saveChatQueue: SaveChatQueue
 
-  constructor(saveChatQueue: SaveChatQueue, interval?: number) {
-    super(interval)
+  constructor(saveChatQueue: SaveChatQueue) {
+    super()
     this.saveChatQueue = saveChatQueue
   }
 
@@ -23,11 +24,17 @@ export default class DrawDomQueue extends BaseQueue<DrawObjects> {
     // 一枚ずつ書いていく
     for (const obj of objects) {
       try {
+        // スクロールさせる
+        if (obj.scroller) {
+          var topPos = obj.node.offsetTop
+          obj.scroller.scrollTop = topPos
+        }
+
         // chat に url があったら無視する (軽量化対策)
-        if (!obj.chat.pngUrl) {
+        // if (!obj.chat.pngUrl) {
           const dataUrl = await NodeToPng.generage(obj.node)
           obj.chat.pngUrl = dataUrl
-        }
+        // }
       } catch (err) {
         Logger.error(err)
       }

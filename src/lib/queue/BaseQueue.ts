@@ -1,12 +1,12 @@
 export default abstract class BaseQueue<T> {
-  protected interval: number // 待機時間
+  public static COUNT_TO_PROCESS_AT_ONE = 10
+  public static PROCESS_INTERVAL = 1000
 
   protected queue: T[] // キュー
   protected timer?: number // タイマー
   protected isRun: boolean // 処理中かどうか
 
-  constructor(interval = 1000) {
-    this.interval = interval
+  constructor() {
     this.queue = []
     this.isRun = false
     this.timer = undefined
@@ -33,8 +33,8 @@ export default abstract class BaseQueue<T> {
     }
     this.isRun = true
 
-    // データを破壊的に全部取り出す
-    const values = this.queue.splice(0)
+    // データを破壊的に全部取り出す(最大10)
+    const values = this.queue.splice(0, BaseQueue.COUNT_TO_PROCESS_AT_ONE)
     if (!values || values.length === 0) {
       this.timerStop()
       this.isRun = false
@@ -56,7 +56,7 @@ export default abstract class BaseQueue<T> {
     if (this.timer === undefined) {
       this.timer = window.setInterval(() => {
         this.exec()
-      }, this.interval)
+      }, BaseQueue.PROCESS_INTERVAL)
     }
   }
 
