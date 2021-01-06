@@ -48,7 +48,7 @@ export default class NodeToPng {
       // TODO: scale にも対応させる
       domToImage.toCanvas(node, {
         width: displays.width, // 指定しないと横幅を揃えられない
-        // height: dh, // 必要なさそう
+        // height: displays.height, // 必要なさそう
         style: {
           // marginTop: '4px' // これを適用すれば単行コメの余白が正確になるが、他が駄目になる
         },
@@ -61,12 +61,20 @@ export default class NodeToPng {
         const height = canvas.height
         Logger.trace(`> 🎨 generated canvas: ${width}x${height}`)
 
-        // ■ 下部に透過部分が発生することが多々あるので修正
         if (!ctx) {
-          throw new Error('Canvas generation failure (ctx)')
+          throw new Error('Failed to generate canvas (ctx)')
         }
 
-        const colors = ctx?.getImageData(0, 0, 1, height).data
+        // ■ もし背景が真っ黒なら取得失敗
+        const rightTopColors = ctx.getImageData(width - 5, 5, 2, 2).data
+        console.log(rightTopColors.length)
+        const isBlack = rightTopColors.every(c => c === 0)
+        if (isBlack) {
+          throw new Error('Failed to draw DOM.')
+        }
+
+        // ■ 下部に透過部分が発生することが多々あるので修正
+        const colors = ctx.getImageData(0, 0, 1, height).data
         let threshold = height // 透明ではない高さ
         for (let i = colors.length - 4; i >= 0; i -= 4) {
           const [r, g, b, a] = [colors[i], colors[i + 1], colors[i + 2], colors[i + 3]]
@@ -87,7 +95,7 @@ export default class NodeToPng {
 
           const nctx = nCanvas.getContext('2d')
           if (!nctx) {
-            throw new Error('Canvas generation failure (nctx)')
+            throw new Error('Failed to generate canvas (nctx)')
           }
 
           nctx.drawImage(canvas, 0, 0, width, threshold + 1, 0, 0, width, threshold + 1)

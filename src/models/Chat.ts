@@ -26,6 +26,8 @@ export default class Chat {
   moneyUnit?: string // 通貨単位
 
   pngUrl?: string // use generatePng()
+  isImageError: boolean // 画像生成エラー
+
   seconds?: number // 開始からの経過秒
 
   @TransformDate()
@@ -47,6 +49,8 @@ export default class Chat {
     this.isJoinMember = false
     this.isSuperChat = false
     this.isSuperStickers = false
+
+    this.isImageError = false
   }
 
   public static async createByElement(video: Video, node: Element): Promise<Chat> {
