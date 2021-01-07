@@ -16,7 +16,9 @@ export default class PageEventer {
   protected chatFilter: ChatFilter
   protected observer: MutationObserver
 
+  protected video?: Video
   protected config?: Config
+  protected doInitialChats: boolean // 初期チャットを取得したかどうか
 
   constructor(handler: ChatHandler) {
     this.handler = handler
@@ -27,6 +29,8 @@ export default class PageEventer {
         record.addedNodes.forEach(node => this.handler.invoke(node as HTMLElement, this.chatFilter))
       })
     })
+
+    this.doInitialChats = false
   }
 
   public async init(): Promise<void> {
@@ -58,8 +62,9 @@ export default class PageEventer {
   /// ////////////////////////////////////////////////////////////
 
   protected async beforeConnect(): Promise<boolean> {
-    // 一応 observer を止めとく
-    this.observer.disconnect()
+    // 初期化
+    this.doInitialChats = false
+    this.observer.disconnect() // 一応 observer を止めとく
 
     const videoId = PageHelper.getPageVideoId()
     Logger.debug('VideoID(URL): ' + videoId)
@@ -69,7 +74,8 @@ export default class PageEventer {
     if (!videoData) throw new Error('missing video data')
 
     const video = await Video.createByElement(videoData)
-    await this.handler.setVideo(video)
+    this.video = video
+    Logger.trace('video: ' + JSON.stringify(video))
 
     // 配信かどうか確認する
     if (video.isBroadcast) {
@@ -82,6 +88,12 @@ export default class PageEventer {
 
   protected async onConnected(e: Element): Promise<void> {
     Logger.info('⚙️[start] observer')
+    if (!this.video) {
+      throw new Error('Video not found')
+    }
+
+    // video を設定して observer 開始
+    await this.handler.setVideo(this.video)
     this.observer.observe(e, {
       childList: true,
       subtree: true,
@@ -93,16 +105,23 @@ export default class PageEventer {
 
     // 今表示されてるものを処理する (promise はスルー)
     // コメント追加にラグがあるのでいい感じに全部取れるはず
-    this.handler.findInvoke(e, this.chatFilter).then(() => {
-      Logger.debug('⚙️[finish] handle display chats')
-    })
+    if (!this.doInitialChats) {
+      Logger.debug('⚙️[start] handle initial chats')
+
+      this.doInitialChats = true
+      this.handler.findInvoke(e, this.chatFilter).then(() => {
+        Logger.debug('⚙️[finish] handle initial chats')
+      })
+    }
   }
 
   protected async onDeleted(): Promise<void> {
+    // 二重実行対策
     if (this.handler.hasVideo()) {
       Logger.info('⚙️[stop] observer')
       this.observer.disconnect()
       await this.handler.removeVideo()
+      // eventer で保持している video は維持する
 
       // icon を非アクティブにする
       await BadgeManager.deactivateIcon()
@@ -141,6 +160,7 @@ export default class PageEventer {
             await this.onDeleted()
           }
         }
+        // parent.removeEventListener('DOMNodeRemoved', parentRemovedEvent)
         parent.addEventListener('DOMNodeRemoved', parentRemovedEvent)
 
         // iframe を取得
@@ -161,8 +181,9 @@ export default class PageEventer {
 
           // 監視開始
           await this.onConnected(chatapp)
-          iframe.removeEventListener('load', iframeLoadEvent)
+          // iframe.removeEventListener('load', iframeLoadEvent)
         }
+        // iframe.removeEventListener('load', iframeLoadEvent)
         iframe.addEventListener('load', iframeLoadEvent)
         Logger.info('⚙️[bind] bind event to chat iframe')
       } catch (err) {

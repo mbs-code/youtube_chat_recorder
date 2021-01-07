@@ -38,7 +38,6 @@ export default class ChatHandler {
 
   public async setVideo(video: Video): Promise<void> {
     Logger.debug(`✋[Handler] set video (${video.dump()})`)
-    Logger.trace('video: ' + JSON.stringify(video))
     this.video = video
     this.saveChatQueue.setVideo(video)
 
