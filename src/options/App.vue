@@ -78,6 +78,13 @@
 
         <div class="field">
           <label class="checkbox">
+            <input v-model="chatDrawOnce" type="checkbox" />
+            &nbsp;一度取得した画像は再取得しない
+          </label>
+        </div>
+
+        <div class="field">
+          <label class="checkbox">
             <input v-model="complementImage" type="checkbox" />
             &nbsp;取得できていないチャット画像を独自に生成する
           </label>
@@ -212,6 +219,7 @@ export default class App extends Vue {
   // 初期値は適当 (絶対に上書きするので)
   chatFilters: ChatFilterConfigInterface[] = []
   mergeImageFileName: string = ''
+  chatDrawOnce: boolean = false
   complementImage: boolean = false
   maxVideoLength: number = 0
 
@@ -235,6 +243,7 @@ export default class App extends Vue {
 
     this.chatFilters = config.chatFilters
     this.mergeImageFileName = config.mergeImageFileName
+    this.chatDrawOnce = config.chatDrawOnce
     this.complementImage = config.complementImage
     this.maxVideoLength = config.maxVideoLength
     this.showLogLevel = config.showLogLevel
@@ -251,6 +260,7 @@ export default class App extends Vue {
     const config = new Config()
     config.chatFilters = this.chatFilters
     config.mergeImageFileName = this.mergeImageFileName || config.mergeImageFileName
+    config.chatDrawOnce = this.chatDrawOnce
     config.complementImage = this.complementImage
     config.maxVideoLength = this.maxVideoLength
     config.showLogLevel = this.showLogLevel

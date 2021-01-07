@@ -10,6 +10,8 @@ export interface DrawObjects {
 }
 
 export default class DrawDomQueue extends BaseQueue<DrawObjects> {
+  public static DRAW_ONCE = false
+
   protected saveChatQueue: SaveChatQueue
 
   constructor(saveChatQueue: SaveChatQueue) {
@@ -34,10 +36,13 @@ export default class DrawDomQueue extends BaseQueue<DrawObjects> {
         // }
 
         // chat に url があったら無視する (軽量化対策)
-        // if (!obj.chat.pngUrl) {
-          const dataUrl = await NodeToPng.generage(obj.node)
-          obj.chat.pngUrl = dataUrl
-        // }
+        if (DrawDomQueue.DRAW_ONCE && obj.chat.pngUrl) {
+          Logger.trace('🎨[DRAW] skip: ' + obj.chat.dump())
+          continue
+        }
+
+        const dataUrl = await NodeToPng.generage(obj.node)
+        obj.chat.pngUrl = dataUrl
       } catch (err) {
         Logger.error(err)
         obj.chat.isImageError = true
