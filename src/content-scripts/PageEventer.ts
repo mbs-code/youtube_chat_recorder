@@ -37,16 +37,18 @@ export default class PageEventer {
     // config を読み込む
     await this.loadConfig()
 
-    // 初期化
-    const manifest = Runtime.getManifest()
-    Logger.info(manifest.name + ` ver:${manifest.version}`)
-    Logger.info('⚙️[init]')
+    // スクリプトを初期化して実行する
+    if (this.config?.runScript) {
+      const manifest = Runtime.getManifest()
+      Logger.info(manifest.name + ` ver:${manifest.version}`)
+      Logger.info('⚙️[init]')
 
-    // 動画を消しとく
-    this.handler.removeVideo()
+      // 動画を消しとく
+      this.handler.removeVideo()
 
-    // ページに event listener を付与する
-    await this.attachEventListener()
+      // ページに event listener を付与する
+      await this.attachEventListener()
+    }
   }
 
   public async loadConfig(): Promise<void> {
@@ -181,8 +183,12 @@ export default class PageEventer {
           const chatapp = await retry(() => iframeDoc.querySelector<Element>('yt-live-chat-app'))
           if (!chatapp) throw new Error('missing chat app dom')
 
+          // スクロールエリアの取得
+          const scroller = await retry(() => iframeDoc.querySelector<Element>('#item-scroller'))
+          if (!scroller) throw new Error('missing scroller dom')
+
           // 監視開始
-          await this.onConnected(chatapp)
+          await this.onConnected(scroller)
           // iframe.removeEventListener('load', iframeLoadEvent)
         }
         // iframe.removeEventListener('load', iframeLoadEvent)

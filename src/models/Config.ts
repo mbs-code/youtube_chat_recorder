@@ -27,14 +27,18 @@ export default class Config {
   // 最大保存video数
   maxVideoLength: number
 
-  ///
+  /// ////////////////////////////////////////
 
   // 画像保存時にスクロールさせる
   // scrollWhenChatDraw: boolean
 
+  // スクリプトを起動させるか
+  runScript: boolean
 
   // ログレベル
   showLogLevel: LogLevel
+
+  /// ////////////////////////////////////////
 
   @TransformDate()
   createdAt?: Date // 作成日時
@@ -52,6 +56,7 @@ export default class Config {
     this.maxVideoLength = 10
 
     // this.scrollWhenChatDraw = false
+    this.runScript = true
     this.showLogLevel = 'warn'
   }
 

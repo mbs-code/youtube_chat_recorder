@@ -132,6 +132,17 @@
 
         <div class="field is-grouped">
           <p class="control">
+            <label class="label field-into-height">スクリプトを実行する</label>
+          </p>
+          <p class="control">
+            <label class="label field-into-height">
+              <input v-model="runScript" type="checkbox" />
+            </label>
+          </p>
+        </div>
+
+        <div class="field is-grouped">
+          <p class="control">
             <label class="label field-into-height">出力するログレベル</label>
           </p>
           <div class="control">
@@ -157,6 +168,9 @@
           </div>
         </div>
 
+        <div class="field">
+        </div>
+
         <div class="field is-grouped">
           <p class="control">
             <a class="button is-danger is-light" @click="handleDeleteVideos">
@@ -164,7 +178,7 @@
             </a>
           </p>
           <p class="control">
-            <a class="button is-danger is-light" @click="handleAllDelete">
+            <a class="button is-danger" @click="handleAllDelete">
               ストレージを空にする
             </a>
           </p>
@@ -231,7 +245,8 @@ export default class App extends Vue {
   complementImage: boolean = false
   maxVideoLength: number = 0
 
-  logLevels = LEVELS
+  logLevels = LEVELS // select 配列
+  runScript: boolean = false
   showLogLevel: LogLevel = 'info'
 
   async mounted(): Promise<void> {
@@ -255,6 +270,8 @@ export default class App extends Vue {
     this.chatDrawOnce = config.chatDrawOnce
     this.complementImage = config.complementImage
     this.maxVideoLength = config.maxVideoLength
+
+    this.runScript = config.runScript
     this.showLogLevel = config.showLogLevel
 
     // 使用サイズを取得
@@ -273,6 +290,8 @@ export default class App extends Vue {
     config.chatDrawOnce = this.chatDrawOnce
     config.complementImage = this.complementImage
     config.maxVideoLength = this.maxVideoLength
+
+    config.runScript = this.runScript
     config.showLogLevel = this.showLogLevel
 
     // リミット確認
