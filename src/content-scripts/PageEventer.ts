@@ -105,13 +105,15 @@ export default class PageEventer {
 
     // 今表示されてるものを処理する (promise はスルー)
     // コメント追加にラグがあるのでいい感じに全部取れるはず
-    if (!this.doInitialChats) {
-      Logger.debug('⚙️[start] handle initial chats')
+    if (this.config?.captureInitialChats) {
+      if (!this.doInitialChats) {
+        Logger.debug('⚙️[start] handle initial chats')
 
-      this.doInitialChats = true
-      this.handler.findInvoke(e, this.chatFilter).then(() => {
-        Logger.debug('⚙️[finish] handle initial chats')
-      })
+        this.doInitialChats = true
+        this.handler.findInvoke(e, this.chatFilter).then(() => {
+          Logger.debug('⚙️[finish] handle initial chats')
+        })
+      }
     }
   }
 

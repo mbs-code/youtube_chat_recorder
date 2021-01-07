@@ -15,6 +15,9 @@ export default class Config {
   // 結合ファイル名
   mergeImageFileName: string
 
+  // 初めに表示されるチャットを取得する
+  captureInitialChats: boolean
+
   // 一度保存したら処理しない
   chatDrawOnce: boolean
 
@@ -43,6 +46,7 @@ export default class Config {
     // 初期値
     this.chatFilters = ChatFilter.generateDefaultChatfilterConfigs()
     this.mergeImageFileName = '%now%'
+    this.captureInitialChats = false
     this.chatDrawOnce = true
     this.complementImage = false
     this.maxVideoLength = 10
