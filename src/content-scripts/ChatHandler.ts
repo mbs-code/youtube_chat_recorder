@@ -40,9 +40,6 @@ export default class ChatHandler {
     Logger.debug(`✋[Handler] set video (${video.dump()})`)
     this.video = video
     this.saveChatQueue.setVideo(video)
-
-    // storage に保存
-    await VideoStorage.save(video)
   }
 
   public async removeVideo(): Promise<boolean> {
