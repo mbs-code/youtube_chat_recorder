@@ -67,7 +67,6 @@ export default class NodeToPng {
 
         // ■ もし背景が真っ黒なら取得失敗
         const rightTopColors = ctx.getImageData(width - 5, 5, 2, 2).data
-        console.log(rightTopColors.length)
         const isBlack = rightTopColors.every(c => c === 0)
         if (isBlack) {
           throw new Error('Failed to draw DOM.')
