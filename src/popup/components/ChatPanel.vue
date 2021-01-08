@@ -12,8 +12,15 @@
         </div>
         <div> {{ chat.authorName }}: {{ chat.altMessage }}</div>
         <div v-if='chat.money'>{{ chat.moneyUnit }} {{ chat.money }}</div>
+
         <div v-if="chat.pngUrl">
           <img :src="chat.pngUrl" alt="chat-image"/>
+        </div>
+        <div v-if="chat.isImageError" class="has-text-grey-light">
+          <span class="icon">
+            <i class="mdi mdi-image-broken" />
+          </span>
+          <span>画像の取得に失敗しました</span>
         </div>
       </div>
     </div>
