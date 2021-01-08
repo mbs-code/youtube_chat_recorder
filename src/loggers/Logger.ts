@@ -1,8 +1,12 @@
 import { format as dateFormat } from 'date-fns'
 
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug' | 'trace'
+export type LogLevel = 'silent' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'all'
 
-export const LEVELS = {
+export const LEVELS: { [key: string]: { name: LogLevel, value: number }} = {
+  silent: {
+    name: 'silent',
+    value: Number.MAX_SAFE_INTEGER,
+  },
   error: {
     name: 'error',
     value: 5000,
@@ -22,6 +26,10 @@ export const LEVELS = {
   trace: {
     name: 'trace',
     value: 1000,
+  },
+  all: {
+    name: 'all',
+    value: -1,
   }
 }
 
