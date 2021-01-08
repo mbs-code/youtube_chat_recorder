@@ -55,6 +55,9 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
 // 警告を出すフィルターキー
 export const warnFilterKeys = ['plain', 'member']
 
+// 初期設定で保存するフィルターキー
+export const defaultTrueKeys = ['owner', 'verified', 'moderator']
+
 export default class ChatFilter {
   protected chatFilters: ChatFilterDataInterface[]
 
@@ -91,8 +94,8 @@ export default class ChatFilter {
         return {
           key: e.key,
           title: e.title,
-          doSave: false,
-          doImage: false,
+          doSave: defaultTrueKeys.includes(e.key),
+          doImage: defaultTrueKeys.includes(e.key),
         }
       })
   }

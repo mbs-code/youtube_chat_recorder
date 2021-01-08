@@ -179,7 +179,7 @@
           </p>
           <p class="control">
             <a class="button is-danger" @click="handleAllDelete">
-              ストレージを空にする
+              全てを初期化する
             </a>
           </p>
         </div>
