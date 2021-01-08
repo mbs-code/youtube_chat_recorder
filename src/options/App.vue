@@ -216,7 +216,7 @@ import displayFilter from '../filters/displayFilter'
 
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import Toast from '../plugins/Toast'
-import Config from '../models/Config'
+import Config, { ConfigInterface } from '../models/Config'
 import Runtime from '../lib/chrome/Runtime'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 import { LogLevel, LEVELS } from '../loggers/Logger'
@@ -230,7 +230,7 @@ import Storage from '../lib/chrome/storage/Storage'
   components: { ChatFilterTable },
   filters: displayFilter,
 })
-export default class App extends Vue {
+export default class App extends Vue implements ConfigInterface {
   version?: string | null = null
   byteInUse: number = 0
 

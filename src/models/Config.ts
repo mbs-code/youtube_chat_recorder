@@ -8,7 +8,7 @@ import Logger, { LogLevel } from '../loggers/Logger'
 import Chat from './Chat'
 import Video from './Video'
 
-export default class Config {
+export interface ConfigInterface {
   // chat のフィルタリング
   chatFilters: ChatFilterConfigInterface[]
 
@@ -37,8 +37,18 @@ export default class Config {
 
   // ログレベル
   showLogLevel: LogLevel
+}
 
-  /// ////////////////////////////////////////
+export default class Config implements ConfigInterface {
+  chatFilters: ChatFilterConfigInterface[]
+  mergeImageFileName: string
+  captureInitialChats: boolean
+  chatDrawOnce: boolean
+  complementImage: boolean
+  maxVideoLength: number
+
+  runScript: boolean
+  showLogLevel: LogLevel
 
   @TransformDate()
   createdAt?: Date // 作成日時
@@ -55,7 +65,6 @@ export default class Config {
     this.complementImage = false
     this.maxVideoLength = 10
 
-    // this.scrollWhenChatDraw = false
     this.runScript = true
     this.showLogLevel = 'warn'
   }
