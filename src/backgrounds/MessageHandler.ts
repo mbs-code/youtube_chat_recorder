@@ -4,6 +4,7 @@ import MessageInterface from '../lib/chrome/interface/MessageInterface'
 import Logger from '../loggers/Logger'
 
 const activeIcon = 'icons/icon-32x32.png' // 赤いやつ
+const waitingIcon = 'icons/icon-32x32-blue.png' // 青いやつ
 const deactiveIcon = 'icons/icon-32x32-grey.png' // グレーのやつ (デフォルト)
 
 export default class MessageHandler {
@@ -51,12 +52,17 @@ export default class MessageHandler {
   }
 
   public static async activeHandler(value: any, sender: Runtime.MessageSender): Promise<void> {
-    const isActive = Boolean(value)
-    Logger.debug('💻 > set icon: ' + (isActive ? 'active' : 'deactive'))
+    const type = String(value)
+    Logger.debug('💻 > set icon: ' + type)
+
+    // アイコンを選択
+    let iconPath = deactiveIcon
+    if (type === 'active') iconPath = activeIcon
+    if (type === 'waiting') iconPath = waitingIcon
 
     await browser.browserAction.setIcon({
       tabId: sender.tab?.id,
-      path: isActive ? activeIcon : deactiveIcon
+      path: iconPath,
     })
   }
 }

@@ -90,6 +90,11 @@ export default class PageEventer {
     return false
   }
 
+  protected async onNotApplicate() {
+    await BadgeManager.waitingIcon()
+    await BadgeManager.clearBadgeCounter()
+  }
+
   protected async onConnected(e: Element): Promise<void> {
     Logger.info('⚙️[start] observer')
     if (!this.video) {
@@ -162,6 +167,7 @@ export default class PageEventer {
       const res = await this.beforeConnect()
       if (!res) {
         Logger.info('⚙️[stop] This video is not a target')
+        await this.onNotApplicate()
         return
       }
 
