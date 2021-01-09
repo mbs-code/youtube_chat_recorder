@@ -356,7 +356,7 @@ export default class App extends Vue implements ConfigInterface {
     try {
       // json 化して出力する
       const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_config.json'
-      const text = await ConfigStorage.exportText()
+      const text = await ConfigStorage.export()
       await Filer.downloadFile(text, title)
 
       Toast.success(`「${title}」を出力しました。`)
@@ -377,7 +377,7 @@ export default class App extends Vue implements ConfigInterface {
         if (!text) throw new Error('File not found')
 
         // config を読み込む
-        await ConfigStorage.importText(text)
+        await ConfigStorage.import(text)
         Toast.success(`「${name}」を読み込みました。`)
 
         // 再読み込み
