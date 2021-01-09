@@ -51,19 +51,14 @@ export default class ConfigStorage extends BaseStorage {
 
   /// ////////////////////////////////////////
 
-  public static async export(): Promise<string> {
+  public static async export(prettier: boolean = true): Promise<string> {
     Logger.debug(`> 💾[export] config`)
-    const text = await super.parseText(this.STORAGE_KEY)
+    const text = await this.parseObjectURL(this.STORAGE_KEY, prettier)
     return text
   }
 
-  public static async import(text: string): Promise<Config> {
+  public static async import(text: string): Promise<void> {
     Logger.debug(`> 💾[import] config`)
-
-    const config = await super.importText<Config>(Config, text)
-
-    // config を上書き
-    await this.save(config)
-    return config
+    await this.replaceText(this.STORAGE_KEY, text)
   }
 }

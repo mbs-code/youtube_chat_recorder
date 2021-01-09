@@ -59,20 +59,23 @@ export default class BaseStorage {
 
   /// //////////
 
-  protected static async parseText(key: string): Promise<string> {
-    const config = await this.getPlain(key)
+  protected static async parseObjectURL(key: string, prettier: boolean = false): Promise<string> {
+    const plain = await this.getPlain(key)
 
-    // json 化して出力する
-    const text = serialize(classToPlain(config))
+    // 文字列化する
+    const text = plain
+      ? JSON.stringify(plain, null, (prettier ? 2 : undefined))
+      : '{}' // 空文字
+
+    // blob にして url を出力
     const blob = new Blob([text], { type: 'octet/stream' })
-    const url = window.URL.createObjectURL(blob)
-    return url
+    const urlText = window.URL.createObjectURL(blob)
+    return urlText
   }
 
-  protected static async importText<T>(ctor: { new(): T }, text: string): Promise<T> {
+  protected static async replaceText(key: string, text: string): Promise<void> {
+    // json 変換して置き換える
     const json = JSON.parse(text)
-    const obj = plainToClass(ctor, json)
-    // TODO: { excludeExtraneousValues:true } を付けたいが, boolean が確定 false になってしまう
-    return obj
+    await this.replacePlain(key, json)
   }
 }
