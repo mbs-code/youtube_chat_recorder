@@ -1,4 +1,4 @@
-import { classToPlain, plainToClass } from 'class-transformer'
+import { classToPlain, plainToClass, serialize } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
 import Logger from '../../../loggers/Logger'
 import Config from '../../../models/Config'
@@ -49,6 +49,31 @@ export default class ConfigStorage {
       Logger.debug(`> 💾[remove] config`)
       await browser.storage.local.remove(this.STORAGE_KEY)
     }
+    return config
+  }
+
+  ///
+
+  public static async exportText(): Promise<string> {
+    Logger.debug(`> 💾[export] config`)
+    const config = await this.get()
+
+    // json 化して出力する
+    const text = serialize(classToPlain(config))
+    const blob = new Blob([text], { type: 'octet/stream' })
+    const url = window.URL.createObjectURL(blob)
+    return url
+  }
+
+  public static async importText(text: string): Promise<Config> {
+    Logger.debug(`> 💾[import] config`)
+
+    const json = JSON.parse(text)
+    const config = plainToClass(Config, json)
+    // TODO: { excludeExtraneousValues:true } を付けたいが, boolean が確定 false になってしまう
+
+    // config を上書き
+    await this.save(config)
     return config
   }
 }

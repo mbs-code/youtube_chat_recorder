@@ -160,7 +160,7 @@ import ChatList from './components/ChatList.vue'
 import BrowserTabs from '../lib/chrome/BrowserTabs'
 import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
-import Download from '../lib/chrome/Download'
+import Filer from '../lib/chrome/Filer'
 import Runtime from '../lib/chrome/Runtime'
 import PageHelper from '../lib/util/PageHelper'
 import Chat from '../models/Chat'
@@ -287,7 +287,7 @@ export default class App extends Vue {
       const blob = new Blob([text], { type: 'octet/stream' })
       const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_' + this.selectedVideo?.id + '.json'
 
-      await Download.file(window.URL.createObjectURL(blob), title)
+      await Filer.downloadFile(window.URL.createObjectURL(blob), title)
     }
   }
 
@@ -345,7 +345,7 @@ export default class App extends Vue {
         // ファイル名を生成して保存する
         const filename = config.formatFilename(video, selected)
         const mergeUrl = await NodeToPng.merge(urls)
-        Download.image(mergeUrl, filename)
+        Filer.downloadImage(mergeUrl, filename)
       } catch(err) {
         window.alert(err)
       }
