@@ -68,6 +68,11 @@ export default class PageEventer {
     this.doInitialChats = false
     this.observer.disconnect() // 一応 observer を止めとく
 
+    // icon をグレーにする
+    await BadgeManager.deactivateIcon()
+    await BadgeManager.clearBadgeCounter()
+
+    // url から id を抜き出す
     const videoId = PageHelper.getPageVideoId()
     Logger.debug('VideoID(URL): ' + videoId)
 
@@ -81,6 +86,10 @@ export default class PageEventer {
     await VideoStorage.save(video)
     Logger.trace('video: ' + JSON.stringify(video))
 
+    // 動画ページなら icon を待機中にする
+    await BadgeManager.waitingIcon()
+    await BadgeManager.clearBadgeCounter()
+
     // 配信かどうか確認する
     if (video.isBroadcast) {
       Logger.trace('is boadcast')
@@ -88,11 +97,6 @@ export default class PageEventer {
     }
 
     return false
-  }
-
-  protected async onNotApplicate() {
-    await BadgeManager.waitingIcon()
-    await BadgeManager.clearBadgeCounter()
   }
 
   protected async onConnected(e: Element): Promise<void> {
@@ -167,7 +171,6 @@ export default class PageEventer {
       const res = await this.beforeConnect()
       if (!res) {
         Logger.info('⚙️[stop] This video is not a target')
-        await this.onNotApplicate()
         return
       }
 
