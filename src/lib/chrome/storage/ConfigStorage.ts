@@ -51,7 +51,7 @@ export default class ConfigStorage extends BaseStorage {
 
   /// ////////////////////////////////////////
 
-  public static async export(prettier: boolean = true): Promise<string> {
+  public static async export(prettier: boolean = false): Promise<string> {
     Logger.debug(`> 💾[export] config`)
     const text = await this.parseObjectURL(this.STORAGE_KEY, prettier)
     return text

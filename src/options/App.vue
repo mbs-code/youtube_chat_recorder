@@ -201,6 +201,25 @@
             </div>
           </div>
         </div>
+
+        <div class="field is-grouped">
+          <p class="control">
+            <a class="button" @click="handleExportData">
+              データのバックアップ
+            </a>
+          </p>
+          <div class="control">
+            <div class="file">
+              <label class="file-label">
+                <input type="file" class="file-input" accept=".json" @change="handleInportData">
+                <span class="file-cta">
+                  <span class="file-label">データの復元</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
       </div>
       <!-- end right panel -->
     </div>
@@ -355,8 +374,8 @@ export default class App extends Vue implements ConfigInterface {
   async handleExportConfig(): Promise<void> {
     try {
       // json 化して出力する
-      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_config.json'
-      const text = await ConfigStorage.export()
+      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_ycr_config.json'
+      const text = await ConfigStorage.export(true)
       await Filer.downloadFile(text, title)
 
       Toast.success(`「${title}」を出力しました。`)
@@ -378,6 +397,43 @@ export default class App extends Vue implements ConfigInterface {
 
         // config を読み込む
         await ConfigStorage.import(text)
+        Toast.success(`「${name}」を読み込みました。`)
+
+        // 再読み込み
+        await this.loadConfig()
+      } catch (err) {
+        Toast.error('ファイルの読み込みに失敗しました。')
+        Logger.error(err)
+      }
+    }
+  }
+
+  async handleExportData(): Promise<void> {
+    try {
+      // json 化して出力する
+      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_ycr_data.json'
+      const text = await Storage.export()
+      await Filer.downloadFile(text, title)
+
+      Toast.success(`「${title}」を出力しました。`)
+    } catch (err) {
+      Toast.error('ファイルの出力に失敗しました。')
+      Logger.error(err)
+    }
+  }
+
+  async handleInportData(event: InputEvent): Promise<void> {
+    const t = event.target as HTMLInputElement
+    const file = t.files ? t.files[0] : null
+
+    if (file) {
+      try {
+        const name = file.name
+        const text = await Filer.readFile(file)
+        if (!text) throw new Error('File not found')
+
+        // config を読み込む
+        await Storage.import(text)
         Toast.success(`「${name}」を読み込みました。`)
 
         // 再読み込み

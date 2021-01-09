@@ -1,4 +1,4 @@
-import { classToPlain, plainToClass, serialize } from 'class-transformer'
+import { classToPlain, plainToClass } from 'class-transformer'
 import { browser } from 'webextension-polyfill-ts'
 import Logger from '../../../loggers/Logger'
 
