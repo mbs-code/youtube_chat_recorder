@@ -12,6 +12,8 @@ export interface ConfigInterface {
   // chat のフィルタリング
   chatFilters: ChatFilterConfigInterface[]
 
+  /// ////////////////////
+
   // 結合ファイル名
   mergeImageFileName: string
 
@@ -24,8 +26,13 @@ export interface ConfigInterface {
   // 取得できていない画像を補完する
   complementImage: boolean
 
+  /// ////////////////////
+
   // 最大保存video数
   maxVideoLength: number
+
+  // チャットが無い動画を保存するか
+  ignoreSimpleVideo: boolean
 
   /// ////////////////////////////////////////
 
@@ -45,7 +52,9 @@ export default class Config implements ConfigInterface {
   captureInitialChats: boolean
   chatDrawOnce: boolean
   complementImage: boolean
+
   maxVideoLength: number
+  ignoreSimpleVideo: boolean
 
   runScript: boolean
   showLogLevel: LogLevel
@@ -63,7 +72,9 @@ export default class Config implements ConfigInterface {
     this.captureInitialChats = false
     this.chatDrawOnce = true
     this.complementImage = false
-    this.maxVideoLength = 10
+
+    this.maxVideoLength = 20
+    this.ignoreSimpleVideo = false
 
     this.runScript = true
     this.showLogLevel = 'warn'

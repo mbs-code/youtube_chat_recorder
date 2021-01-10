@@ -65,8 +65,9 @@ export default class PageEventer {
 
   protected async beforeConnect(): Promise<boolean> {
     // 初期化
-    this.doInitialChats = false
     this.observer.disconnect() // 一応 observer を止めとく
+    this.doInitialChats = false
+    this.video = undefined
 
     // icon をグレーにする
     await BadgeManager.deactivateIcon()
@@ -80,11 +81,19 @@ export default class PageEventer {
     const videoData = await PageHelper.getVideoData()
     if (!videoData) throw new Error('missing video data')
 
-    // video を変換して保存する
+    // video を変換する
     const video = await Video.createByElement(videoData)
+    Logger.trace('video: ' + JSON.stringify(video))
+
+    // ただの動画で、除外設定があったら何もせず終了
+    if (!video.isBroadcast && this.config?.ignoreSimpleVideo) {
+      Logger.trace('ignore video without chat')
+      return false
+    }
+
+    // video を保存する
     this.video = video // 自身で保持する video を変更
     await VideoStorage.save(video)
-    Logger.trace('video: ' + JSON.stringify(video))
 
     // 動画ページなら icon を待機中にする
     await BadgeManager.waitingIcon()
@@ -93,6 +102,7 @@ export default class PageEventer {
     // 配信かどうか確認する
     if (video.isBroadcast) {
       Logger.trace('is boadcast')
+
       return true
     }
 

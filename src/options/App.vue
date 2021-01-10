@@ -140,6 +140,13 @@
           </div>
         </div>
 
+        <div class="field">
+          <label class="checkbox">
+            <input v-model="ignoreSimpleVideo" type="checkbox" />
+            &nbsp;チャットが無い動画を無視する
+          </label>
+        </div>
+
         <hr>
 
         <div class="field is-grouped">
@@ -278,7 +285,9 @@ export default class App extends Vue implements ConfigInterface {
   captureInitialChats: boolean = false
   chatDrawOnce: boolean = false
   complementImage: boolean = false
+
   maxVideoLength: number = 0
+  ignoreSimpleVideo: boolean = false
 
   runScript: boolean = false
   showLogLevel: LogLevel = 'info'
@@ -305,7 +314,9 @@ export default class App extends Vue implements ConfigInterface {
     this.captureInitialChats = config.captureInitialChats
     this.chatDrawOnce = config.chatDrawOnce
     this.complementImage = config.complementImage
+
     this.maxVideoLength = config.maxVideoLength
+    this.ignoreSimpleVideo = config.ignoreSimpleVideo
 
     this.runScript = config.runScript
     this.showLogLevel = config.showLogLevel
@@ -325,7 +336,9 @@ export default class App extends Vue implements ConfigInterface {
     config.captureInitialChats = this.captureInitialChats
     config.chatDrawOnce = this.chatDrawOnce
     config.complementImage = this.complementImage
+
     config.maxVideoLength = this.maxVideoLength
+    config.ignoreSimpleVideo = this.ignoreSimpleVideo
 
     config.runScript = this.runScript
     config.showLogLevel = this.showLogLevel
