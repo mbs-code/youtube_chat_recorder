@@ -33,6 +33,7 @@
     "date-fns": "^2.16.1",
     "delay": "^4.4.0",
     "dom-to-image-more": "^2.8.0",
+    "dotenv-webpack": "^6.0.0",
     "hh-mm-ss": "^1.2.0",
     "reflect-metadata": "^0.1.13",
     "sanitize-filename-ts": "^1.0.2",

@@ -2,6 +2,7 @@
 const path = require('path')
 const webpack = require('webpack')
 const ejs = require('ejs')
+const Dotenv = require('dotenv-webpack')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 const CopyPlugin = require('copy-webpack-plugin')
 const ExtensionReloader = require('webpack-extension-reloader')
@@ -83,6 +84,7 @@ const config = {
     ],
   },
   plugins: [
+    new Dotenv(),
     new webpack.DefinePlugin({
       global: 'window',
     }),

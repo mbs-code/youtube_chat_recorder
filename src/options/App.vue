@@ -1,13 +1,25 @@
 <template>
   <section class="section">
-    <h1 class="title">
-      Youtube Chat Recorder
-      <span class="subtitle is-4">{{ version }}</span>
-    </h1>
-    <h2 class="subtitle">つべくんのチャットをあれこれするやつ</h2>
+    <div class="columns is-flex">
+      <div class="column is-flex-grow-1">
+        <h1 class="title">
+          Youtube Chat Recorder
+          <span class="subtitle is-4">{{ version }}</span>
+        </h1>
+        <h2 class="subtitle">つべくんのチャットをあれこれするやつ</h2>
+      </div>
+      <div v-if="FORM_URL" class="column is-flex-grow-0">
+        <a class="button is-link is-outlined full-height" :href="FORM_URL" target="_blank">
+          <span class="icon">
+            <i class="mdi mdi-inbox-arrow-down" />
+          </span>
+          <span>目安箱</span>
+        </a>
+      </div>
+    </div>
 
     <div class="field">
-      <div class="notification is-link is-light">
+      <div class="notification is-warning is-light">
         開いているYouTubeのページに適用させる場合は、その<strong>ページを更新</strong>してください。
       </div>
     </div>
@@ -148,7 +160,7 @@
           <div class="control">
             <div class="select">
               <select v-model="showLogLevel">
-                <option v-for="level of logLevels" :key="level.name" :value="level.name">
+                <option v-for="level of LOG_LEVELS" :key="level.name" :value="level.name">
                   {{ level.name.toUpperCase() }}
                 </option>
               </select>
@@ -256,6 +268,10 @@ export default class App extends Vue implements ConfigInterface {
   config?: Config | null = null
   loadDate?: Date | null = null
 
+  // 表示用変数
+  LOG_LEVELS = LEVELS // select 配列
+  FORM_URL: string | null = null // フォームのURL
+
   // 初期値は適当 (絶対に上書きするので)
   chatFilters: ChatFilterConfigInterface[] = []
   mergeImageFileName: string = ''
@@ -264,11 +280,12 @@ export default class App extends Vue implements ConfigInterface {
   complementImage: boolean = false
   maxVideoLength: number = 0
 
-  logLevels = LEVELS // select 配列
   runScript: boolean = false
   showLogLevel: LogLevel = 'info'
 
   async mounted(): Promise<void> {
+    this.FORM_URL = process.env.VUE_APP_FORM_URL || null
+
     // manifest を読み込む
     // TODO: 動いてないかも
     const manifest = Runtime.getManifest()
@@ -461,5 +478,9 @@ input[type="checkbox"] {
 
 .field-into-height {
   padding: 10px;
+}
+
+.full-height {
+  height: 100%;
 }
 </style>
