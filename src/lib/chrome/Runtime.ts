@@ -22,6 +22,15 @@ export default class Runtime {
     await browser.runtime.openOptionsPage()
   }
 
+  /**
+   * Readme page を開く.
+   *
+   * @static
+   */
+  public static async openReadmePage(): Promise<void> {
+    window.open('../readme.html')
+  }
+
   ///
 
   /**

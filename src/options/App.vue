@@ -35,6 +35,11 @@
           リセット
         </a>
       </p>
+      <p class="control">
+        <a class="button is-success is-outlined" @click="handleReadme">
+          使い方
+        </a>
+      </p>
     </div>
 
     <hr> <!-- //////////////////////////////////////////////////////////// -->
@@ -396,6 +401,10 @@ export default class App extends Vue implements ConfigInterface {
 
       await this.loadConfig()
     }
+  }
+
+  async handleReadme(): Promise<void> {
+    await Runtime.openReadmePage()
   }
 
   async handleDeleteVideos(): Promise<void> {
