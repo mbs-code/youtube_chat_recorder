@@ -57,7 +57,7 @@
             <br>
             ※ 「画像化する」は負荷が高い＆容量を食うので加減して使用してください。( 1枚10KBくらい )
             <br>
-            ※ 後から画像化するにはもう一度動画を再生する必要があります。
+            ※ 後から画像化するにはもう一度動画を再生してチャットを流す必要があります。
           </div>
         </div>
 
@@ -67,46 +67,87 @@
       <!-- start right panel -->
       <div class="column">
         <div class="field">
-          <label class="label">結合後の画像ファイル名</label>
-          <div class="control">
-            <div class="field has-addons">
-              <p class="control is-expanded">
-                <input
-                  v-model="mergeImageFileName"
-                  class="input"
-                  type="text"
-                  name="mergeImageFileName"
-                  :placeholder="config.mergeImageFileName"
-                >
-              </p>
-              <p class="control">
-                <a class="button is-static">
-                  .png
-                </a>
-              </p>
+          <label class="label">動画の保存設定</label>
+        </div>
+
+        <div class="box">
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="ignoreSimpleVideo" type="checkbox" />
+              &nbsp;チャットが無い動画を無視する
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="label">動画の最大保存数(最低 5)</label>
+            <div class="control">
+              <input
+                v-model="maxVideoLength"
+                class="input"
+                type="number"
+                name="maxVideoLength"
+                min="5"
+                :placeholder="config.maxVideoLength"
+              >
             </div>
           </div>
         </div>
 
         <div class="field">
-          <label class="checkbox">
-            <input v-model="chatDrawOnce" type="checkbox" />
-            &nbsp;一度取得した画像は再取得しない
-          </label>
+          <div class="notification">
+            ※ 最大値を超えた場合、参照していない動画とチャットが削除されます。
+            <br>
+            　 適度に大きい値にするか、予め画像の保存などを行ってください。
+          </div>
         </div>
 
         <div class="field">
-          <label class="checkbox">
-            <input v-model="captureInitialChats" type="checkbox" />
-            &nbsp;初めに表示されるチャットを処理する（画像データが取れない可能性大｜調査中）
-          </label>
+          <label class="label">チャットの保存設定</label>
         </div>
 
-        <div class="field">
-          <label class="checkbox">
-            <input v-model="complementImage" type="checkbox" />
-            &nbsp;取得できていないチャット画像を独自に生成する
-          </label>
+        <div class="box">
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="chatDrawOnce" type="checkbox" />
+              &nbsp;一度取得した画像は再取得しない
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="captureInitialChats" type="checkbox" />
+              &nbsp;初めに表示されるチャットを処理する（画像データが取れない可能性大｜調査中）
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="complementImage" type="checkbox" />
+              &nbsp;取得できていないチャット画像を独自に生成する
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="label">結合後の画像ファイル名</label>
+            <div class="control">
+              <div class="field has-addons">
+                <p class="control is-expanded">
+                  <input
+                    v-model="mergeImageFileName"
+                    class="input"
+                    type="text"
+                    name="mergeImageFileName"
+                    :placeholder="config.mergeImageFileName"
+                  >
+                </p>
+                <p class="control">
+                  <a class="button is-static">
+                    .png
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="field">
@@ -124,27 +165,6 @@
             <br>
             ※ 禁則文字は勝手にエスケープします。
           </div>
-        </div>
-
-        <div class="field">
-          <label class="label">動画の最大保存数(最低 5)</label>
-          <div class="control">
-            <input
-              v-model="maxVideoLength"
-              class="input"
-              type="number"
-              name="maxVideoLength"
-              min="5"
-              :placeholder="config.maxVideoLength"
-            >
-          </div>
-        </div>
-
-        <div class="field">
-          <label class="checkbox">
-            <input v-model="ignoreSimpleVideo" type="checkbox" />
-            &nbsp;チャットが無い動画を無視する
-          </label>
         </div>
 
         <hr>
