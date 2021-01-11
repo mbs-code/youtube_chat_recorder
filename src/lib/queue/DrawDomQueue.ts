@@ -41,7 +41,7 @@ export default class DrawDomQueue extends BaseQueue<DrawObjects> {
           continue
         }
 
-        const dataUrl = await NodeToPng.generage(obj.node)
+        const dataUrl = await NodeToPng.generateChatImageUrl(obj.node)
         obj.chat.pngUrl = dataUrl
       } catch (err) {
         Logger.error(err)

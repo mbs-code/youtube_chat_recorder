@@ -325,13 +325,20 @@ export default class App extends Vue {
         // url を取得していく
         const urls = []
         for (const chat of selected) {
-          if (chat.pngUrl) {
+          if (config.generateOriginalImage) {
+            // 全てを独自で描画するモード
+              const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"] .app-chat-main`)
+              if (node) {
+                const url = await NodeToPng.generage(node as HTMLElement)
+                urls.push(url)
+              }
+          } else if (chat.pngUrl) {
             // url があるならそれ
             urls.push(chat.pngUrl)
           } else {
             if (config.complementImage) {
-            // 無いなら生成する
-              const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"]`)
+              // 無いなら生成するモード
+              const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"] .app-chat-main`)
               if (node) {
                 const url = await NodeToPng.generage(node as HTMLElement)
                 urls.push(url)

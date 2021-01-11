@@ -6,22 +6,28 @@
         <input type="checkbox" :checked="isSelected" />
       </div>
       <div class="column app-chat" :data-chatid="chat.id">
-        <div>
-          {{ chat.timestamp | datetimeString }}
-          <span class="tag is-info is-light">{{ chat.seconds | hmsString }}</span>
+        <div class="columns is-multiline">
+          <div class="column is-12 app-chat-main">
+            <div>
+              {{ chat.timestamp | datetimeString }}
+              <span class="tag is-info is-light">{{ chat.seconds | hmsString }}</span>
+            </div>
+            <div> {{ chat.authorName }}: {{ chat.altMessage }}</div>
+            <div v-if='chat.money'>{{ chat.moneyUnit }} {{ chat.money }}</div>
+          </div>
+          <div class="column is-12 app-chat-image">
+            <div v-if="chat.pngUrl">
+              <img :src="chat.pngUrl" alt="chat-image"/>
+            </div>
+            <div v-if="chat.isImageError" class="has-text-grey-light">
+              <span class="icon">
+                <i class="mdi mdi-image-broken" />
+              </span>
+              <span>画像の取得に失敗しました</span>
+            </div>
+          </div>
         </div>
-        <div> {{ chat.authorName }}: {{ chat.altMessage }}</div>
-        <div v-if='chat.money'>{{ chat.moneyUnit }} {{ chat.money }}</div>
 
-        <div v-if="chat.pngUrl">
-          <img :src="chat.pngUrl" alt="chat-image"/>
-        </div>
-        <div v-if="chat.isImageError" class="has-text-grey-light">
-          <span class="icon">
-            <i class="mdi mdi-image-broken" />
-          </span>
-          <span>画像の取得に失敗しました</span>
-        </div>
       </div>
     </div>
   </div>
@@ -59,5 +65,9 @@ input[type="checkbox"] {
 
 .box {
   box-shadow: none;
+}
+
+.app-chat-image {
+  padding-top: 0;
 }
 </style>

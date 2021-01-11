@@ -128,6 +128,13 @@
           </div>
 
           <div class="field">
+            <label class="checkbox">
+              <input v-model="generateOriginalImage" type="checkbox" />
+              &nbsp;全てのチャット画像を独自に生成する
+            </label>
+          </div>
+
+          <div class="field">
             <label class="label">結合後の画像ファイル名</label>
             <div class="control">
               <div class="field has-addons">
@@ -305,6 +312,7 @@ export default class App extends Vue implements ConfigInterface {
   captureInitialChats: boolean = false
   chatDrawOnce: boolean = false
   complementImage: boolean = false
+  generateOriginalImage: boolean = false
 
   maxVideoLength: number = 0
   ignoreSimpleVideo: boolean = false
@@ -334,6 +342,7 @@ export default class App extends Vue implements ConfigInterface {
     this.captureInitialChats = config.captureInitialChats
     this.chatDrawOnce = config.chatDrawOnce
     this.complementImage = config.complementImage
+    this.generateOriginalImage = config.generateOriginalImage
 
     this.maxVideoLength = config.maxVideoLength
     this.ignoreSimpleVideo = config.ignoreSimpleVideo
@@ -356,6 +365,7 @@ export default class App extends Vue implements ConfigInterface {
     config.captureInitialChats = this.captureInitialChats
     config.chatDrawOnce = this.chatDrawOnce
     config.complementImage = this.complementImage
+    config.generateOriginalImage = this.generateOriginalImage
 
     config.maxVideoLength = this.maxVideoLength
     config.ignoreSimpleVideo = this.ignoreSimpleVideo

@@ -23,8 +23,11 @@ export interface ConfigInterface {
   // 一度保存したら処理しない
   chatDrawOnce: boolean
 
-  // 取得できていない画像を補完する
+  // 取得できていないチャット画像を補完する
   complementImage: boolean
+
+  // 全てのチャット画像を独自に描画する
+  generateOriginalImage: boolean
 
   /// ////////////////////
 
@@ -52,6 +55,7 @@ export default class Config implements ConfigInterface {
   captureInitialChats: boolean
   chatDrawOnce: boolean
   complementImage: boolean
+  generateOriginalImage: boolean
 
   maxVideoLength: number
   ignoreSimpleVideo: boolean
@@ -72,6 +76,7 @@ export default class Config implements ConfigInterface {
     this.captureInitialChats = false
     this.chatDrawOnce = true
     this.complementImage = false
+    this.generateOriginalImage = false
 
     this.maxVideoLength = 20
     this.ignoreSimpleVideo = false

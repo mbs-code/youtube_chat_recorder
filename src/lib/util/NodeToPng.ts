@@ -9,36 +9,68 @@ export default class NodeToPng {
    * @param {HTMLElement} node 対象 node
    * @return {string} png data url
    */
-  public static async generage(node: HTMLElement): Promise<string> {
-    return new Promise((resolve, reject) => {
-      // <<単純移植>>
-      // node は消えたら描画できないので、引数で指定させる
-      // 他の処理に影響を与えないように非同期処理で
+  public static async generateChatImageUrl(node: HTMLElement): Promise<string> {
+    let author
+    let content
+    let chatRenderer
 
+    let authorWhiteSpace
+    let contentWidth
+    let chatBackground
+
+    try {
       // TODO: 直接 css を弄っているが、どうせすぐ消えるし... (できれば clone に適用したい... )
       // 実装が環境依存すぎるので色々修正したいね...
       // このプルリクを適用してもいいかも https://github.com/1904labs/dom-to-image-more/pull/10
 
       // ■ 作成者が改行されることが多々あるので改行
-      const author: HTMLElement | null = node.querySelector('#author-name')
+      author = node.querySelector<HTMLElement>('#author-name')
       if (author) {
+        authorWhiteSpace = author.style.whiteSpace
         author.style.whiteSpace = 'nowrap'
       }
 
       // ■ 通常コメが改行されることがあるので幅を 100% に修正
       // ex) 絵文字などの謎改行
       // 他の node では見受けられなかった
-      const content: HTMLElement | null = node.querySelector('yt-live-chat-text-message-renderer #content')
+      content = node.querySelector<HTMLElement>('yt-live-chat-text-message-renderer #content')
       if (content) {
+        contentWidth = content.style.width
         content.style.width = '100%'
       }
 
       // ■ コメントの背景色が transparent なので親の色を指定
-      const chatRenderer: HTMLElement | null = node.closest('yt-live-chat-renderer') // 直近の親 (多分見つかる)
+      chatRenderer = node.closest<HTMLElement>('yt-live-chat-renderer') // 直近の親 (多分見つかる)
       if (chatRenderer) {
+        chatBackground = node.style.backgroundColor
         const style = window.getComputedStyle(chatRenderer)
         node.style.backgroundColor = style.backgroundColor // NOTE: デバッグ時は色を付けると良い
       }
+
+      // データURLにする
+      const dataUrl = await this.generage(node, true)
+      return dataUrl
+    } finally {
+      // 元に戻す
+      if (author && authorWhiteSpace) author.style.whiteSpace = authorWhiteSpace
+      if (content && contentWidth) content.style.width = contentWidth
+      if (chatRenderer && chatBackground) chatRenderer.style.width = chatBackground
+    }
+  }
+
+  /**
+   * HTMLElement を png data url に変換する.
+   *
+   * @static
+   * @param {HTMLElement} node 対象 node
+   * @param {boolean} strict チャットを保存する際に背景色を確認するモード
+   * @return {string} png data url
+   */
+  public static async generage(node: HTMLElement, strict: boolean = false): Promise<string> {
+    return new Promise((resolve, reject) => {
+      // <<単純移植>>
+      // node は消えたら描画できないので、引数で指定させる
+      // 他の処理に影響を与えないように非同期処理で
 
       // dom のサイズを取得
       const displays = this.calcNodeDisplaySize(node)
@@ -66,10 +98,12 @@ export default class NodeToPng {
         }
 
         // ■ もし背景が真っ黒なら取得失敗
-        const rightTopColors = ctx.getImageData(width - 5, 5, 2, 2).data
-        const isBlack = rightTopColors.every(c => c === 0)
-        if (isBlack) {
-          throw new Error('Failed to draw DOM.')
+        if (strict) {
+          const rightTopColors = ctx.getImageData(width - 5, 5, 2, 2).data
+          const isBlack = rightTopColors.every(c => c === 0)
+          if (isBlack) {
+            throw new Error('Failed to draw DOM.')
+          }
         }
 
         // ■ 下部に透過部分が発生することが多々あるので修正
