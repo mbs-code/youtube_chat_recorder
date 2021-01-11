@@ -8,6 +8,7 @@ const CopyPlugin = require('copy-webpack-plugin')
 const ExtensionReloader = require('webpack-extension-reloader')
 const { VueLoaderPlugin } = require('vue-loader')
 const BundleAnalyzerPlugin = require('webpack-bundle-analyzer').BundleAnalyzerPlugin
+const htmlToMarkdown = require('./scripts/htmlToMarkdown')
 const { version } = require('./package.json')
 
 const config = {
@@ -96,6 +97,8 @@ const config = {
       { from: 'icons', to: 'icons', ignore: ['icon.xcf'] },
       { from: 'popup/popup.html', to: 'popup/popup.html', transform: transformHtml },
       { from: 'options/options.html', to: 'options/options.html', transform: transformHtml },
+      { from: '../docs/readme.md', to: 'readme.html', transform: htmlToMarkdown },
+      { from: '../docs/assets', to: 'assets' },
       {
         from: 'manifest.json',
         to: 'manifest.json',

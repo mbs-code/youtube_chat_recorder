@@ -24,7 +24,8 @@ YouTube を見ていれば勝手に実行されます。
 
 
 この拡張機能を chrome にインストールした後、上部バーにピン留めして使用することを推奨します。  
-![pinned_extension](./assets/pinned_extension.png "pinned_extension")
+
+![pinned_extension](./assets/pinned_extension.png "pinned_extension")  
 
 
 
@@ -54,19 +55,19 @@ F12を押した画面の「Console」に状態が出力されているので確�
 下記に説明がある「チャットフィルター」で指定したチャットが画面に表示された時、そのチャットを保存します。  
 保存したチャットは右上のアイコンを選択し出てくるポップアップ画面で閲覧できます。  
 
-![image_popup](./assets/image_popup.png "image_popup")
+![image_popup](./assets/image_popup.png "image_popup")  
 
 この画面でチャットを選択し、「結合して保存」をすることで以下のような画像が生成できます。  
 この時、ドロップダウンでチャットを抽出して「すべて選択」を押すと簡単です。  
 ※ 現時点ではチャットの上限を100件としています。(実装方法検討中)  
 ※ 生成画像の最大サイズは 16,384px 辺りなので、あまりに多い数（500以上？）を結合するとエラーを吐きます。 ([canvas - MDN](https://developer.mozilla.org/ja/docs/Web/HTML/Element/canvas "canvas"))  
 
-![output_chats](./assets/output_chats.png "output_chats")
+![output_chats](./assets/output_chats.png "output_chats")  
 
 「チャットの保存設定」の「取得できていないチャット画像を独自に生成する」 を ON にすると、画像が無いチャットを独自のデザインで出力します。(デフォルトだとスキップされる)  
 また、「チャットの保存設定」の「全てのチャット画像を独自に生成する」 を ON にすると、全ての画像を独自のデザインで出力します。（「画像化する」を選ぶ必要が無くなる可能性。）  
 
-![output_original_chats](./assets/output_original_chats.png "output_original_chats")
+![output_original_chats](./assets/output_original_chats.png "output_original_chats")  
 ※ 仮デザインです。（変えたい）  
 
 
@@ -78,7 +79,7 @@ F12を押した画面の「Console」に状態が出力されているので確�
 オプションの「チャットフィルター」で保存したいチャットを指定します。  
 デフォルトのフィルターと、独自で条件を指定するフィルターが使用可能です。  
 
-![image_chat_config](./assets/image_chat_config.png "image_chat_config")
+![image_chat_config](./assets/image_chat_config.png "image_chat_config")  
 
 **`「保存する」`** は対象のチャットを文字として保存します。  
 **`「画像化する`** は「保存する」に加えて表示されているまま、チャットのキャプチャをします。  
