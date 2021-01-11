@@ -57,7 +57,7 @@
             </span>
           </button>
         </p>
-        <p class="control">
+        <!-- <p class="control">
           <button
             class="button"
             data-tooltip="jsonで出力する"
@@ -69,7 +69,7 @@
               <i class="mdi mdi-code-json" />
             </span>
           </button>
-        </p>
+        </p> -->
         <p class="control">
           <button
             class="button is-danger is-light"
@@ -279,17 +279,17 @@ export default class App extends Vue {
     }
   }
 
-  async handleExportJson(): Promise<void> {
-    if (this.chats.length) {
-      // json 化して出力する
-      const plains = this.chats.map(c => classToPlain(c))
-      const text = serialize(plains)
-      const blob = new Blob([text], { type: 'octet/stream' })
-      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_' + this.selectedVideo?.id + '.json'
+  // async handleExportJson(): Promise<void> {
+  //   if (this.chats.length) {
+  //     // json 化して出力する
+  //     const plains = this.chats.map(c => classToPlain(c))
+  //     const text = serialize(plains)
+  //     const blob = new Blob([text], { type: 'octet/stream' })
+  //     const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_' + this.selectedVideo?.id + '.json'
 
-      await Filer.downloadFile(window.URL.createObjectURL(blob), title)
-    }
-  }
+  //     await Filer.downloadFile(window.URL.createObjectURL(blob), title)
+  //   }
+  // }
 
   async handleDeleteChats(video?: Video): Promise<void> {
     // TODO: 動画を削除しちゃうと色々と不都合なので、とりあえず全チャットを削除
