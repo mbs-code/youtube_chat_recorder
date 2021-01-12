@@ -22,6 +22,15 @@ export default class Runtime {
     await browser.runtime.openOptionsPage()
   }
 
+  /**
+   * Readme page を開く.
+   *
+   * @static
+   */
+  public static async openReadmePage(): Promise<void> {
+    window.open('../readme.html')
+  }
+
   ///
 
   /**
@@ -77,10 +86,10 @@ export default class Runtime {
    * @param {boolean} bool アクティブな状態かどうか
    * @return {boolean} 成功可否
    */
-  public static async sendIconIsActive(bool: boolean): Promise<boolean> {
+  public static async sendIconType(type: 'active' | 'waiting' | 'deactive'): Promise<boolean> {
     return this.sendMessage({
       type: 'YCR_ACTIVE',
-      value: Boolean(bool),
+      value: type,
     })
   }
 }

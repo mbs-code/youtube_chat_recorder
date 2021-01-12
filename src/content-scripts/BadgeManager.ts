@@ -33,11 +33,16 @@ export default class BadgeManager {
 
   public static async activateIcon() {
     Logger.trace('📛[BADGE] Activate icon')
-    await Runtime.sendIconIsActive(true)
+    await Runtime.sendIconType('active')
   }
 
   public static async deactivateIcon() {
     Logger.trace('📛[BADGE] Deactivate icon')
-    await Runtime.sendIconIsActive(false)
+    await Runtime.sendIconType('deactive')
+  }
+
+  public static async waitingIcon() {
+    Logger.trace('📛[BADGE] Waiting icon')
+    await Runtime.sendIconType('waiting')
   }
 }

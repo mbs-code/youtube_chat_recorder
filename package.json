@@ -1,7 +1,7 @@
 {
   "name": "youtube_chat_recorder",
-  "version": "0.1.0",
-  "description": "App to operate streaming chat.",
+  "version": "1.0.0",
+  "description": "[Browser Extension] App to operate streaming chat.",
   "author": "mabasasi <aoe317293@yahoo.co.jp>",
   "engines": {
     "node": ">=10"
@@ -11,6 +11,7 @@
     "prettier": "prettier \"src/**/*.{js,vue}\"",
     "prettier:write": "npm run prettier -- --write",
     "build": "cross-env NODE_ENV=production webpack --hide-modules",
+    "build:copy": "npm run build && cpx --clean ./dist/**/* ./dist-copy",
     "build:analysis": "cross-env NODE_ENV=production ANALYSIS=true webpack --hide-modules",
     "build:dev": "cross-env NODE_ENV=development webpack --hide-modules",
     "build-zip": "node scripts/build-zip.js",
@@ -32,6 +33,7 @@
     "date-fns": "^2.16.1",
     "delay": "^4.4.0",
     "dom-to-image-more": "^2.8.0",
+    "dotenv-webpack": "^6.0.0",
     "hh-mm-ss": "^1.2.0",
     "reflect-metadata": "^0.1.13",
     "sanitize-filename-ts": "^1.0.2",
@@ -63,6 +65,7 @@
     "babel-loader": "^8.0.2",
     "copy-webpack-plugin": "^5.1.1",
     "core-js": "^3.0.1",
+    "cpx": "^1.5.0",
     "cross-env": "^5.2.0",
     "css-loader": "^3.4.0",
     "ejs": "^2.6.1",
@@ -78,6 +81,7 @@
     "eslint-plugin-standard": "^4.0.1",
     "eslint-plugin-vue": "^6.2.2",
     "file-loader": "^5.0.2",
+    "marked": "^1.2.7",
     "mini-css-extract-plugin": "^0.9.0",
     "node-sass": "^4.9.3",
     "prettier": "^1.19.1",

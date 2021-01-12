@@ -66,14 +66,16 @@ export default class ChatParser {
       chat.isSuperStickers = true
       chat.money = split?.money
       chat.moneyUnit = split?.unit
-      chat.altMessage = await retry(() => DomQueryHelper.getAttribute(node, '#sticker #img', 'alt'))
+
+      const sticketAlt = await retry(() => DomQueryHelper.getAttribute(node, '#sticker #img', 'alt'))
+      chat.altMessage = sticketAlt || ''
     }
 
     // メンバー加入系 ///
     if (node.tagName.toLowerCase() === 'yt-live-chat-membership-item-renderer') {
       // これが最適解
       const headerSubtext = DomQueryHelper.getTextContent(node, '#header-subtext')
-      chat.altMessage = headerSubtext
+      chat.altMessage = headerSubtext || ''
       chat.isJoinMember = true
     }
 
@@ -95,7 +97,8 @@ export default class ChatParser {
             if (tagName === 'a') {
               message += element.textContent || ''
             } else {
-              message += element.attributes.getNamedItem('alt')?.textContent || ''
+              const alt = element.attributes.getNamedItem('alt')?.textContent
+              message += alt ? (':' + alt + ':') : ''
             }
           }
         } else if (type === Node.TEXT_NODE) {

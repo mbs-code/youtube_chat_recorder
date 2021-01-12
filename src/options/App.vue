@@ -1,13 +1,25 @@
 <template>
   <section class="section">
-    <h1 class="title">
-      Youtube Chat Recorder
-      <span class="subtitle is-4">{{ version }}</span>
-    </h1>
-    <h2 class="subtitle">つべくんのチャットをあれこれするやつ</h2>
+    <div class="columns is-flex">
+      <div class="column is-flex-grow-1">
+        <h1 class="title">
+          Youtube Chat Recorder
+          <span class="subtitle is-4">{{ version }}</span>
+        </h1>
+        <h2 class="subtitle">つべくんのチャットをあれこれするやつ</h2>
+      </div>
+      <div v-if="FORM_URL" class="column is-flex-grow-0">
+        <a class="button is-link is-outlined full-height" :href="FORM_URL" target="_blank">
+          <span class="icon">
+            <i class="mdi mdi-inbox-arrow-down" />
+          </span>
+          <span>目安箱</span>
+        </a>
+      </div>
+    </div>
 
     <div class="field">
-      <div class="notification is-link is-light">
+      <div class="notification is-warning is-light">
         開いているYouTubeのページに適用させる場合は、その<strong>ページを更新</strong>してください。
       </div>
     </div>
@@ -21,6 +33,11 @@
       <p class="control">
         <a class="button" @click="handleReset">
           リセット
+        </a>
+      </p>
+      <p class="control">
+        <a class="button is-success is-outlined" @click="handleReadme">
+          使い方
         </a>
       </p>
     </div>
@@ -45,7 +62,7 @@
             <br>
             ※ 「画像化する」は負荷が高い＆容量を食うので加減して使用してください。( 1枚10KBくらい )
             <br>
-            ※ 後から画像化するにはもう一度動画を再生する必要があります。
+            ※ 後から画像化するにはもう一度動画を再生してチャットを流す必要があります。
           </div>
         </div>
 
@@ -55,32 +72,94 @@
       <!-- start right panel -->
       <div class="column">
         <div class="field">
-          <label class="label">結合後の画像ファイル名</label>
-          <div class="control">
-            <div class="field has-addons">
-              <p class="control is-expanded">
-                <input
-                  v-model="mergeImageFileName"
-                  class="input"
-                  type="text"
-                  name="mergeImageFileName"
-                  :placeholder="config.mergeImageFileName"
-                >
-              </p>
-              <p class="control">
-                <a class="button is-static">
-                  .png
-                </a>
-              </p>
+          <label class="label">動画の保存設定</label>
+        </div>
+
+        <div class="box">
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="ignoreSimpleVideo" type="checkbox" />
+              &nbsp;チャットが無い動画を無視する
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="label">動画の最大保存数(最低 5)</label>
+            <div class="control">
+              <input
+                v-model="maxVideoLength"
+                class="input"
+                type="number"
+                name="maxVideoLength"
+                min="5"
+                :placeholder="config.maxVideoLength"
+              >
             </div>
           </div>
         </div>
 
         <div class="field">
-          <label class="checkbox">
-            <input v-model="complementImage" type="checkbox" />
-            &nbsp;取得できていないチャット画像を独自に生成する
-          </label>
+          <div class="notification">
+            ※ 最大値を超えた場合、参照していない動画とチャットが削除されます。
+            <br>
+            　 適度に大きい値にするか、予め画像の保存などを行ってください。
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="label">チャットの保存設定</label>
+        </div>
+
+        <div class="box">
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="chatDrawOnce" type="checkbox" />
+              &nbsp;一度取得した画像は再取得しない
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="captureInitialChats" type="checkbox" />
+              &nbsp;初めに表示されるチャットを処理する（画像データが取れない可能性大｜調査中）
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="complementImage" type="checkbox" />
+              &nbsp;取得できていないチャット画像を独自に生成する
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="checkbox">
+              <input v-model="generateOriginalImage" type="checkbox" />
+              &nbsp;全てのチャット画像を独自に生成する
+            </label>
+          </div>
+
+          <div class="field">
+            <label class="label">結合後の画像ファイル名</label>
+            <div class="control">
+              <div class="field has-addons">
+                <p class="control is-expanded">
+                  <input
+                    v-model="mergeImageFileName"
+                    class="input"
+                    type="text"
+                    name="mergeImageFileName"
+                    :placeholder="config.mergeImageFileName"
+                  >
+                </p>
+                <p class="control">
+                  <a class="button is-static">
+                    .png
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="field">
@@ -100,21 +179,18 @@
           </div>
         </div>
 
-        <div class="field">
-          <label class="label">動画の最大保存数(最低 5)</label>
-          <div class="control">
-            <input
-              v-model="maxVideoLength"
-              class="input"
-              type="number"
-              name="maxVideoLength"
-              min="5"
-              :placeholder="config.maxVideoLength"
-            >
-          </div>
-        </div>
-
         <hr>
+
+        <div class="field is-grouped">
+          <p class="control">
+            <label class="label field-into-height">スクリプトを実行する</label>
+          </p>
+          <p class="control">
+            <label class="label field-into-height">
+              <input v-model="runScript" type="checkbox" />
+            </label>
+          </p>
+        </div>
 
         <div class="field is-grouped">
           <p class="control">
@@ -123,7 +199,7 @@
           <div class="control">
             <div class="select">
               <select v-model="showLogLevel">
-                <option v-for="level of logLevels" :key="level.name" :value="level.name">
+                <option v-for="level of LOG_LEVELS" :key="level.name" :value="level.name">
                   {{ level.name.toUpperCase() }}
                 </option>
               </select>
@@ -143,6 +219,9 @@
           </div>
         </div>
 
+        <div class="field">
+        </div>
+
         <div class="field is-grouped">
           <p class="control">
             <a class="button is-danger is-light" @click="handleDeleteVideos">
@@ -150,8 +229,8 @@
             </a>
           </p>
           <p class="control">
-            <a class="button is-danger is-light" @click="handleAllDelete">
-              ストレージを空にする
+            <a class="button is-danger" @click="handleAllDelete">
+              全てを初期化する
             </a>
           </p>
         </div>
@@ -173,6 +252,25 @@
             </div>
           </div>
         </div>
+
+        <div class="field is-grouped">
+          <p class="control">
+            <a class="button" @click="handleExportData">
+              データのバックアップ
+            </a>
+          </p>
+          <div class="control">
+            <div class="file">
+              <label class="file-label">
+                <input type="file" class="file-input" accept=".json" @change="handleInportData">
+                <span class="file-cta">
+                  <span class="file-label">データの復元</span>
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
       </div>
       <!-- end right panel -->
     </div>
@@ -188,37 +286,48 @@ import displayFilter from '../filters/displayFilter'
 
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import Toast from '../plugins/Toast'
-import Config from '../models/Config'
+import Config, { ConfigInterface } from '../models/Config'
 import Runtime from '../lib/chrome/Runtime'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
-import { LogLevel, LEVELS } from '../loggers/Logger'
+import Logger, { LogLevel, LEVELS } from '../loggers/Logger'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import { classToPlain, deserialize, plainToClass, serialize } from 'class-transformer'
-import Download from '../lib/chrome/Download'
+import Filer from '../lib/chrome/Filer'
 import Storage from '../lib/chrome/storage/Storage'
 
 @Component({
   components: { ChatFilterTable },
   filters: displayFilter,
 })
-export default class App extends Vue {
+export default class App extends Vue implements ConfigInterface {
   version?: string | null = null
   byteInUse: number = 0
 
   config?: Config | null = null
   loadDate?: Date | null = null
 
+  // 表示用変数
+  LOG_LEVELS = LEVELS // select 配列
+  FORM_URL: string | null = null // フォームのURL
+
   // 初期値は適当 (絶対に上書きするので)
   chatFilters: ChatFilterConfigInterface[] = []
   mergeImageFileName: string = ''
+  captureInitialChats: boolean = false
+  chatDrawOnce: boolean = false
   complementImage: boolean = false
-  maxVideoLength: number = 0
+  generateOriginalImage: boolean = false
 
-  logLevels = LEVELS
+  maxVideoLength: number = 0
+  ignoreSimpleVideo: boolean = false
+
+  runScript: boolean = false
   showLogLevel: LogLevel = 'info'
 
   async mounted(): Promise<void> {
+    this.FORM_URL = process.env.VUE_APP_FORM_URL || null
+
     // manifest を読み込む
     // TODO: 動いてないかも
     const manifest = Runtime.getManifest()
@@ -235,8 +344,15 @@ export default class App extends Vue {
 
     this.chatFilters = config.chatFilters
     this.mergeImageFileName = config.mergeImageFileName
+    this.captureInitialChats = config.captureInitialChats
+    this.chatDrawOnce = config.chatDrawOnce
     this.complementImage = config.complementImage
+    this.generateOriginalImage = config.generateOriginalImage
+
     this.maxVideoLength = config.maxVideoLength
+    this.ignoreSimpleVideo = config.ignoreSimpleVideo
+
+    this.runScript = config.runScript
     this.showLogLevel = config.showLogLevel
 
     // 使用サイズを取得
@@ -251,8 +367,15 @@ export default class App extends Vue {
     const config = new Config()
     config.chatFilters = this.chatFilters
     config.mergeImageFileName = this.mergeImageFileName || config.mergeImageFileName
+    config.captureInitialChats = this.captureInitialChats
+    config.chatDrawOnce = this.chatDrawOnce
     config.complementImage = this.complementImage
+    config.generateOriginalImage = this.generateOriginalImage
+
     config.maxVideoLength = this.maxVideoLength
+    config.ignoreSimpleVideo = this.ignoreSimpleVideo
+
+    config.runScript = this.runScript
     config.showLogLevel = this.showLogLevel
 
     // リミット確認
@@ -278,6 +401,10 @@ export default class App extends Vue {
 
       await this.loadConfig()
     }
+  }
+
+  async handleReadme(): Promise<void> {
+    await Runtime.openReadmePage()
   }
 
   async handleDeleteVideos(): Promise<void> {
@@ -314,45 +441,77 @@ export default class App extends Vue {
   ///
 
   async handleExportConfig(): Promise<void> {
-    // 設定を取得
-    const config = await ConfigStorage.get()
-    console.log(config)
+    try {
+      // json 化して出力する
+      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_ycr_config.json'
+      const text = await ConfigStorage.export(true)
+      await Filer.downloadFile(text, title)
 
-    // json 化して出力する
-    const text = serialize(classToPlain(config))
-    const blob = new Blob([text], { type: 'octet/stream' })
-    const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_config.json'
-
-    await Download.file(window.URL.createObjectURL(blob), title)
+      Toast.success(`「${title}」を出力しました。`)
+    } catch (err) {
+      Toast.error('ファイルの出力に失敗しました。')
+      Logger.error(err)
+    }
   }
 
   async handleInportConfig(event: InputEvent): Promise<void> {
-      const t = event.target as HTMLInputElement
-      const file = t.files ? t.files[0] : null
+    const t = event.target as HTMLInputElement
+    const file = t.files ? t.files[0] : null
 
-      if (file) {
-        try {
-          const name = file.name
-          const reader = new FileReader()
-          reader.onload = async () => {
-            // config を読み込む
-            const text = reader.result as string
-            const json = JSON.parse(text)
-            const config = plainToClass(Config, json)
-            // TODO: { excludeExtraneousValues:true } を付けたいが, boolean が確定 false になってしまう
+    if (file) {
+      try {
+        const name = file.name
+        const text = await Filer.readFile(file)
+        if (!text) throw new Error('File not found')
 
-            // 設定を保存
-            await ConfigStorage.save(config)
-            Toast.success(`「${name}」を読み込みました。`)
+        // config を読み込む
+        await ConfigStorage.import(text)
+        Toast.success(`「${name}」を読み込みました。`)
 
-            // 再読み込み
-            await this.loadConfig()
-          }
-          reader.readAsText(file)
-        } catch (err) {
-          window.alert(err)
-        }
+        // 再読み込み
+        await this.loadConfig()
+      } catch (err) {
+        Toast.error('ファイルの読み込みに失敗しました。')
+        Logger.error(err)
       }
+    }
+  }
+
+  async handleExportData(): Promise<void> {
+    try {
+      // json 化して出力する
+      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_ycr_data.json'
+      const text = await Storage.export()
+      await Filer.downloadFile(text, title)
+
+      Toast.success(`「${title}」を出力しました。`)
+    } catch (err) {
+      Toast.error('ファイルの出力に失敗しました。')
+      Logger.error(err)
+    }
+  }
+
+  async handleInportData(event: InputEvent): Promise<void> {
+    const t = event.target as HTMLInputElement
+    const file = t.files ? t.files[0] : null
+
+    if (file) {
+      try {
+        const name = file.name
+        const text = await Filer.readFile(file)
+        if (!text) throw new Error('File not found')
+
+        // config を読み込む
+        await Storage.import(text)
+        Toast.success(`「${name}」を読み込みました。`)
+
+        // 再読み込み
+        await this.loadConfig()
+      } catch (err) {
+        Toast.error('ファイルの読み込みに失敗しました。')
+        Logger.error(err)
+      }
+    }
   }
 }
 </script>
@@ -371,5 +530,9 @@ input[type="checkbox"] {
 
 .field-into-height {
   padding: 10px;
+}
+
+.full-height {
+  height: 100%;
 }
 </style>

@@ -36,13 +36,11 @@ export default class VideoPanel extends Vue {
   video!: Video | null
 
   get computedTitle(): string {
-    const type = this.video?.type
     const title = this.video?.title || '-'
-
-    switch (type) {
-      case 'live': return '🔴' + title
-      default: return title
+    if (this.video?.isBroadcast) {
+      return '🔴' + title
     }
+    return title
   }
 
   handleClick(): void {

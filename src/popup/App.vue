@@ -57,6 +57,19 @@
             </span>
           </button>
         </p>
+        <!-- <p class="control">
+          <button
+            class="button"
+            data-tooltip="jsonで出力する"
+            :disabled="!selectedVideo.thumbnailUrl || !chats.length"
+            :href="selectedVideo.thumbnailUrl || ''"
+            @click="handleExportJson()"
+          >
+            <span class="icon has-text-black">
+              <i class="mdi mdi-code-json" />
+            </span>
+          </button>
+        </p> -->
         <p class="control">
           <button
             class="button is-danger is-light"
@@ -138,6 +151,7 @@
 </template>
 
 <script lang="ts">
+import { format as dateFormat } from 'date-fns'
 import arraySort from 'array-sort'
 import { Component, Vue } from 'vue-property-decorator'
 import VideoDropdown from './components/VideoDropdown.vue'
@@ -146,7 +160,7 @@ import ChatList from './components/ChatList.vue'
 import BrowserTabs from '../lib/chrome/BrowserTabs'
 import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
-import Download from '../lib/chrome/Download'
+import Filer from '../lib/chrome/Filer'
 import Runtime from '../lib/chrome/Runtime'
 import PageHelper from '../lib/util/PageHelper'
 import Chat from '../models/Chat'
@@ -156,6 +170,7 @@ import NodeToPng from '../lib/util/NodeToPng'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterDataInterface } from '../lib/chatFilter/ChatFilterInterface'
+import { classToPlain, serialize } from 'class-transformer'
 
 @Component({
   components: { VideoDropdown, ChatList }
@@ -264,6 +279,18 @@ export default class App extends Vue {
     }
   }
 
+  // async handleExportJson(): Promise<void> {
+  //   if (this.chats.length) {
+  //     // json 化して出力する
+  //     const plains = this.chats.map(c => classToPlain(c))
+  //     const text = serialize(plains)
+  //     const blob = new Blob([text], { type: 'octet/stream' })
+  //     const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_yt_' + this.selectedVideo?.id + '.json'
+
+  //     await Filer.downloadFile(window.URL.createObjectURL(blob), title)
+  //   }
+  // }
+
   async handleDeleteChats(video?: Video): Promise<void> {
     // TODO: 動画を削除しちゃうと色々と不都合なので、とりあえず全チャットを削除
     if (video) {
@@ -298,13 +325,20 @@ export default class App extends Vue {
         // url を取得していく
         const urls = []
         for (const chat of selected) {
-          if (chat.pngUrl) {
+          if (config.generateOriginalImage) {
+            // 全てを独自で描画するモード
+              const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"] .app-chat-main`)
+              if (node) {
+                const url = await NodeToPng.generage(node as HTMLElement)
+                urls.push(url)
+              }
+          } else if (chat.pngUrl) {
             // url があるならそれ
             urls.push(chat.pngUrl)
           } else {
             if (config.complementImage) {
-            // 無いなら生成する
-              const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"]`)
+              // 無いなら生成するモード
+              const node = document.querySelector(`.app-chat[data-chatid="${chat.id}"] .app-chat-main`)
               if (node) {
                 const url = await NodeToPng.generage(node as HTMLElement)
                 urls.push(url)
@@ -318,7 +352,7 @@ export default class App extends Vue {
         // ファイル名を生成して保存する
         const filename = config.formatFilename(video, selected)
         const mergeUrl = await NodeToPng.merge(urls)
-        Download.image(mergeUrl, filename)
+        Filer.downloadImage(mergeUrl, filename)
       } catch(err) {
         window.alert(err)
       }

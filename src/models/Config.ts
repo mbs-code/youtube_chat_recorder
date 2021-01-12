@@ -2,27 +2,65 @@ import ChatFilter from '../lib/chatFilter/ChatFilter'
 import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import TransformDate from '../lib/decorator/TransformDate'
+import DrawDomQueue from '../lib/queue/DrawDomQueue'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
 import Logger, { LogLevel } from '../loggers/Logger'
 import Chat from './Chat'
 import Video from './Video'
 
-export default class Config {
+export interface ConfigInterface {
   // chat のフィルタリング
   chatFilters: ChatFilterConfigInterface[]
+
+  /// ////////////////////
 
   // 結合ファイル名
   mergeImageFileName: string
 
-  // 画像を保管する
-  // @Transform(value => Boolean(value), { toClassOnly: true })
-  // @Transform(value => value instanceof Boolean ? value : undefined, { toPlainOnly: true })
-  complementImage: boolean = false
+  // 初めに表示されるチャットを取得する
+  captureInitialChats: boolean
+
+  // 一度保存したら処理しない
+  chatDrawOnce: boolean
+
+  // 取得できていないチャット画像を補完する
+  complementImage: boolean
+
+  // 全てのチャット画像を独自に描画する
+  generateOriginalImage: boolean
+
+  /// ////////////////////
 
   // 最大保存video数
   maxVideoLength: number
 
+  // チャットが無い動画を保存するか
+  ignoreSimpleVideo: boolean
+
+  /// ////////////////////////////////////////
+
+  // 画像保存時にスクロールさせる
+  // scrollWhenChatDraw: boolean
+
+  // スクリプトを起動させるか
+  runScript: boolean
+
   // ログレベル
+  showLogLevel: LogLevel
+}
+
+export default class Config implements ConfigInterface {
+  chatFilters: ChatFilterConfigInterface[]
+  mergeImageFileName: string
+  captureInitialChats: boolean
+  chatDrawOnce: boolean
+  complementImage: boolean
+  generateOriginalImage: boolean
+
+  maxVideoLength: number
+  ignoreSimpleVideo: boolean
+
+  runScript: boolean
   showLogLevel: LogLevel
 
   @TransformDate()
@@ -35,9 +73,15 @@ export default class Config {
     // 初期値
     this.chatFilters = ChatFilter.generateDefaultChatfilterConfigs()
     this.mergeImageFileName = '%now%'
+    this.captureInitialChats = false
+    this.chatDrawOnce = true
     this.complementImage = false
-    this.maxVideoLength = 10
+    this.generateOriginalImage = false
 
+    this.maxVideoLength = 20
+    this.ignoreSimpleVideo = false
+
+    this.runScript = true
     this.showLogLevel = 'warn'
   }
 
@@ -45,6 +89,7 @@ export default class Config {
    * アプリに設定値を付与する.
    */
   public initApp() {
+    DrawDomQueue.DRAW_ONCE = this.chatDrawOnce
     VideoStorage.MAX_LENGTH = this.maxVideoLength
     Logger.SHOW_LOG_LEVEL = this.showLogLevel
   }

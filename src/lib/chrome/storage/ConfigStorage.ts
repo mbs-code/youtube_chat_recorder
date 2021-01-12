@@ -1,29 +1,27 @@
-import { classToPlain, plainToClass } from 'class-transformer'
-import { browser } from 'webextension-polyfill-ts'
 import Logger from '../../../loggers/Logger'
 import Config from '../../../models/Config'
+import BaseStorage from './BaseStorage'
 
-export default class ConfigStorage {
+export default class ConfigStorage extends BaseStorage {
   public static readonly STORAGE_KEY = '@config'
 
+  /**
+   * 設定を取り出す.
+   *
+   * @static
+   * @return {Config} config object
+   */
   public static async get(): Promise<Config> {
-    const value = await browser.storage.local.get(this.STORAGE_KEY)
-    const plain: any | undefined = value[this.STORAGE_KEY]
-
-    // デシリアライズする
-    if (plain) {
-      const config = plainToClass(Config, plain)
-      return config
-    }
-    return new Config()
+    const config = await this.getClassObject(Config, this.STORAGE_KEY)
+    return config || new Config()
   }
 
-  protected static async replace(config: Config): Promise<void> {
-    // シリアライズする
-    const plain = classToPlain(config)
-    await browser.storage.local.set({ [this.STORAGE_KEY]: plain })
-  }
-
+  /**
+   * 設定を上書き保存する.
+   *
+   * @static
+   * @param {Config} config config object
+   */
   public static async save(config: Config): Promise<void> {
     const db = await this.get()
 
@@ -37,18 +35,30 @@ export default class ConfigStorage {
     config.createdAt = config.createdAt || config.updatedAt
 
     // 値の置き換え
-    Logger.debug(`> 💾[save] config: ${JSON.stringify(config)}`)
-    await this.replace(config)
+    Logger.debug(`> 💾[save] ${this.STORAGE_KEY}: ${JSON.stringify(config)}`)
+    await this.replaceObject(this.STORAGE_KEY, config)
   }
 
-  public static async clear(): Promise<Config | undefined> {
-    const config = await this.get()
+  /**
+   * 設定情報を空にする.
+   *
+   * @static
+   * @return {boolean} 削除できたか(false で失敗、存在しない)
+   */
+  public static async clear(): Promise<boolean> {
+    return await this.removeKey(this.STORAGE_KEY)
+  }
 
-    // 値があったら消しとく
-    if (config) {
-      Logger.debug(`> 💾[remove] config`)
-      await browser.storage.local.remove(this.STORAGE_KEY)
-    }
-    return config
+  /// ////////////////////////////////////////
+
+  public static async export(prettier: boolean = false): Promise<string> {
+    Logger.debug(`> 💾[export] config`)
+    const text = await this.parseObjectURL(this.STORAGE_KEY, prettier)
+    return text
+  }
+
+  public static async import(text: string): Promise<void> {
+    Logger.debug(`> 💾[import] config`)
+    await this.replaceText(this.STORAGE_KEY, text)
   }
 }

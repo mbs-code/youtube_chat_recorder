@@ -8,8 +8,8 @@ import BaseQueue from './BaseQueue'
 export default class SaveChatQueue extends BaseQueue<Chat> {
   protected video?: Video
 
-  constructor(interval?: number) {
-    super(interval)
+  constructor() {
+    super()
     this.video = undefined
   }
 

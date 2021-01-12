@@ -1,28 +1,30 @@
-import { classToPlain, plainToClass } from 'class-transformer'
-import { browser } from 'webextension-polyfill-ts'
 import Logger from '../../../loggers/Logger'
 import Chat from '../../../models/Chat'
-export default class ChatStorage {
+import BaseStorage from './BaseStorage'
+
+export default class ChatStorage extends BaseStorage{
   // chat のキーは 動画ID
 
+  /**
+   * 特定の動画のチャットを取り出す.
+   *
+   * @static
+   * @param {string} videoId 動画の ID
+   * @return {Chat[]} chat object array
+   */
   public static async get(videoId: string): Promise<Chat[]> {
-    const value = await browser.storage.local.get(videoId)
-    const plains: any[] | undefined = value[videoId]
-
-    // デシリアライズする
-    if (plains) {
-      const chats = plains.map(plain => plainToClass(Chat, plain))
-      return chats
-    }
-    return []
+    const chats = await this.getClassObjectArray(Chat, videoId)
+    return chats
   }
 
-  protected static async replace(videoId: string, chats: Chat[]): Promise<void> {
-    // シリアライズする
-    const plains = chats ? chats.map(e => classToPlain(e)) : null
-    await browser.storage.local.set({ [videoId]: plains })
-  }
-
+  /**
+   * チャットを上書き保存する.
+   *
+   * - サイズ制限は無いので注意
+   * @static
+   * @param {string} videoId 動画の ID
+   * @param {Chat[]} chats chat object array
+   */
   public static async save(videoId: string, chats: Chat[]): Promise<void> {
     const dbs = await this.get(videoId)
     const count = dbs.length
@@ -48,9 +50,17 @@ export default class ChatStorage {
 
     // 値の置き換え
     Logger.debug(`> 💾[save] chats: ${dbs.length} (db:${count}, +add:${chats.length}, -dup:${duplicate})`)
-    await this.replace(videoId, dbs)
+    await this.replaceObject(videoId, dbs)
   }
 
+  /**
+   * 特定の動画のチャットを指定して削除する.
+   *
+   * @static
+   * @param {string} videoId 動画の ID
+   * @param {Chat[]} chats chat object array
+   * @return {Chat[]} 削除した chats
+   */
   public static async remove(videoId: string, chats: Chat[]): Promise<Chat[]> {
     const dbs = await this.get(videoId)
 
@@ -69,20 +79,19 @@ export default class ChatStorage {
 
     // 値の置き換え
     if (dels.length > 0) {
-      await this.replace(videoId, dbs)
+      await this.replaceObject(videoId, dbs)
     }
 
     return dels
   }
 
-  public static async clear(videoId: string): Promise<Chat[] | undefined> {
-    const chats = await this.get(videoId)
-
-    // 値があったら消しとく
-    if (chats) {
-      Logger.debug(`> 💾[remove] chats: ${videoId}`)
-      await browser.storage.local.remove(videoId)
-    }
-    return chats
+  /**
+   * チャット情報を空にする.
+   *
+   * @static
+   * @return {boolean} 削除できたか(false で失敗、存在しない)
+   */
+  public static async clear(videoId: string): Promise<boolean> {
+    return await this.removeKey(videoId)
   }
 }

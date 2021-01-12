@@ -26,6 +26,9 @@
             @click="handleSelected(video)"
           />
         </template>
+        <div v-if="videos.length === 0" class="box">
+          動画がありません。
+        </div>
       </div>
     </div>
   </div>
