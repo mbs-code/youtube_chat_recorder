@@ -64,7 +64,7 @@ const VIDEOS = [
 const CHATS = [
   { authorName: '@〇〇ちゃんねる', altMessage: 'みなさんこんにちは～！', isOwner: true, isVerified: true, image: '#fda4af' },
   { authorName: '@moderator_san', altMessage: 'こんにちは！今日もよろしくお願いします', isModerator: true, image: '#93c5fd' },
-  { authorName: '@fan_one', altMessage: '初配信おめでとうございます！', isSuperChat: true, money: 1000, moneyUnit: '￥', image: '#fcd34d' },
+  { authorName: '@fan_one', altMessage: '初配信おめでとうございます！', isSuperChat: true, money: 1000, moneyUnit: '￥', superCount: 5, image: '#fcd34d' },
   {
     authorName: '@member_two',
     altMessage: 'ずっと応援してます',

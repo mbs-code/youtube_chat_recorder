@@ -40,6 +40,7 @@ export default class Chat {
   isSuperStickers = false
   money?: number // 金額
   moneyUnit?: string // 通貨単位
+  superCount?: number // Super の購入回数の節目 ("ライブ配信での 5 回目の Super" なら 5)
 
   pngUrl?: string // チャット欄の画像 (data url)
   isImageError = false // 画像生成エラー
@@ -58,6 +59,24 @@ export default class Chat {
   public static compareByTime(a: Chat, b: Chat): number {
     if (a.seconds !== undefined && b.seconds !== undefined) return a.seconds - b.seconds
     return (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0)
+  }
+
+  /**
+   * スーパーチャット・スーパーステッカーの金額を通貨ごとに合計する. (popup の合計額の目安)
+   *
+   * - 為替は分からないので通貨ごとに分ける. 件数の多い順.
+   */
+  public static sumMoney(chats: Chat[]): { unit: string, money: number, count: number }[] {
+    const sums = new Map<string, { unit: string, money: number, count: number }>()
+    for (const chat of chats) {
+      if (!chat.money || !(chat.isSuperChat || chat.isSuperStickers)) continue
+      const unit = chat.moneyUnit ?? ''
+      const sum = sums.get(unit) ?? { unit, money: 0, count: 0 }
+      sum.money += chat.money
+      sum.count++
+      sums.set(unit, sum)
+    }
+    return [...sums.values()].sort((a, b) => b.count - a.count)
   }
 
   /** storage から復元する. */
@@ -87,6 +106,7 @@ export default class Chat {
     if (this.topChatRank) emojis.push(`👑${this.topChatRank}`)
     if (this.replyTo) emojis.push('💬')
     if (this.money) emojis.push('💰')
+    if (this.superCount) emojis.push(`🎊${this.superCount}`)
 
     const date = this.timestamp?.toLocaleString()
     const author = this.authorName || '<unknown>'

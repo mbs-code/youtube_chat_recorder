@@ -81,6 +81,22 @@ describe('後から追加した基本フィルターの補完', () => {
   })
 })
 
+describe('Chat.sumMoney', () => {
+  it('スーパーチャット・ステッカーの金額を通貨ごとに合計する (件数の多い順)', () => {
+    const chats = [
+      Object.assign(new Chat(), { isSuperChat: true, money: 800, moneyUnit: '￥' }),
+      Object.assign(new Chat(), { isSuperStickers: true, money: 200, moneyUnit: '￥' }),
+      Object.assign(new Chat(), { isSuperChat: true, money: 5.5, moneyUnit: '$' }),
+      Object.assign(new Chat(), { isMember: true }),
+    ]
+    expect(Chat.sumMoney(chats)).toEqual([
+      { unit: '￥', money: 1000, count: 2 },
+      { unit: '$', money: 5.5, count: 1 },
+    ])
+    expect(Chat.sumMoney([])).toEqual([])
+  })
+})
+
 describe('Chat.compareByTime', () => {
   const chat = (props: Partial<Chat>) => Object.assign(new Chat(), props)
 

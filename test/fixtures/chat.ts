@@ -257,3 +257,48 @@ export const TEXT_MESSAGE_SUPERCHAT_REPLY = `
   <div id="menu"></div>
 </yt-live-chat-text-message-renderer>
 `
+
+/** スーパーチャット (購入回数のおまけ付き). 2026-11 時点の実際の DOM (アーカイブ) を縮小したもの. */
+export const PAID_MESSAGE_SUPER_COUNT = `
+<yt-live-chat-paid-message-renderer class="style-scope yt-live-chat-item-list-renderer" modern="" id="ChwKGkNPeW9pcWJEbDRnREZVUER3Z1FkeV80dU9R" allow-animations="">
+  <div id="card">
+    <div id="header">
+      <yt-img-shadow id="author-photo"><img id="img" alt="" width="32" height="32" src="https://yt4.ggpht.com/paid=s32-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+      <yt-img-shadow id="overlay-image"><img id="img" alt="" width="130" src="https://www.gstatic.com/youtube/img/pdg/novelty/purchase_milestones/5th_purchase_milestone/5th_Purchase_Celebration_Novelty_ILSC_T3.webp"></yt-img-shadow>
+      <div id="header-content">
+        <div id="header-content-primary-column">
+          <div id="single-line">
+            <div id="author-name-chip">
+              <yt-live-chat-author-chip disable-highlighting="" single-line="">
+                <span id="prepend-chat-badges"></span>
+                <span id="author-name" dir="auto" class="single-line">@jiro9608<span id="chip-badges"></span></span>
+                <span id="chat-badges"></span>
+              </yt-live-chat-author-chip>
+            </div>
+            <div id="leaderboard-badge" class="leaderboard-badge"></div>
+            <div id="purchase-amount-column">
+              <yt-img-shadow id="currency-img" height="16" width="16" hidden=""><img id="img" alt="" height="16" width="16"></yt-img-shadow>
+              <div id="purchase-amount"><yt-formatted-string>￥800</yt-formatted-string></div>
+            </div>
+          </div>
+        </div>
+        <span id="timestamp">0:22</span>
+        <div id="menu"></div>
+      </div>
+    </div>
+    <div id="content">
+      <div id="message" dir="auto">卒業おめでとう！！！</div>
+      <div id="action-buttons">
+        <div id="reply-button" class="action-button"><button aria-label="この Super Chat に返信します"><div class="ytSpecButtonShapeNextButtonTextContent">返信</div></button></div>
+      </div>
+    </div>
+  </div>
+  <div id="lower-bumper">
+    <yt-live-chat-item-bumper-view-model><div id="bumper"><div id="content">
+      <div id="bumper-content"><div id="message-block">
+        <yt-attributed-string id="message"><span class="ytAttributedStringHost" role="text"><span>ライブ配信での 5 回目の Super をお祝いしましょう</span></span></yt-attributed-string>
+      </div></div>
+    </div></div></yt-live-chat-item-bumper-view-model>
+  </div>
+</yt-live-chat-paid-message-renderer>
+`

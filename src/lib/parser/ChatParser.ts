@@ -79,6 +79,8 @@ export default class ChatParser {
       chat.isSuperChat = true
       chat.money = amount?.money
       chat.moneyUnit = amount?.unit
+      // 購入回数の節目のおまけ ("ライブ配信での 5 回目の Super をお祝いしましょう")
+      chat.superCount = this.parseSuperCount(DomQueryHelper.getTextContent(node, '#lower-bumper'))
     }
 
     // スーパーステッカー ///
@@ -95,11 +97,15 @@ export default class ChatParser {
 
     // メンバー加入・マイルストーン ///
     if (tagName === 'yt-live-chat-membership-item-renderer') {
-      // マイルストーン: #header-primary-text = "メンバー歴 11 か月", #header-subtext = メンバーシップ名, #message = 本文 (省略可)
-      // 加入: #header-primary-text は空 (または無い), #header-subtext = "〇〇 へようこそ！"
-      const headerPrimaryText = DomQueryHelper.getTextContent(node, '#header-primary-text')
+      // マイルストーン: has-primary-header-text 属性, #header-primary-text = "メンバー歴 11 か月", #header-subtext = メンバーシップ名, #message = 本文 (省略可)
+      // 加入: show-only-header 属性, #header-primary-text は空 (または無い), #header-subtext = "〇〇 へようこそ！"
+      // 要素が追加された直後は #header-primary-text の文字がまだ無いことがあるので、加入と確定できなければ少し待つ
+      const getHeaderPrimaryText = () => DomQueryHelper.getTextContent(node, '#header-primary-text')
+      const headerPrimaryText = DomQueryHelper.hasAttribute(node, null, 'show-only-header')
+        ? getHeaderPrimaryText()
+        : await retry(getHeaderPrimaryText, 3, 300)
       const headerSubtext = DomQueryHelper.getTextContent(node, '#header-subtext')
-      if (headerPrimaryText) {
+      if (headerPrimaryText || DomQueryHelper.hasAttribute(node, null, 'has-primary-header-text')) {
         chat.isMilestone = true
         chat.memberMonths = this.parseMemberMonth(headerPrimaryText) ?? chat.memberMonths // バッジより正確
         chat.milestoneText = headerPrimaryText
@@ -211,6 +217,17 @@ export default class ChatParser {
     if (video?.type !== 'live') return {}
     const startDate = video.startDate
     return { datetime: new Date(now), seconds: startDate ? differenceInSeconds(now, startDate) : undefined }
+  }
+
+  /**
+   * スーパーチャットのおまけの文から、Super の購入回数を取り出す.
+   *
+   * - "ライブ配信での 5 回目の Super をお祝いしましょう", "Celebrate your 5th Super ..."
+   */
+  public static parseSuperCount(text?: string): number | undefined {
+    if (!text) return undefined
+    const count = text.match(/(\d+)\s*回目/)?.[1] ?? text.match(/(\d+)(?:st|nd|rd|th)\b/i)?.[1]
+    return count ? parseInt(count, 10) : undefined
   }
 
   /**

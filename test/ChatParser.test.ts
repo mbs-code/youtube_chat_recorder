@@ -8,6 +8,7 @@ import {
   MEMBERSHIP_JOIN,
   MEMBERSHIP_MILESTONE,
   PAID_MESSAGE,
+  PAID_MESSAGE_SUPER_COUNT,
   TEXT_MESSAGE_MEMBER,
   TEXT_MESSAGE_OWNER,
   TEXT_MESSAGE_SUPERCHAT_REPLY,
@@ -131,6 +132,41 @@ describe('ChatParser.parse', () => {
     expect(chat.replyTo).toBeUndefined()
   })
 
+  it('スーパーチャットの購入回数のおまけを解析できる (本文はおまけの文と混ざらない)', async () => {
+    const chat = await ChatParser.parse(archiveVideo(), createElement(PAID_MESSAGE_SUPER_COUNT))
+
+    expect(chat.isSuperChat).toBe(true)
+    expect(chat.money).toBe(800)
+    expect(chat.moneyUnit).toBe('￥')
+    expect(chat.superCount).toBe(5)
+    expect(chat.message).toBe('卒業おめでとう！！！')
+    expect(chat.authorName).toBe('@jiro9608')
+    expect(chat.replyTo).toBeUndefined()
+    expect(chat.seconds).toBe(22)
+  })
+
+  it('メンバー歴: 追加直後で #header-primary-text が空でも、属性でマイルストーンと分かる', async () => {
+    const node = createElement(MEMBERSHIP_MILESTONE)
+    node.querySelector('#header-primary-text')!.textContent = ''
+    const chat = await ChatParser.parse(liveVideo(), node)
+
+    expect(chat.isMilestone).toBe(true)
+    expect(chat.isJoinMember).toBe(false)
+  })
+
+  it('メンバー歴: 属性が無くても、#header-primary-text の文字が後から入れば待って判定する', async () => {
+    const node = createElement(MEMBERSHIP_MILESTONE)
+    node.removeAttribute('has-primary-header-text')
+    const header = node.querySelector('#header-primary-text')!
+    header.textContent = ''
+    setTimeout(() => (header.textContent = 'メンバー歴 4 か月'), 100)
+    const chat = await ChatParser.parse(liveVideo(), node)
+
+    expect(chat.isMilestone).toBe(true)
+    expect(chat.milestoneText).toBe('メンバー歴 4 か月')
+    expect(chat.memberMonths).toBe(4)
+  })
+
   it('メンバー加入 (実 DOM, #header-primary-text が空) はマイルストーンにしない', async () => {
     const now = new Date(2026, 10, 22, 14, 14, 30)
     const chat = await ChatParser.parse(liveVideo(), createElement(MEMBERSHIP_JOIN), now)
@@ -174,6 +210,14 @@ describe('ChatParser.parse', () => {
 
     expect(chat.isMilestone).toBe(true)
     expect(chat.altMessage).toBe('メンバー歴 11 か月')
+  })
+})
+
+describe('ChatParser.parseSuperCount', () => {
+  it('Super の購入回数を取り出す', () => {
+    expect(ChatParser.parseSuperCount('ライブ配信での 5 回目の Super をお祝いしましょう')).toBe(5)
+    expect(ChatParser.parseSuperCount('Celebrate your 10th Super in live streams')).toBe(10)
+    expect(ChatParser.parseSuperCount('')).toBeUndefined()
   })
 })
 

@@ -68,6 +68,7 @@ const tags = computed(() => {
   if (chat.isModerator) list.push({ label: 'モデレーター', class: 'badge-info' })
   if (chat.isVerified) list.push({ label: '確認済み' })
   if (chat.money) list.push({ label: `${chat.moneyUnit ?? ''}${chat.money.toLocaleString()}`, class: 'badge-accent' })
+  if (chat.superCount) list.push({ label: `🎊 ${chat.superCount} 回目の Super`, class: 'badge-accent' })
   if (chat.topChatRank) list.push({ label: `👑 #${chat.topChatRank}`, class: 'badge-accent' })
   if (chat.replyTo) list.push({ label: `💬 ${chat.replyTo} へ返信`, class: 'badge-accent' })
   if (chat.isGift) list.push({ label: `🎁 ギフト${chat.giftCount ? ` ×${chat.giftCount}` : ''}`, class: 'badge-success' })

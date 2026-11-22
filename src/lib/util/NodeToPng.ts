@@ -71,11 +71,12 @@ export default class NodeToPng {
       width: displays.width, // 指定しないと横幅を揃えられない
       height: displays.height, // margin・border を含めた高さ
       // - スパチャの menu が展開されるため描画しない
-      // - ギフトの右の飾り画像 (.rhs-image) は www.gstatic.com にあり CORS で読めず空白になるので描画しない
+      // - ギフトの右の飾り画像 (.rhs-image)、スパチャのおまけの画像 (#overlay-image) は
+      //   www.gstatic.com にあり CORS で読めず空白になるので描画しない
       // (iframe 内のノードは realm が違うので instanceof は使わない)
       filter: (child: Node) => {
         const element = child as Element
-        return element.id !== 'menu' && !element.classList?.contains('rhs-image')
+        return element.id !== 'menu' && element.id !== 'overlay-image' && !element.classList?.contains('rhs-image')
       },
       // 指定した CSS だけを埋め込む. (ページの CSS からは探さない: Google Fonts の CSS は別ドメインで読めないため)
       font: fontCss ? { cssText: fontCss } : false,

@@ -60,20 +60,25 @@
             <i class="mdi" :class="sortOrder === 'asc' ? 'mdi-sort-clock-ascending-outline' : 'mdi-sort-clock-descending-outline'" />
             {{ sortOrder === 'asc' ? '古い順' : '新しい順' }}
           </button>
-          <button class="btn btn-secondary btn-sm" :disabled="filteredChats.length === 0" @click="selectedChats = [...filteredChats]">
+          <button class="btn btn-secondary btn-sm" :disabled="sortedChats.length === 0" @click="selectedChats = [...sortedChats]">
             すべて選択
           </button>
           <button class="btn btn-secondary btn-sm" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
         </div>
 
-        <!-- 表示の上限を超えた時の注意 -->
-        <p v-if="isOver" class="notice notice-warning">
-          <i class="mdi mdi-alert-outline" />
-          表示できるのは {{ MAX_CHAT_LENGTH }} 件までです。上の選択欄で絞り込んでください。
+        <!-- 表示中のスーパーチャットの合計額 (記録したものだけなので目安) -->
+        <p v-if="moneySums.length" class="text-xs text-zinc-600">
+          <i class="mdi mdi-cash-multiple" />
+          スーパーチャット合計 (目安):
+          <template v-for="(sum, i) in moneySums" :key="sum.unit">
+            <template v-if="i > 0"> + </template>
+            <strong class="text-sm text-zinc-950">{{ sum.unit }}{{ formatMoney(sum.money) }}</strong>
+            <span class="ml-1 text-zinc-500">({{ sum.count }} 件)</span>
+          </template>
         </p>
 
         <!-- チャットの一覧 (無ければ案内) -->
-        <ChatList v-if="filteredChats.length" v-model:selected="selectedChats" :chats="filteredChats" />
+        <ChatList v-if="sortedChats.length" v-model:selected="selectedChats" :chats="sortedChats" />
         <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
           <i class="mdi mdi-message-text-outline mb-1 text-4xl text-zinc-400" />
           <p>記録したチャットはありません</p>
@@ -138,8 +143,6 @@ import type Video from '../models/Video'
 import ChatList from './components/ChatList.vue'
 import VideoDropdown from './components/VideoDropdown.vue'
 
-const MAX_CHAT_LENGTH = 100 // 最大表示チャット数
-
 /** 最近見た動画. */
 const videos = shallowRef<Video[]>([])
 /** 選んでいる動画. */
@@ -193,10 +196,14 @@ const sortedChats = computed(() => {
   const sorted = [...filtered].sort(Chat.compareByTime)
   return sortOrder.value === 'desc' ? sorted.reverse() : sorted
 })
-/** 表示の上限を超えているか. */
-const isOver = computed(() => sortedChats.value.length > MAX_CHAT_LENGTH)
-/** 実際に表示するチャット (上限まで). */
-const filteredChats = computed(() => sortedChats.value.slice(0, MAX_CHAT_LENGTH))
+
+/** 表示中のチャットのスーパーチャットの合計 (通貨ごと). */
+const moneySums = computed(() => Chat.sumMoney(sortedChats.value))
+
+/** 金額の表示 (小数は 2 桁まで). */
+function formatMoney(money: number): string {
+  return money.toLocaleString(undefined, { maximumFractionDigits: 2 })
+}
 
 onMounted(async () => {
   // 開いているタブのバッジをリセットする (content script が居なければ何もしない)

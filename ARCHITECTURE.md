@@ -238,13 +238,16 @@ flowchart TD
   N --> RANK["parseTopChatRank()<br/>#before-content-buttons の button aria-label='#1'"]
   N --> RPL["parseReplyTo()<br/>#before-content-buttons の button の文字が '@handle' → replyTo"]
   N --> SC{"#purchase-amount がある?"}
-  SC -- "はい" --> SC1["isSuperChat / money・moneyUnit<br/>(parsePurchaseAmount)"]
+  SC -- "はい" --> SC1["isSuperChat / money・moneyUnit<br/>(parsePurchaseAmount)<br/>superCount = parseSuperCount(#lower-bumper)"]
   N --> ST{"#purchase-amount-chip がある?"}
   ST -- "はい" --> ST1["isSuperStickers / money<br/>altMessage = ステッカーの alt"]
   N --> MB{"タグが membership-item-renderer?"}
-  MB -- "はい" --> MB1{"#header-primary-text に文字がある?"}
+  MB -- "はい" --> MB0{"show-only-header 属性がある?"}
+  MB0 -- "はい (加入)" --> MB1
+  MB0 -- "いいえ" --> MBW["#header-primary-text の文字を待つ<br/>retry 3 回 × 300ms"] --> MB1
+  MB1{"#header-primary-text に文字がある<br/>または has-primary-header-text 属性?"}
   MB1 -- "はい" --> MS["isMilestone (メンバー歴)<br/>memberMonths はヘッダーの値を優先"]
-  MB1 -- "いいえ (空)" --> JN["isJoinMember (メンバー加入)"]
+  MB1 -- "いいえ" --> JN["isJoinMember (メンバー加入)"]
   N --> GF{"タグが gift-purchase-announcement-renderer?"}
   GF -- "はい" --> GF1["isGift / giftCount = parseGiftCount(#primary-text)<br/>message = #primary-text"]
 ```
@@ -350,8 +353,8 @@ flowchart TD
   VD -- "emit change" --> HV["handleVideoChange(video)"]
   HV --> RC["reloadChats()<br/>ChatStorage.get(video.id) → chats"]
   RC --> SC["sortedChats (computed)<br/>絞り込み: chatFilters[selectedFilterKey].func<br/>並び: Chat.compareByTime<br/>sortOrder が 'desc' なら逆順"]
-  SC --> FC["filteredChats = 先頭 MAX_CHAT_LENGTH (100) 件"]
-  FC --> CL["ChatList → ChatPanel<br/>クリックで selectedChats に追加 / 削除"]
+  SC --> SUM["moneySums = Chat.sumMoney(sortedChats)<br/>スーパーチャット合計 (通貨ごと, 目安)"]
+  SC --> CL["ChatList → ChatPanel (全件表示)<br/>クリックで selectedChats に追加 / 削除"]
 
   CL --> DEL["handleDeleteSelectedChats<br/>ChatStorage.remove()"]
   CL --> CSV["handleSaveCsv<br/>ChatCsv.createObjectURL(video, selectedChats)<br/>→ Filer.downloadFile()"]
@@ -511,7 +514,6 @@ flowchart LR
 | `MESSAGE_TYPES` | `messages.ts` | `YCR_*` 4 種 | 受け付けるメッセージ (それ以外は無視) |
 | `ICONS` | `background.ts` | `active` / `waiting` / `inactive` → アイコン画像 | アイコンの色 |
 | `BRIDGE_REQUEST_SOURCE` / `BRIDGE_RESPONSE_SOURCE` | `bridge/protocol.ts` | `'ycr:content'` / `'ycr:bridge'` | postMessage の送り主の判定 |
-| `MAX_CHAT_LENGTH` | `popup/App.vue` | `100` | popup に表示する最大件数 |
 | `MIN_VIDEO_LENGTH` | `models/Config.ts` | `5` | 動画の最大保存数の下限 |
 | `CSV_FILENAME` | `popup/App.vue` | `'%title%_チャット_%now%'` | popup の CSV のファイル名 |
 | `FORMULA_PREFIX` | `ChatCsv.ts` | `= + - @ タブ 改行` で始まる | CSV で先頭に `'` を付ける値 |

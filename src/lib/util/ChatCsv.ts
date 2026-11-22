@@ -31,6 +31,7 @@ const COLUMNS: Column[] = [
   { header: 'スーパーチャット', value: chat => chat.isSuperChat || chat.isSuperStickers },
   { header: '金額', value: chat => chat.money },
   { header: '通貨', value: chat => chat.moneyUnit },
+  { header: 'Super の回数', value: chat => chat.superCount },
   { header: '動画ID', value: (_, video) => video.id },
   { header: '動画タイトル', value: (_, video) => video.title },
   { header: 'チャットID', value: chat => chat.id },
