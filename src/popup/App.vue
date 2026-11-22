@@ -36,7 +36,7 @@
           @click="handleToggleProtected(selectedVideo)"
         >
           <i class="mdi" :class="selectedVideo.isProtected ? 'mdi-pin' : 'mdi-pin-outline'" />
-          {{ selectedVideo.isProtected ? '自動で削除しない' : '自動削除から外す' }}
+          自動で削除しない
         </button>
         <button
           class="btn btn-ghost btn-sm ml-auto enabled:hover:bg-danger-soft enabled:hover:text-danger"
