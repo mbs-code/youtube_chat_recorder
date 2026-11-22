@@ -2,7 +2,7 @@
  * YouTube ライブチャットの DOM から、パースに関係する部分だけを残したもの.
  *
  * - TEXT_MESSAGE_*: 2026-11 時点の実際の DOM を縮小したもの.
- * - MEMBERSHIP_MILESTONE / MEMBERSHIP_JOIN / GIFT_PURCHASE / TEXT_MESSAGE_TOPCHAT: 2026-11 時点の実際の DOM を縮小したもの.
+ * - MEMBERSHIP_MILESTONE / MEMBERSHIP_JOIN / GIFT_PURCHASE / TEXT_MESSAGE_TOPCHAT / TEXT_MESSAGE_SUPERCHAT_REPLY: 2026-11 時点の実際の DOM を縮小したもの.
  * - PAID_MESSAGE / MEMBERSHIP_ITEM: 既知の構造から再現したもの (実 DOM との突き合わせは未確認).
  *
  * YouTube の DOM が変わったら `npm run e2e` で確認し、ここも更新すること.
@@ -224,4 +224,36 @@ export const GIFT_PURCHASE = `
   </ytd-sponsorships-live-chat-header-renderer>
   <div id="opt-in-prompt" hidden=""></div>
 </ytd-sponsorships-live-chat-gift-purchase-announcement-renderer>
+`
+
+/** スーパーチャットへの返信 (名前の後ろに返信先のボタン). 2026-11 時点の実際の DOM (アーカイブ) を縮小したもの. */
+export const TEXT_MESSAGE_SUPERCHAT_REPLY = `
+<yt-live-chat-text-message-renderer class="style-scope yt-live-chat-item-list-renderer" modern="" id="ChwKGkNQVFZwOHI5LTRjREZjWU1yUVlkeE1RRXhB" author-type="member">
+  <yt-img-shadow id="author-photo" height="24" width="24"><img id="img" alt="" height="24" width="24" src="https://yt4.ggpht.com/reply=s32-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+  <div id="content">
+    <span id="timestamp">0:07</span>
+    <yt-live-chat-author-chip>
+      <span id="prepend-chat-badges"></span>
+      <span id="author-name" dir="auto" class="member">@moku8444<span id="chip-badges"></span></span>
+      <span id="chat-badges">
+        <yt-live-chat-author-badge-renderer aria-label="メンバー（2 か月）" type="member" shared-tooltip-text="メンバー（2 か月）">
+          <div id="image"><img src="https://yt3.ggpht.com/badge=s16-c-k" alt="メンバー（2 か月）"></div>
+        </yt-live-chat-author-badge-renderer>
+      </span>
+    </yt-live-chat-author-chip>&ZeroWidthSpace;<div id="before-content-buttons">
+      <yt-button-view-model><button-view-model class="ytSpecButtonViewModelHost">
+        <button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextTonal" title="" aria-disabled="false" style="color: rgba(0, 0, 0, 0.875); background-color: rgb(255, 202, 40);">
+          <div class="ytSpecButtonShapeNextButtonTextContent">@gikaqi-ぎかき</div>
+          <div class="ytSpecButtonShapeNextIcon"><span class="ytIconWrapperHost"><svg viewBox="0 0 12 12" width="12" height="12"><path d="M9.5 1"></path></svg></span></div>
+        </button>
+      </button-view-model></yt-button-view-model>
+    </div>&ZeroWidthSpace;<span id="message-container">
+      <span id="message-prefix-icon-container"></span>
+      <span id="message" dir="auto">ないすぱ！</span>
+    </span>
+    <span id="hover-message" dir="auto"></span>
+    <span id="deleted-state"></span>
+  </div>
+  <div id="menu"></div>
+</yt-live-chat-text-message-renderer>
 `

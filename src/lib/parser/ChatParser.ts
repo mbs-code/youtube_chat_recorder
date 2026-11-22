@@ -67,6 +67,9 @@ export default class ChatParser {
     // トップチャット (名前の後ろの 👑#1 のような順位ボタン) ///
     chat.topChatRank = this.parseTopChatRank(node)
 
+    // スーパーチャットへの返信 (名前の後ろの [@相手の名前 💬] ボタン) ///
+    chat.replyTo = this.parseReplyTo(node)
+
     const tagName = node.tagName.toLowerCase()
 
     // スーパーチャット ///
@@ -233,6 +236,20 @@ export default class ChatParser {
       const label = button.getAttribute('aria-label') || button.textContent || ''
       const rank = label.trim().match(/^#(\d+)$/)?.[1]
       if (rank) return parseInt(rank, 10)
+    }
+    return undefined
+  }
+
+  /**
+   * スーパーチャットへの返信先の投稿者名を取り出す.
+   *
+   * - `#before-content-buttons` 内のボタンの文字が "@handle" (背景はスパチャの色). トップチャットの "#1" と同じ場所.
+   * - 返信でなければ undefined.
+   */
+  public static parseReplyTo(node: Element): string | undefined {
+    for (const button of Array.from(node.querySelectorAll('#before-content-buttons button'))) {
+      const text = button.textContent?.trim() ?? ''
+      if (text.startsWith('@')) return text
     }
     return undefined
   }

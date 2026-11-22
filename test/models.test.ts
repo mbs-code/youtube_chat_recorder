@@ -61,6 +61,7 @@ describe('後から追加した基本フィルターの補完', () => {
     expect(config.chatFilters.find(cf => cf.key === 'milestone')).toMatchObject({ doSave: true, doImage: true })
     expect(config.chatFilters.find(cf => cf.key === 'owner')).toMatchObject({ doSave: true, doImage: true }) // 初期値
     expect(config.chatFilters.find(cf => cf.key === 'topchat')).toMatchObject({ doSave: false, doImage: false }) // plain を引き継ぐ
+    expect(config.chatFilters.find(cf => cf.key === 'screply')).toMatchObject({ doSave: false, doImage: false }) // plain を引き継ぐ
     expect(config.chatFilters.find(cf => cf.key === 'gift')).toMatchObject({ doSave: true, doImage: true }) // joinmember を引き継ぐ
   })
 

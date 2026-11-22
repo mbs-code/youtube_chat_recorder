@@ -122,6 +122,7 @@ YouTube に依存している箇所:
 - 投稿者名は `@handle` 形式
 - メンバー歴 (マイルストーン) チャットは加入と同じ `yt-live-chat-membership-item-renderer` で、`#header-primary-text` ("メンバー歴 11 か月") の中身の有無で区別する (加入でも空の `#header-primary-text` がある)。`#header-subtext` はメンバーシップ名、`#message` は本文 (省略可)
 - トップチャット (名前の後ろの 👑#1) は `#before-content-buttons` 内の `<button aria-label="#1">`。`ChatParser.parseTopChatRank` で順位を取る
+- スーパーチャットへの返信は、同じ `#before-content-buttons` 内のボタンの文字が `@handle` (背景はスパチャの色)。`ChatParser.parseReplyTo` で返信先を取る
 
 - メンバーシップギフト (贈った側) は `ytd-sponsorships-live-chat-gift-purchase-announcement-renderer`。文は `#primary-text` ("〇〇 のメンバーシップ ギフトを 10 個贈りました")、**`#timestamp` が無い**ので配信中は現在時刻にする (`ChatParser.liveNowTimes`)。右の飾り画像 `.rhs-image` は www.gstatic.com にあり CORS で読めないので画像化しない
 

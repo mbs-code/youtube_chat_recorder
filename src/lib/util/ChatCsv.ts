@@ -27,6 +27,7 @@ const COLUMNS: Column[] = [
   { header: 'メンバーシップギフト', value: chat => chat.isGift },
   { header: 'ギフト数', value: chat => chat.giftCount },
   { header: 'トップチャット順位', value: chat => chat.topChatRank },
+  { header: 'スパチャへの返信先', value: chat => chat.replyTo },
   { header: 'スーパーチャット', value: chat => chat.isSuperChat || chat.isSuperStickers },
   { header: '金額', value: chat => chat.money },
   { header: '通貨', value: chat => chat.moneyUnit },

@@ -215,6 +215,7 @@ flowchart TD
 | `milestone` | 🎉 メンバー歴 | `isMilestone` |
 | `gift` | 🎁 メンバーシップギフト | `isGift` |
 | `topchat` | 👑 トップチャット | `topChatRank !== undefined` |
+| `screply` | 💬 スーパーチャットへの返信 | `replyTo !== undefined` |
 
 テキストマッチング (`generateChatFilterFunc`) は `textMode` で比べる対象 (`message` → `chat.message` / `author` → `chat.authorName`) を決め、`isRegex` → 正規表現、`isExact` → 完全一致、どちらでもなければ部分一致で判定する。不正な正規表現のフィルターは判定関数が作れないので無視される。
 
@@ -235,6 +236,7 @@ flowchart TD
   BADGE -- "owner / verified / moderator" --> F1["isOwner / isVerified / isModerator"]
   BADGE -- "member" --> F2["isMember<br/>memberMonths = parseMemberMonth(aria-label)"]
   N --> RANK["parseTopChatRank()<br/>#before-content-buttons の button aria-label='#1'"]
+  N --> RPL["parseReplyTo()<br/>#before-content-buttons の button の文字が '@handle' → replyTo"]
   N --> SC{"#purchase-amount がある?"}
   SC -- "はい" --> SC1["isSuperChat / money・moneyUnit<br/>(parsePurchaseAmount)"]
   N --> ST{"#purchase-amount-chip がある?"}
@@ -397,7 +399,7 @@ flowchart TD
   end
 ```
 
-後から追加された基本フィルターは、`Config.fromPlain()` の中で `complementChatFilterConfigs()` が補う。初期値は `INHERIT_FILTER_KEYS` の引き継ぎ元 (`milestone` ← `joinmember`, `topchat` ← `plain`, `gift` ← `joinmember`) があればその設定、無ければ `defaultTrueKeys` に入っているかで決まる。
+後から追加された基本フィルターは、`Config.fromPlain()` の中で `complementChatFilterConfigs()` が補う。初期値は `INHERIT_FILTER_KEYS` の引き継ぎ元 (`milestone` ← `joinmember`, `topchat` ← `plain`, `screply` ← `plain`, `gift` ← `joinmember`) があればその設定、無ければ `defaultTrueKeys` に入っているかで決まる。
 
 ---
 
@@ -499,7 +501,7 @@ flowchart LR
 | `CHAT_SCROLLER_SELECTOR` | `PageEventer.ts` | `yt-live-chat-item-list-renderer #item-scroller` | チャットの追加を監視する要素 |
 | `CHAT_NODE_NAMES` | `ChatParser.ts` | text / paid / membership / sticker / ギフト (gift-purchase-announcement) の renderer | `ChatHandler.invoke` が処理するタグ名 |
 | `BASE_FILTERS` | `ChatFilter.ts` | [4-2 の表](#4-2-chatfiltercheckstuckchatfilter-保存するか画像化するか) | チャットの種類の判定 |
-| `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain`, `gift ← joinmember` | 後から追加したフィルターの初期値の引き継ぎ元 |
+| `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain`, `screply ← plain`, `gift ← joinmember` | 後から追加したフィルターの初期値の引き継ぎ元 |
 | `defaultTrueKeys` | `ChatFilter.ts` | `owner`, `verified`, `moderator` | 初期設定で「保存する」「画像化する」をオンにするもの |
 | `warnFilterKeys` | `ChatFilter.ts` | `plain`, `member` | 設定画面で「負荷注意」を出すもの |
 | `COUNT_TO_PROCESS_AT_ONE` | `BaseQueue.ts` | `10` | キューが一度に処理する件数 |

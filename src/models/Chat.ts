@@ -31,6 +31,7 @@ export default class Chat {
   isMilestone = false // メンバー歴 (マイルストーン) チャット
   milestoneText?: string // "メンバー歴 11 か月"
   topChatRank?: number // トップチャットの順位 (👑#1 なら 1)
+  replyTo?: string // スーパーチャットへの返信なら、返信先の投稿者名 (@handle)
   isGift = false // メンバーシップギフトを贈った
   giftCount?: number // 贈ったギフトの数
 
@@ -84,6 +85,7 @@ export default class Chat {
     if (this.isMilestone) emojis.push('🎉')
     if (this.isGift) emojis.push(`🎁${this.giftCount ?? ''}`)
     if (this.topChatRank) emojis.push(`👑${this.topChatRank}`)
+    if (this.replyTo) emojis.push('💬')
     if (this.money) emojis.push('💰')
 
     const date = this.timestamp?.toLocaleString()

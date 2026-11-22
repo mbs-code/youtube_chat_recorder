@@ -10,6 +10,7 @@ import {
   PAID_MESSAGE,
   TEXT_MESSAGE_MEMBER,
   TEXT_MESSAGE_OWNER,
+  TEXT_MESSAGE_SUPERCHAT_REPLY,
   TEXT_MESSAGE_TOPCHAT,
 } from './fixtures/chat'
 
@@ -111,6 +112,23 @@ describe('ChatParser.parse', () => {
   it('順位ボタンが無ければトップチャットではない', async () => {
     const chat = await ChatParser.parse(liveVideo(), createElement(TEXT_MESSAGE_MEMBER))
     expect(chat.topChatRank).toBeUndefined()
+  })
+
+  it('スーパーチャットへの返信を解析できる (トップチャットとは区別する)', async () => {
+    const chat = await ChatParser.parse(archiveVideo(), createElement(TEXT_MESSAGE_SUPERCHAT_REPLY))
+
+    expect(chat.replyTo).toBe('@gikaqi-ぎかき')
+    expect(chat.topChatRank).toBeUndefined()
+    expect(chat.authorName).toBe('@moku8444')
+    expect(chat.message).toBe('ないすぱ！')
+    expect(chat.isSuperChat).toBe(false)
+    expect(chat.memberMonths).toBe(2)
+    expect(chat.seconds).toBe(7)
+  })
+
+  it('トップチャットは返信ではない', async () => {
+    const chat = await ChatParser.parse(liveVideo(), createElement(TEXT_MESSAGE_TOPCHAT))
+    expect(chat.replyTo).toBeUndefined()
   })
 
   it('メンバー加入 (実 DOM, #header-primary-text が空) はマイルストーンにしない', async () => {
