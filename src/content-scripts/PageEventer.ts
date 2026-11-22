@@ -265,9 +265,34 @@ export default class PageEventer {
 
     let max = video.maxViewers ?? 0
     let misses = 0
-    let observed: Element | undefined
+    let observed: Element[] = []
 
-    // 表示が変わったら (VIEWERS_THROTTLE 後に) 読む. 30 秒ごとの確認は、監視が外れた時の予備
+    /** 読んだ値を記録する (推移には毎回、最大同接は超えた時だけ). */
+    const record = async (viewers: number | undefined, from: string) => {
+      if (generation !== this.generation) return
+      Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max}, from: ${from})`)
+      if (viewers === undefined) {
+        // 見つからない時は、原因を調べられるようにページの状態を 1 回だけ出す
+        if (++misses === VIEWERS_WARN_AFTER) Logger.warn(`👀[viewers] concurrent viewers not found: ${this.describeViewCount()}`)
+        return
+      }
+      this.timeline.addViewers(viewers)
+      if (viewers <= max) return
+
+      max = viewers
+      await VideoStorage.updateMaxViewers(videoId, viewers)
+    }
+
+    /** ページ全体から読む (定期的な確認と、回転する数字が止まった後). */
+    const check = async () => {
+      // 遷移した後の古い呼び出しは何もしない. (ここで stop すると、新しい動画の監視まで止めてしまう)
+      if (generation !== this.generation) return
+      if (!Runtime.isContextValid()) return this.stopWatchViewers()
+      observe()
+      await record(this.readConcurrentViewers(), 'page')
+    }
+
+    // 回転する数字の変化は、止まるまで (VIEWERS_THROTTLE) 待ってから読む
     const schedule = () => {
       if (this.viewersPending) return
       this.viewersPending = setTimeout(() => {
@@ -275,40 +300,34 @@ export default class PageEventer {
         void check().catch(err => Logger.error(err))
       }, VIEWERS_THROTTLE)
     }
-    this.viewersObserver = new MutationObserver(schedule)
 
-    // 表示の要素は作り直されることがあるので、読むたびに監視先を確かめる
-    const observe = () => {
-      const target = this.findViewCountContainer()
-      if (!target || target === observed) return
-      observed = target
-      this.viewersObserver?.disconnect()
-      this.viewersObserver?.observe(target, {
-        subtree: true,
-        childList: true,
-        characterData: true,
-        attributes: true,
-        attributeFilter: ['aria-label', 'style'], // aria-label の数字 / 回転する数字の margin-top
-      })
-    }
-
-    const check = async () => {
-      // 遷移した後の古い呼び出しは何もしない. (ここで stop すると、新しい動画の監視まで止めてしまう)
-      if (generation !== this.generation) return
-      if (!Runtime.isContextValid()) return this.stopWatchViewers()
-      observe()
-      const viewers = this.readConcurrentViewers()
-      Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max})`)
-      if (viewers !== undefined) this.timeline.addViewers(viewers)
-      if (viewers === undefined) {
-        // 見つからない時は、原因を調べられるようにページの状態を 1 回だけ出す
-        if (++misses === VIEWERS_WARN_AFTER) Logger.warn(`👀[viewers] concurrent viewers not found: ${this.describeViewCount()}`)
-        return
+    // #view-count の aria-label ("6,679 人が視聴中") が変わったら、その値をすぐ記録する.
+    // (aria-label は回転のアニメーションと違い、最初から変わった後の値になっている)
+    this.viewersObserver = new MutationObserver((records) => {
+      for (const r of records) {
+        if (r.type !== 'attributes' || r.attributeName !== 'aria-label') continue
+        const viewers = VideoParser.parseConcurrentViewers((r.target as Element).getAttribute('aria-label'))
+        if (viewers !== undefined) return void record(viewers, 'aria-label').catch(err => Logger.error(err))
       }
-      if (viewers <= max) return
+      schedule()
+    })
 
-      max = viewers
-      await VideoStorage.updateMaxViewers(videoId, viewers)
+    // 監視先: 全ての #view-count (説明欄の開閉などで複数あることがある). 作り直されることがあるので、読むたびに確かめる
+    const observe = () => {
+      const targets = this.findViewCountTargets()
+      if (targets.length === observed.length && targets.every((t, i) => t === observed[i])) return
+      observed = targets
+      this.viewersObserver?.disconnect()
+      for (const target of targets) {
+        this.viewersObserver?.observe(target, {
+          attributes: true,
+          attributeFilter: ['aria-label', 'style'], // aria-label の数字 / 回転する数字の margin-top
+          subtree: true,
+          childList: true,
+          characterData: true,
+        })
+      }
+      Logger.debug(`👀[viewers] observe ${targets.length} element(s)`)
     }
 
     this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
@@ -320,13 +339,13 @@ export default class PageEventer {
     Logger.debug('⚙️[start] watch concurrent viewers')
   }
 
-  /** 同時接続数の表示を囲む要素 (監視先). */
-  protected findViewCountContainer(): Element | undefined {
-    const viewCount = document.querySelector(VIEW_COUNT_SELECTOR)
-    if (viewCount) return viewCount.parentElement ?? viewCount
-    const rolling = Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))
-      .find(r => CONCURRENT_LABEL_RE.test(this.rollingLabel(r)))
-    return rolling?.parentElement?.parentElement ?? undefined
+  /** 同時接続数の表示 (監視先). 全ての #view-count、無ければ「視聴中」の回転する数字の周り. */
+  protected findViewCountTargets(): Element[] {
+    const viewCounts = Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))
+    if (viewCounts.length) return viewCounts
+    return Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))
+      .filter(r => CONCURRENT_LABEL_RE.test(this.rollingLabel(r)))
+      .map(r => r.parentElement?.parentElement ?? r)
   }
 
   /**
