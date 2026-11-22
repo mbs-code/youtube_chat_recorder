@@ -11,6 +11,9 @@ TypeScript + Vue 3 + Vite + Tailwind CSS
 開発者・AI エージェント向けの詳しい説明はここ。
 [AGENTS.md](./AGENTS.md)
 
+関数の構成・データの流れ (図)。
+[ARCHITECTURE.md](./ARCHITECTURE.md)
+
 ## 開発
 
 Node.js 20.19 以上が必要です。

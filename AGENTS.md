@@ -1,6 +1,7 @@
 # AGENTS.md
 
 AI エージェント (Claude Code など) と開発者向けのガイド。人間向けの概要は [readme.md](./readme.md)、利用者向けの使い方は [docs/readme.md](./docs/readme.md)。
+関数の呼び出し関係・分岐条件・データの流れの図は [ARCHITECTURE.md](./ARCHITECTURE.md)。関数の構成や分岐を変えたら、こちらも更新する。
 
 ## 概要
 
