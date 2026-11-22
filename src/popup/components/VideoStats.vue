@@ -61,7 +61,7 @@ const rows = computed<Row[]>(() => {
   if (video.maxViewers) {
     list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: `${video.maxViewers.toLocaleString()} 人`, note: formatAt(video.maxViewersAt) })
   } else if (video.isBroadcast) {
-    list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: '-', note: '記録なし (配信中に動画のページを開いている間に記録します)' })
+    list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: '-', note: '記録なし' })
   }
 
   // 最大再生数が無い古い記録は、最後に開いた時の再生数を出す
