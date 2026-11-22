@@ -1,24 +1,26 @@
-import arraySort from 'array-sort'
-import Chat from '../../models/Chat'
-import {
-  ChatFilterConfigInterface,
-  ChatFilterDataInterface,
-  ChatTaskType,
-} from './ChatFilterInterface'
+import type Chat from '../../models/Chat'
+import type { ChatFilterConfigInterface, ChatFilterDataInterface, ChatTaskType } from './ChatFilterInterface'
 
 const BASE_FILTERS: ChatFilterDataInterface[] = [
   {
     key: 'all',
     title: 'すべて表示',
-    func: (chat: Chat) => true,
+    func: () => true,
   },
   {
     key: 'plain',
     title: '⬜ 通常チャット',
     func: (chat: Chat) => {
-      return !chat.isOwner && !chat.isVerified && !chat.isModerator&& !chat.isSuperChat
-        && !chat.isSuperStickers && !chat.isMember && !chat.isJoinMember
-    }
+      return (
+        !chat.isOwner &&
+        !chat.isVerified &&
+        !chat.isModerator &&
+        !chat.isSuperChat &&
+        !chat.isSuperStickers &&
+        !chat.isMember &&
+        !chat.isJoinMember
+      )
+    },
   },
   {
     key: 'owner',
@@ -38,7 +40,7 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
   {
     key: 'superchat',
     title: '💰 スーパーチャット',
-    func: (chat: Chat) =>  chat.isSuperChat || chat.isSuperStickers,
+    func: (chat: Chat) => chat.isSuperChat || chat.isSuperStickers,
   },
   {
     key: 'member',
@@ -88,8 +90,7 @@ export default class ChatFilter {
    * @return {ChatFilterConfigInterface[]} config chat filter 配列
    */
   public static generateDefaultChatfilterConfigs(): ChatFilterConfigInterface[] {
-    return BASE_FILTERS
-      .filter(e => e.key !== 'all') // 全ての条件を除外する
+    return BASE_FILTERS.filter(e => e.key !== 'all') // 全ての条件を除外する
       .map(e => {
         return {
           key: e.key,
@@ -102,23 +103,20 @@ export default class ChatFilter {
 
   ///
 
-
   /**
    * チャットフィルターを設定する.
    *
    * @param {ChatFilterConfigInterface[]} configs config chat filter 配列
    */
-  public setChatFilters(configs: ChatFilterConfigInterface[]) {
+  public setChatFilters(configs: ChatFilterConfigInterface[]): void {
     // 生成して設定する
     const chatFilters = this.generateChatFilters(configs)
 
     // 処理チェックが無いフィルターを除外する
     const actives = chatFilters.filter(cf => cf.doImage || cf.doSave)
 
-    // isImage = true を上部にソートする (最適化)
-    const sorts = arraySort(actives, 'isImage')
-
-    this.chatFilters = sorts
+    // doImage = true を上部にソートする (image が見つかれば即決定できるため)
+    this.chatFilters = actives.sort((a, b) => Number(Boolean(b.doImage)) - Number(Boolean(a.doImage)))
   }
 
   /**
@@ -127,18 +125,18 @@ export default class ChatFilter {
    * @param {Chat} chat 対象の chat
    * @return {{ filter: ChatFilterDataInterface, taskType: ChatTaskType } | undefined} 引っかかったフィルター
    */
-  public checkStuckChatFilter(chat: Chat): { filter: ChatFilterDataInterface, taskType: ChatTaskType } | undefined {
+  public checkStuckChatFilter(chat: Chat): { filter: ChatFilterDataInterface; taskType: ChatTaskType } | undefined {
     // 先頭から全部見ていく
     // もし image があったら即決定
     // save は最後まで image 要素が出てこなかったらで
-    let isSaveFilter = null
+    let isSaveFilter: ChatFilterDataInterface | null = null
 
     const chatFilters = this.chatFilters
     for (const cf of chatFilters) {
       if (!cf.func) continue
 
-    // フラグが無かったらそもそもスキップする
-    // ※ (!isSave) は一度 true になったら条件を飛ばす
+      // フラグが無かったらそもそもスキップする
+      // ※ (!isSave) は一度 true になったら条件を飛ばす
       if ((!isSaveFilter && cf.doSave) || cf.doImage) {
         const isTarget = cf.func(chat)
         if (isTarget) {
@@ -169,7 +167,7 @@ export default class ChatFilter {
 
   ///
 
-  protected generateChatFilters(configs: ChatFilterConfigInterface[]) {
+  protected generateChatFilters(configs: ChatFilterConfigInterface[]): ChatFilterDataInterface[] {
     return configs
       .map(config => {
         // 関数はモードがあれば自己生成、無ければ検索
@@ -196,15 +194,19 @@ export default class ChatFilter {
       const isRegex = cf.isRegex
       const isExact = cf.isExact
 
-      if (mode === 'message') {
-        if (isRegex) return (chat: Chat) => ((chat.message || '').match(match)?.length || -1) > 0
-        if (isExact) return (chat: Chat) => (chat.message || '') === match
-        return (chat: Chat) => (chat.message || '').includes(match)
-      } else if (mode === 'author') {
-        if (isRegex) return (chat: Chat) => ((chat.authorName || '').match(match)?.length || -1) > 0
-        if (isExact) return (chat: Chat) => (chat.authorName || '') === match
-        return (chat: Chat) => (chat.authorName || '').includes(match)
+      const pick = mode === 'author' ? (chat: Chat) => chat.authorName || '' : (chat: Chat) => chat.message || ''
+
+      if (isRegex) {
+        let regex: RegExp
+        try {
+          regex = new RegExp(match)
+        } catch {
+          return undefined // 不正な正規表現は無視する
+        }
+        return (chat: Chat) => regex.test(pick(chat))
       }
+      if (isExact) return (chat: Chat) => pick(chat) === match
+      return (chat: Chat) => pick(chat).includes(match)
     }
     return undefined
   }

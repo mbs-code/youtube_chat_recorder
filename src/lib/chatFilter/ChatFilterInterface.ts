@@ -1,4 +1,4 @@
-import Chat from '../../models/Chat'
+import type Chat from '../../models/Chat'
 
 export type ChatFilterFunc = (chat: Chat) => boolean
 

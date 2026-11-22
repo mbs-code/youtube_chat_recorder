@@ -1,11 +1,7 @@
 <template>
-  <div v-on-clickaway="handleClose" class="dropdown is-fullwidth" :class="{'is-active': isActive }">
+  <div ref="root" class="dropdown is-fullwidth" :class="{ 'is-active': isActive }">
     <div class="dropdown-trigger">
-      <button
-        class="button"
-        aria-haspopup="true"
-        @click.stop="handleToggle"
-      >
+      <button class="button" aria-haspopup="true" @click.stop="isActive = !isActive">
         <span v-if="selected">
           <VideoPanel :key="selected.id" :video="selected" />
         </span>
@@ -17,126 +13,116 @@
     </div>
     <div class="dropdown-menu" role="menu">
       <div class="dropdown-content">
-        <template v-for="video in videos">
-          <VideoPanel
-            :key="video.id"
-            :video="video"
-            class="dropdown-item"
-            :class="{ 'is-active': isSelectedVideo(video) }"
-            @click="handleSelected(video)"
-          />
-        </template>
-        <div v-if="videos.length === 0" class="box">
-          動画がありません。
-        </div>
+        <VideoPanel
+          v-for="video in videos"
+          :key="video.id"
+          :video="video"
+          class="dropdown-item"
+          :class="{ 'is-active': video.id === selected?.id }"
+          @click="handleSelected(video)"
+        />
+        <div v-if="videos.length === 0" class="box">動画がありません。</div>
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { Component, Prop, Vue, Watch } from 'vue-property-decorator'
-import { directive as onClickaway } from 'vue-clickaway'
-import VideoPanel from './VideoPanel.vue'
-
-import Video from '../../models/Video'
+<script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import BrowserTabs from '../../lib/chrome/BrowserTabs'
 import PageHelper from '../../lib/util/PageHelper'
+import type Video from '../../models/Video'
+import VideoPanel from './VideoPanel.vue'
 
-@Component({
-  components: { VideoPanel },
-  directives: { onClickaway },
-})
-export default class VideoDropdown extends Vue {
-  isActive = false
-  selected: Video | null = null
+const props = defineProps<{ videos: Video[] }>()
+const emit = defineEmits<{ change: [video: Video | null]; close: [] }>()
 
-  @Prop({ default: [] })
-  videos!: Video[]
+const isActive = ref(false)
+const selected = shallowRef<Video | null>(null)
+const root = useTemplateRef<HTMLElement>('root')
 
-  @Watch('videos')
-  async onVideosChanged(): Promise<void> {
-    // select の初期化
-    this.selected = null
-
-    // 初期に選択される動画を探す
+// 動画一覧が変わったら、開いているタブの動画を初期選択にする
+watch(
+  () => props.videos,
+  async videos => {
+    selected.value = null
     const activeTab = await BrowserTabs.getActiveTab()
-    const videoId = await PageHelper.getPageVideoId(activeTab?.url)
-    if (videoId) {
-      const find = this.videos.find(v => v?.id && (v?.id === videoId))
-      if (find) {
-        this.selected = find
-        this.$emit('change', this.selected)
-      }
+    const videoId = PageHelper.getPageVideoId(activeTab?.url)
+    const find = videoId ? videos.find(v => v.id === videoId) : undefined
+    if (find) {
+      selected.value = find
+      emit('change', find)
     }
   }
+)
 
-  isSelectedVideo(video: Video): boolean {
-    return video && (video?.id === this.selected?.id)
-  }
-
-  handleToggle(): void {
-    this.isActive = !this.isActive
-  }
-
-  handleClose(): void {
-    if (this.isActive) {
-      this.isActive = false
-      this.$emit('close')
-    }
-  }
-
-  handleSelected(video: Video): void {
-    this.selected = video
-    this.$emit('change', this.selected)
-    this.handleClose()
+function handleClose(): void {
+  if (isActive.value) {
+    isActive.value = false
+    emit('close')
   }
 }
+
+function handleSelected(video: Video): void {
+  selected.value = video
+  emit('change', video)
+  handleClose()
+}
+
+// ドロップダウンの外側をクリックしたら閉じる
+function onClickOutside(event: MouseEvent): void {
+  if (root.value && !root.value.contains(event.target as Node)) handleClose()
+}
+onMounted(() => document.addEventListener('click', onClickOutside))
+onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
 </script>
 
-<style lang="scss" scoped>
-// is-fullwidth に対応させる
+<style scoped>
+/* is-fullwidth に対応させる */
 .dropdown.is-fullwidth {
   display: flex;
-  & * {
-    width: 100%;
-  }
 }
 
 .dropdown-trigger {
   width: 560px;
-  // width: 300px;
 }
 
-// ボタン内部に block 要素を入れる
+.dropdown-menu,
+.dropdown-trigger > button,
+.dropdown-trigger > button > span:first-child {
+  width: 100%;
+}
+
+/* ボタン内部に block 要素を入れる */
 .dropdown-trigger > button {
   height: auto !important;
   text-align: unset;
   white-space: unset;
+  justify-content: space-between;
 }
 
-// dropdown 全体のフチ
+/* dropdown 全体のフチ */
 .dropdown-content {
   padding: 0;
   border: solid 1px gray;
-  // border-radius: 0;
 }
 
-// dropdown の要素について
+/* dropdown の要素 */
 .dropdown-item {
   font-size: 1rem;
+  cursor: pointer;
 
   &.is-active {
     background: aliceblue;
+    color: inherit;
   }
 
   &:hover {
     background: gainsboro !important;
-    // color: white;
   }
 
   &:not(:last-child) {
-    border-bottom: solid  1px lightgray;
+    border-bottom: solid 1px lightgray;
   }
 }
 </style>

@@ -1,47 +1,35 @@
-import { Options, toast } from 'bulma-toast'
+import { type Options, toast } from 'bulma-toast'
 
 // ref: https://github.com/rfoel/bulma-toast
 export default class Toast {
   public static success(message: string): void {
-    toast({
-      ...this.commonOptions(),
-      message: this.createIconMessage(message, 'check-circle'),
-      type: 'is-success',
-    })
+    this.show(message, 'check-circle', 'is-success')
   }
 
   public static warn(message: string): void {
-    toast({
-      ...this.commonOptions(),
-      message: this.createIconMessage(message, 'alert'),
-      type: 'is-warning',
-    })
+    this.show(message, 'alert', 'is-warning')
   }
 
   public static error(message: string): void {
-    toast({
-      ...this.commonOptions(),
-      message: this.createIconMessage(message, 'alert'),
-      type: 'is-danger',
-    })
+    this.show(message, 'alert', 'is-danger')
   }
 
   ///
 
-  protected static commonOptions(): Options {
-    return {
+  protected static show(message: string, icon: string, type: Options['type']): void {
+    toast({
+      message: `<p><span class="icon"><i class="mdi mdi-${icon}"></i></span>${escapeHtml(message)}</p>`,
+      type,
       duration: 5000,
       position: 'top-right',
       dismissible: true,
       pauseOnHover: true,
       animate: { in: 'fadeInRight', out: 'fadeOutRight' },
-    }
+    })
   }
+}
 
-  protected static createIconMessage(message: string, icon?: string) {
-    const span = icon
-      ? `<span class="icon"><i class="mdi mdi-${icon}"></i></span>`
-      : ''
-    return `<p>${span}${message}</p>`
-  }
+/** toast は innerHTML で描画されるため、メッセージ (ファイル名など) はエスケープする. */
+function escapeHtml(text: string): string {
+  return text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
 }

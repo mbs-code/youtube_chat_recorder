@@ -1,23 +1,23 @@
 <template>
-  <div v-if="chat" class="box" @click="handleClick">
+  <div class="box" @click="emit('click', chat)">
     <div class="columns is-mobile is-vcentered">
       <div class="column is-narrow">
         <!-- display only -->
-        <input type="checkbox" :checked="isSelected" />
+        <input type="checkbox" :checked="isSelected" tabindex="-1" />
       </div>
       <div class="column app-chat" :data-chatid="chat.id">
         <div class="columns is-multiline">
           <div class="column is-12 app-chat-main">
             <div>
-              {{ chat.timestamp | datetimeString }}
-              <span class="tag is-info is-light">{{ chat.seconds | hmsString }}</span>
+              {{ datetimeString(chat.timestamp) }}
+              <span class="tag is-info is-light">{{ hmsString(chat.seconds) }}</span>
             </div>
-            <div> {{ chat.authorName }}: {{ chat.altMessage }}</div>
-            <div v-if='chat.money'>{{ chat.moneyUnit }} {{ chat.money }}</div>
+            <div>{{ chat.authorName }}: {{ chat.altMessage }}</div>
+            <div v-if="chat.money">{{ chat.moneyUnit }} {{ chat.money }}</div>
           </div>
           <div class="column is-12 app-chat-image">
             <div v-if="chat.pngUrl">
-              <img :src="chat.pngUrl" alt="chat-image"/>
+              <img :src="chat.pngUrl" alt="chat-image" />
             </div>
             <div v-if="chat.isImageError" class="has-text-grey-light">
               <span class="icon">
@@ -27,44 +27,30 @@
             </div>
           </div>
         </div>
-
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator'
-import displayFilter from '../../filters/displayFilter'
-import BrowserTabs from '../../lib/chrome/BrowserTabs'
-import PageHelper from '../../lib/util/PageHelper'
-import Chat from '../../models/Chat'
+<script setup lang="ts">
+import { datetimeString, hmsString } from '../../lib/util/format'
+import type Chat from '../../models/Chat'
 
-@Component({
-  filters: displayFilter,
-})
-export default class ChatPanel extends Vue {
-  @Prop({ default: null })
-  chat!: Chat | null
-
-  @Prop({ default: false })
-  isSelected?: boolean
-
-  handleClick(): void {
-    this.$emit('click', this.chat)
-  }
-}
+defineProps<{ chat: Chat; isSelected: boolean }>()
+const emit = defineEmits<{ click: [chat: Chat] }>()
 </script>
 
-<style lang="scss" scoped>
-// checkbox を x1.5 に
-input[type="checkbox"] {
+<style scoped>
+/* checkbox を x1.5 に */
+input[type='checkbox'] {
   margin: 3px;
   transform: scale(1.5);
+  pointer-events: none;
 }
 
 .box {
   box-shadow: none;
+  cursor: pointer;
 }
 
 .app-chat-image {

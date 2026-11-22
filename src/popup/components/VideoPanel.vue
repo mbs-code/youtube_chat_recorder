@@ -1,61 +1,49 @@
 <template>
-  <div v-if="video" class="app-chat" :data-videoid="video.id" @click="handleClick">
+  <div v-if="video" class="app-video" :data-videoid="video.id" @click="emit('click', video)">
     <div class="columns is-mobile">
       <div class="column is-narrow video-image">
-        <img :src="video.thumbnailUrl" alt="thumbnail">
+        <img :src="video.thumbnailUrl" alt="thumbnail" />
       </div>
       <div class="column video-text">
-        <p class='line-clamp-3 video-title'>{{ computedTitle }}</p>
+        <p class="line-clamp-3 video-title">{{ title }}</p>
         <div>
           <span class="icon is-nonspace">
             <i class="mdi mdi-alarm" aria-hidden="true" />
           </span>
-          <span>{{ (video.startDate || video.publishedAt) | datetimeString }}</span>
+          <span>{{ datetimeString(video.startDate || video.publishedAt) }}</span>
         </div>
         <div>
           <span class="icon is-nonspace">
             <i class="mdi mdi-eye-outline" aria-hidden="true" />
           </span>
-          <span>{{ video.updatedAt | distanceHumanized }}</span>
+          <span>{{ distanceHumanized(video.updatedAt) }}</span>
         </div>
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator'
-import displayFilter from '../../filters/displayFilter'
-import Video from '../../models/Video'
+<script setup lang="ts">
+import { computed } from 'vue'
+import { datetimeString, distanceHumanized } from '../../lib/util/format'
+import type Video from '../../models/Video'
 
-@Component({
-  filters: displayFilter,
+const props = defineProps<{ video: Video | null }>()
+const emit = defineEmits<{ click: [video: Video] }>()
+
+const title = computed(() => {
+  const title = props.video?.title || '-'
+  return props.video?.isBroadcast ? '🔴' + title : title
 })
-export default class VideoPanel extends Vue {
-  @Prop({ default: null })
-  video!: Video | null
-
-  get computedTitle(): string {
-    const title = this.video?.title || '-'
-    if (this.video?.isBroadcast) {
-      return '🔴' + title
-    }
-    return title
-  }
-
-  handleClick(): void {
-    this.$emit('click', this.video)
-  }
-}
 </script>
 
-<style lang="scss" scoped>
+<style scoped>
 .video-image img {
   width: 200px;
 }
 
 .video-title {
-  height: 72px; // 高さ固定
+  height: 72px; /* 高さ固定 */
   font-weight: 600;
 }
 </style>

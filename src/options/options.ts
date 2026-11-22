@@ -1,15 +1,7 @@
-import Vue, { CreateElement, VNode } from 'vue'
+import { createApp } from 'vue'
+import 'bulma/css/versions/bulma-no-dark-mode.min.css'
+import '@mdi/font/css/materialdesignicons.css'
+import 'animate.css/animate.min.css'
 import App from './App.vue'
-import { browser } from 'webextension-polyfill-ts'
 
-// import css
-import './style.sass'
-
-// bind polyfull
-Vue.prototype.$browser = browser
-
-/* eslint-disable no-new */
-new Vue({
-  el: '#app',
-  render: (h: CreateElement): VNode => h(App),
-})
+createApp(App).mount('#app')

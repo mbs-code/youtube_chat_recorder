@@ -1,64 +1,59 @@
-import { Exclude } from 'class-transformer'
-import 'reflect-metadata'
-import textEllipsis from 'text-ellipsis'
-import VideoObjectInterface from '../interface/VideoObjectInterface'
-import TransformDate from '../lib/decorator/TransformDate'
-import VideoParser from '../lib/parser/VideoParser'
+import { ellipsis } from '../lib/util/format'
+import { type Plain, toDate, toTime } from '../lib/util/serialize'
+
+const DATE_KEYS = ['startDate', 'endDate', 'publishedAt', 'createdAt', 'updatedAt'] as const
+
+export type VideoType = 'video' | 'upcoming' | 'live' | 'archive'
 
 export default class Video {
-  id?: string // 76KDBk...
+  id?: string // 動画 ID (11 文字)
 
   title?: string
+  channelName?: string
   thumbnailUrl?: string
-  // description?: string // 容量削減
-  duration = 0 // seconds 配信中は 0
+  duration = 0 // 秒数, 配信中は 0
   viewCount = 0
-  isBroadcast: boolean // 配信かどうか
 
-  @TransformDate()
-  startDate?: Date // 配信予定開始か実開始時間
+  isBroadcast = false // ライブ配信 (チャットがある) かどうか
+  isLiveNow = false // 現在配信中か
+  isUpcoming = false // 配信予定か
 
-  @TransformDate()
-  endDate?: Date // 配信終了時間
-
-  @TransformDate()
+  startDate?: Date // 配信 (予定) 開始時刻
+  endDate?: Date // 配信終了時刻
   publishedAt?: Date
 
-  @TransformDate()
-  createdAt?: Date // 作成日時
+  createdAt?: Date
+  updatedAt?: Date
 
-  @TransformDate()
-  updatedAt?: Date // 更新日時
-
-  constructor() {
-    // 初期値
-    this.isBroadcast = false
+  get type(): VideoType {
+    if (!this.isBroadcast && !this.startDate) return 'video'
+    if (this.isUpcoming) return 'upcoming'
+    if (this.isLiveNow || !this.endDate) return 'live'
+    return 'archive'
   }
 
-  public static async createByElement(json: VideoObjectInterface): Promise<Video> {
-    return await VideoParser.parse(json)
-  }
-
-  @Exclude()
-  get type(): 'video' | 'live' | 'archive' {
-    // TODO: 現状 upcomig が分からない
-    if (this.startDate) {
-      if (this.endDate) {
-        return 'archive'
-      } else {
-        return 'live'
-      }
-    }
-    return 'video'
-  }
-
-  @Exclude()
   get url(): string | undefined {
     return this.id ? `https://www.youtube.com/watch?v=${this.id}` : undefined
   }
 
+  /** storage から復元する. */
+  public static fromPlain(plain: Plain): Video {
+    const fields = { ...plain }
+    delete fields.type // getter のみのプロパティは代入できないので除外
+    delete fields.url
+    const video = Object.assign(new Video(), fields)
+    for (const key of DATE_KEYS) video[key] = toDate(plain[key])
+    return video
+  }
+
+  /** storage に保存する形にする. (getter は含まれない) */
+  public toPlain(): Plain {
+    const plain: Plain = Object.fromEntries(Object.entries(this))
+    for (const key of DATE_KEYS) plain[key] = toTime(this[key])
+    return plain
+  }
+
   public dump(): string {
-    const title = this.title || '<notitle>'
-    return `[${this.id}]${textEllipsis(title, 24)}`
+    return `[${this.id}]${ellipsis(this.title || '<notitle>', 24)}`
   }
 }

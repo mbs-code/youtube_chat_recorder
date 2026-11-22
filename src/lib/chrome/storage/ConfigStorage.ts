@@ -6,44 +6,31 @@ export default class ConfigStorage extends BaseStorage {
   public static readonly STORAGE_KEY = '@config'
 
   /**
-   * 設定を取り出す.
-   *
-   * @static
-   * @return {Config} config object
+   * 設定を取り出す (無ければ初期値).
    */
   public static async get(): Promise<Config> {
-    const config = await this.getClassObject(Config, this.STORAGE_KEY)
+    const config = await this.getObject(Config.fromPlain, this.STORAGE_KEY)
     return config || new Config()
   }
 
   /**
    * 設定を上書き保存する.
-   *
-   * @static
-   * @param {Config} config config object
    */
   public static async save(config: Config): Promise<void> {
-    const db = await this.get()
+    const db = await this.getObject(Config.fromPlain, this.STORAGE_KEY)
 
-    // db があるなら情報を引き継ぐ
-    if (db) {
-      config.createdAt = db.createdAt
-    }
-
-    // 更新日時の付与
+    // 作成日時は引き継ぐ
     config.updatedAt = new Date()
-    config.createdAt = config.createdAt || config.updatedAt
+    config.createdAt = db?.createdAt || config.updatedAt
 
-    // 値の置き換え
-    Logger.debug(`> 💾[save] ${this.STORAGE_KEY}: ${JSON.stringify(config)}`)
+    Logger.debug(`> 💾[save] ${this.STORAGE_KEY}: ${JSON.stringify(config.toPlain())}`)
     await this.replaceObject(this.STORAGE_KEY, config)
   }
 
   /**
    * 設定情報を空にする.
    *
-   * @static
-   * @return {boolean} 削除できたか(false で失敗、存在しない)
+   * @return 削除できたか (false なら存在しない)
    */
   public static async clear(): Promise<boolean> {
     return await this.removeKey(this.STORAGE_KEY)
@@ -51,10 +38,10 @@ export default class ConfigStorage extends BaseStorage {
 
   /// ////////////////////////////////////////
 
-  public static async export(prettier: boolean = false): Promise<string> {
+  /** 設定を JSON にしてダウンロード用の object url を返す. */
+  public static async export(prettier = false): Promise<string> {
     Logger.debug(`> 💾[export] config`)
-    const text = await this.parseObjectURL(this.STORAGE_KEY, prettier)
-    return text
+    return await this.exportObjectURL(this.STORAGE_KEY, prettier)
   }
 
   public static async import(text: string): Promise<void> {

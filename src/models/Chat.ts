@@ -1,60 +1,50 @@
-import 'reflect-metadata'
-import textEllipsis from 'text-ellipsis'
-import TransformDate from '../lib/decorator/TransformDate'
-import ChatParser from '../lib/parser/ChatParser'
-import Video from './Video'
+import { ellipsis } from '../lib/util/format'
+import { type Plain, toDate, toTime } from '../lib/util/serialize'
+
+const DATE_KEYS = ['timestamp', 'createdAt', 'updatedAt'] as const
 
 export default class Chat {
-  id?: string // CjkK...
+  id?: string // ChwKGkNP...
 
   authorName?: string
   authorPhoto?: string // url
   message?: string
-  altMessage?: string // 画像要素を展開した文
+  altMessage?: string // 画像要素 (絵文字など) を展開した文
 
-  isOwner: boolean
-  isModerator: boolean
-  isMember: boolean
-  isVerified: boolean
+  isOwner = false
+  isModerator = false
+  isMember = false
+  isVerified = false
 
-  memberMonths?: number // undefined, 0(0ヶ月目), 1, 2, ...
+  memberMonths?: number // undefined, 0(新規), 1, 2, ...
 
-  isJoinMember: boolean
-  isSuperChat: boolean
-  isSuperStickers: boolean
+  isJoinMember = false
+  isSuperChat = false
+  isSuperStickers = false
   money?: number
   moneyUnit?: string // 通貨単位
 
-  pngUrl?: string // use generatePng()
-  isImageError: boolean // 画像生成エラー
+  pngUrl?: string // チャット欄の画像 (data url)
+  isImageError = false // 画像生成エラー
 
-  seconds?: number // 開始からの経過秒
+  seconds?: number // 配信開始からの経過秒
+  timestamp?: Date // 投稿日時 (配信中は分単位の精度)
 
-  @TransformDate()
-  timestamp?: Date // !! 配信中は秒が取得できない(仕様)
+  createdAt?: Date
+  updatedAt?: Date
 
-  @TransformDate()
-  createdAt?: Date // 作成日時
-
-  @TransformDate()
-  updatedAt?: Date // 更新日時
-
-  constructor() {
-    // 初期値
-    this.isOwner = false
-    this.isModerator = false
-    this.isMember = false
-    this.isVerified = false
-
-    this.isJoinMember = false
-    this.isSuperChat = false
-    this.isSuperStickers = false
-
-    this.isImageError = false
+  /** storage から復元する. */
+  public static fromPlain(plain: Plain): Chat {
+    const chat = Object.assign(new Chat(), plain)
+    for (const key of DATE_KEYS) chat[key] = toDate(plain[key])
+    return chat
   }
 
-  public static async createByElement(video: Video, node: Element): Promise<Chat> {
-    return await ChatParser.parse(video, node)
+  /** storage に保存する形にする. */
+  public toPlain(): Plain {
+    const plain: Plain = Object.fromEntries(Object.entries(this))
+    for (const key of DATE_KEYS) plain[key] = toTime(this[key])
+    return plain
   }
 
   public dump(): string {
@@ -67,10 +57,9 @@ export default class Chat {
     if (this.money) emojis.push('💰')
 
     const date = this.timestamp?.toLocaleString()
-    const emoji = emojis.join('')
     const author = this.authorName || '<unknown>'
     const message = this.altMessage || '<notext>'
     const money = this.money ? ` (${this.moneyUnit} ${this.money})` : ''
-    return `${date}(${this.seconds}) ${emoji}[${textEllipsis(author, 16)}]${textEllipsis(message, 24)}${money}`
+    return `${date}(${this.seconds}) ${emojis.join('')}[${ellipsis(author, 16)}]${ellipsis(message, 24)}${money}`
   }
 }
