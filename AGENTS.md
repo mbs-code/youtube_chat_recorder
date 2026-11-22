@@ -23,7 +23,6 @@ YouTube のライブ配信・アーカイブのチャット欄を監視し、設
 | `npm run e2e -- [url] [--wait 60] [--screenshot] [--headed]` | `dist/` を読み込んだ Chromium で実際の YouTube を開き、保存結果を表示する |
 | `npm run screenshots` | 架空のサンプルデータで popup / options のスクリーンショットと CSV (`sample.csv`) を `test-results/` に出力する (UI 確認・使い方ページの画像用) |
 | `npm run build-zip` | Chrome Web Store 公開用の zip を `dist-zip/` に作る |
-| `npm run format` | Prettier |
 
 - `npm run e2e` は初回のみ `npx playwright install chromium` が必要。url 省略時はライブ配信を検索して開く。
 - E2E は実際の YouTube に依存するため CI では回さない。チャットの少ない配信だと 0 件になることがある (`--search` で検索語を変えられる)。
@@ -160,7 +159,8 @@ YouTube に依存している箇所:
 ## コーディング規約
 
 - コメント・UI 文言・コミットメッセージは日本語 (既存に合わせる)。
-- Prettier: シングルクォート, セミコロンなし, 140 桁 (`.prettierrc`)。ESLint は flat config (`eslint.config.js`)。
+- 書式は ESLint だけで揃える (Prettier は使わない)。`eslint.config.js` (flat config) で [ESLint Stylistic](https://eslint.style/) を使い、シングルクォート・セミコロンなし・インデント 2・末尾カンマあり・140 桁。`npm run lint:fix` でほぼ自動で直る。
+- Vue のテンプレートは eslint-plugin-vue、Tailwind のクラスは eslint-plugin-better-tailwindcss で確認する (標準クラスへの書き換え `enforce-canonical-classes`、並び順、長いクラスの折り返しなど)。独自の部品クラスやアイコンを増やしたら `eslint.config.js` の `NON_TAILWIND_CLASSES` に追加する。
 - 型のみの import は `import type` (`verbatimModuleSyntax`)。
 - chrome API は `chrome.*` の Promise 版を直接使う (webextension-polyfill は使わない)。
 - YouTube に依存するセレクタや構造は parser / PageEventer に閉じ込め、定数にして名前を付ける。

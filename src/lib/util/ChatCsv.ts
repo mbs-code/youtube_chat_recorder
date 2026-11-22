@@ -42,7 +42,7 @@ function escapeCell(cell: Cell): string {
   if (typeof cell === 'number') return Number.isFinite(cell) ? String(cell) : ''
 
   let text = cell
-  if (FORMULA_PREFIX.test(text)) text = "'" + text
+  if (FORMULA_PREFIX.test(text)) text = '\'' + text
   return /[",\r\n]/.test(text) || text !== cell ? `"${text.replace(/"/g, '""')}"` : text
 }
 

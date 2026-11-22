@@ -108,7 +108,7 @@ async function main() {
 
     const page = await context.newPage()
     const logs = []
-    page.on('console', msg => {
+    page.on('console', (msg) => {
       const text = msg.text()
       if (text.includes('[YCR]')) logs.push(text.replace(/%c/g, '').replace(/ color: [^ ]+$/, ''))
     })
@@ -213,7 +213,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err)
   process.exit(1)
 })

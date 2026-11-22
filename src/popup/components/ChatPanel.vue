@@ -9,7 +9,13 @@
     @click="emit('click', chat)"
     @keydown.space.prevent="emit('click', chat)"
   >
-    <input type="checkbox" class="checkbox pointer-events-none mt-[3px]" :checked="isSelected" tabindex="-1" aria-hidden="true" />
+    <input
+      type="checkbox"
+      class="checkbox pointer-events-none mt-0.75"
+      :checked="isSelected"
+      tabindex="-1"
+      aria-hidden="true"
+    >
 
     <div class="app-chat min-w-0 flex-1" :data-chatid="chat.id">
       <!-- .app-chat-main は「独自のデザインで画像化」でそのまま画像になる (背景色が無いと透明になる) -->
@@ -19,14 +25,14 @@
           <span class="badge" title="配信開始からの時間">{{ hmsString(chat.seconds) }}</span>
           <span v-for="tag in tags" :key="tag.label" class="badge" :class="tag.class">{{ tag.label }}</span>
         </div>
-        <p class="break-words">
+        <p class="wrap-break-word">
           <span class="mr-2 font-semibold text-zinc-500">{{ chat.authorName }}</span>
           <span class="text-zinc-950">{{ chat.altMessage }}</span>
         </p>
       </div>
 
       <div v-if="chat.pngUrl" class="mt-2 overflow-hidden rounded-md border border-zinc-200">
-        <img :src="chat.pngUrl" alt="チャットの画像" />
+        <img :src="chat.pngUrl" alt="チャットの画像">
       </div>
       <p v-else-if="chat.isImageError" class="mt-1.5 flex items-center gap-1 text-xs text-zinc-400">
         <i class="mdi mdi-image-broken-variant" />
@@ -41,13 +47,13 @@ import { computed } from 'vue'
 import { datetimeString, hmsString } from '../../lib/util/format'
 import type Chat from '../../models/Chat'
 
-const props = defineProps<{ chat: Chat; isSelected: boolean }>()
+const props = defineProps<{ chat: Chat, isSelected: boolean }>()
 const emit = defineEmits<{ click: [chat: Chat] }>()
 
 /** チャットの種類を表すタグ. */
 const tags = computed(() => {
   const chat = props.chat
-  const list: { label: string; class?: string }[] = []
+  const list: { label: string, class?: string }[] = []
   if (chat.isOwner) list.push({ label: '配信者', class: 'badge-warning' })
   if (chat.isModerator) list.push({ label: 'モデレーター', class: 'badge-info' })
   if (chat.isVerified) list.push({ label: '確認済み' })

@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-w-0 gap-3 text-left">
     <div class="grid aspect-video w-32 shrink-0 place-items-center overflow-hidden rounded-lg bg-zinc-100 text-[28px] text-zinc-400">
-      <img v-if="video.thumbnailUrl" class="size-full object-cover" :src="video.thumbnailUrl" alt="" />
+      <img v-if="video.thumbnailUrl" class="size-full object-cover" :src="video.thumbnailUrl" alt="">
       <i v-else class="mdi mdi-youtube" />
     </div>
     <div class="flex min-w-0 flex-1 flex-col gap-1">

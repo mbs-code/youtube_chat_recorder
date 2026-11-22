@@ -11,7 +11,7 @@ export default interface VideoData {
   channelId?: string
   lengthSeconds?: number
   viewCount?: number
-  thumbnails: { url: string; width?: number; height?: number }[]
+  thumbnails: { url: string, width?: number, height?: number }[]
 
   isLive: boolean // 配信中
   isUpcoming: boolean // 配信予定

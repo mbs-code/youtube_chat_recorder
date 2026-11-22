@@ -1,7 +1,7 @@
 <template>
   <div class="mx-auto max-w-300 px-6 pt-8">
     <header class="mb-5 flex items-center gap-2">
-      <img class="mr-1.5 size-10" src="/icons/icon-48x48.png" alt="" />
+      <img class="mr-1.5 size-10" src="/icons/icon-48x48.png" alt="">
       <div class="flex-1">
         <h1 class="flex items-center gap-2 text-xl/tight font-bold text-zinc-950">
           Youtube Chat Recorder
@@ -13,7 +13,13 @@
         <i class="mdi mdi-help-circle-outline" />
         使い方
       </button>
-      <a v-if="FORM_URL" class="btn btn-secondary" :href="FORM_URL" target="_blank" rel="noopener">
+      <a
+        v-if="FORM_URL"
+        class="btn btn-secondary"
+        :href="FORM_URL"
+        target="_blank"
+        rel="noopener"
+      >
         <i class="mdi mdi-email-outline" />
         目安箱
       </a>
@@ -57,7 +63,13 @@
           <div class="mb-3">
             <label class="label" for="maxVideoLength">動画の最大保存数</label>
             <div class="flex items-center gap-2">
-              <input id="maxVideoLength" v-model.number="form.maxVideoLength" class="input w-25" type="number" :min="MIN_VIDEO_LENGTH" />
+              <input
+                id="maxVideoLength"
+                v-model.number="form.maxVideoLength"
+                class="input w-25"
+                type="number"
+                :min="MIN_VIDEO_LENGTH"
+              >
               <span>本</span>
             </div>
             <p class="help">
@@ -103,7 +115,7 @@
                 class="input rounded-r-none"
                 type="text"
                 :placeholder="DEFAULTS.mergeImageFileName"
-              />
+              >
               <span
                 class="grid place-items-center rounded-r-lg border border-l-0 border-zinc-300 bg-zinc-50 px-2.5 text-[13px] text-zinc-500"
               >
@@ -121,7 +133,7 @@
               保存日時 ・
               <code>%upload%</code>
               公開日時
-              <br />
+              <br>
               日時の形式は
               <code>%now(yyyy年MM月dd日)%</code>
               のように指定できます (
@@ -176,7 +188,7 @@
               <label class="btn btn-secondary btn-sm">
                 <i class="mdi mdi-upload" />
                 インポート
-                <input type="file" class="sr-only" accept=".json" @change="handleImportConfig" />
+                <input type="file" class="sr-only" accept=".json" @change="handleImportConfig">
               </label>
             </div>
             <div class="flex items-center gap-2">
@@ -198,7 +210,7 @@
               <label class="btn btn-secondary btn-sm">
                 <i class="mdi mdi-upload" />
                 復元
-                <input type="file" class="sr-only" accept=".json" @change="handleImportData" />
+                <input type="file" class="sr-only" accept=".json" @change="handleImportData">
               </label>
             </div>
           </div>
@@ -217,7 +229,7 @@
       </div>
     </main>
 
-    <footer class="sticky bottom-0 z-40 -mx-6 mt-6 flex items-center gap-2 border-t border-zinc-200 bg-white/90 px-6 py-3 backdrop-blur">
+    <footer class="sticky bottom-0 z-40 -mx-6 mt-6 flex items-center gap-2 border-t border-zinc-200 bg-white/90 px-6 py-3 backdrop-blur-sm">
       <span class="flex flex-1 items-center text-[13px]" :class="isDirty ? 'font-semibold text-warning' : 'text-zinc-500'">
         <template v-if="isDirty">
           <i class="mdi mdi-circle-medium text-[22px]" />

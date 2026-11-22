@@ -2,7 +2,7 @@ import domToImage from 'dom-to-image-more'
 import Logger from '../../loggers/Logger'
 
 /** 要素の inline style を一時的に書き換え、元に戻すための記録. */
-type StyleBackup = { element: HTMLElement; property: string; value: string }
+type StyleBackup = { element: HTMLElement, property: string, value: string }
 
 function overrideStyle(backups: StyleBackup[], element: HTMLElement | null, property: string, value: string): void {
   if (!element) return
@@ -154,7 +154,7 @@ export default class NodeToPng {
     })
   }
 
-  protected static calcNodeDisplaySize(node: HTMLElement): { width: number; height: number } {
+  protected static calcNodeDisplaySize(node: HTMLElement): { width: number, height: number } {
     const view = node.ownerDocument.defaultView ?? window
     const style = view.getComputedStyle(node)
     const sum = (...values: string[]) => values.reduce((acc, v) => acc + (parseFloat(v) || 0), 0)

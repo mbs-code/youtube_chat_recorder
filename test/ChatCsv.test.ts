@@ -58,7 +58,7 @@ describe('ChatCsv', () => {
     expect(
       rows(csv)
         .slice(1)
-        .map(r => r.split(',').at(-1))
+        .map(r => r.split(',').at(-1)),
     ).toEqual(['a', 'b', 'c'])
   })
 
@@ -67,7 +67,7 @@ describe('ChatCsv', () => {
     expect(line).toContain('"1行目\n2行目, ""です"""')
   })
 
-  it("数式として解釈される値の先頭に ' を付ける (CSV インジェクション対策)", () => {
+  it('数式として解釈される値の先頭に \' を付ける (CSV インジェクション対策)', () => {
     const [, line] = rows(ChatCsv.generate(video, [chat({ authorName: '@user', altMessage: '=1+1', seconds: -5 })]))
     const cells = line.split(',')
     expect(cells[1]).toBe(`"'-00:05"`)

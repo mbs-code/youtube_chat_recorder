@@ -38,7 +38,7 @@ const VIDEOS = [
     title: '【初配信】はじめまして！〇〇ちゃんねるです【雑談】',
     channelName: '〇〇ちゃんねる',
     thumbnailUrl: svgDataUrl(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#fda4af"/><stop offset="1" stop-color="#93c5fd"/></linearGradient></defs><rect width="320" height="180" fill="url(#g)"/><text x="160" y="105" font-family="sans-serif" font-size="32" font-weight="bold" fill="#fff" text-anchor="middle">初配信</text></svg>'
+      '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><defs><linearGradient id="g" x2="1" y2="1"><stop offset="0" stop-color="#fda4af"/><stop offset="1" stop-color="#93c5fd"/></linearGradient></defs><rect width="320" height="180" fill="url(#g)"/><text x="160" y="105" font-family="sans-serif" font-size="32" font-weight="bold" fill="#fff" text-anchor="middle">初配信</text></svg>',
     ),
     isBroadcast: true,
     isLiveNow: true,
@@ -52,7 +52,7 @@ const VIDEOS = [
     title: '【歌枠】リクエストに応えて歌います！',
     channelName: '△△ch',
     thumbnailUrl: svgDataUrl(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#c4b5fd"/></svg>'
+      '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="180"><rect width="320" height="180" fill="#c4b5fd"/></svg>',
     ),
     isBroadcast: true,
     startDate: start - 86400000,
@@ -105,7 +105,7 @@ async function main() {
   try {
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'))
     const extensionId = new URL(worker.url()).host
-    await worker.evaluate(data => chrome.storage.local.set(data), { '@videos': VIDEOS, sample00001: CHATS })
+    await worker.evaluate(data => chrome.storage.local.set(data), { '@videos': VIDEOS, 'sample00001': CHATS })
 
     const popup = await context.newPage()
     await popup.setViewportSize({ width: 600, height: 600 })
@@ -158,7 +158,7 @@ async function main() {
   }
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err)
   process.exit(1)
 })

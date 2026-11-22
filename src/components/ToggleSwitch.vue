@@ -4,9 +4,19 @@
       <span class="block font-medium text-zinc-950"><slot /></span>
       <span v-if="$slots.description" class="mt-0.5 block text-xs/normal text-zinc-500"><slot name="description" /></span>
     </span>
-    <input v-model="model" type="checkbox" role="switch" class="peer sr-only" :disabled="disabled" />
+    <input
+      v-model="model"
+      type="checkbox"
+      role="switch"
+      class="peer sr-only"
+      :disabled="disabled"
+    >
     <span
-      class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-zinc-300 transition-colors peer-checked:bg-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-ring"
+      class="
+        relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-zinc-300 transition-colors
+        peer-checked:bg-primary
+        peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-ring
+      "
       aria-hidden="true"
     >
       <span

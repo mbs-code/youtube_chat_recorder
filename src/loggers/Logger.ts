@@ -1,6 +1,6 @@
 export type LogLevel = 'silent' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'all'
 
-export const LEVELS: Record<LogLevel, { name: LogLevel; value: number }> = {
+export const LEVELS: Record<LogLevel, { name: LogLevel, value: number }> = {
   silent: { name: 'silent', value: Number.MAX_SAFE_INTEGER },
   error: { name: 'error', value: 5000 },
   warn: { name: 'warn', value: 4000 },

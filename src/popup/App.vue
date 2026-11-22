@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-h-150 flex-col">
-    <header class="sticky top-0 z-30 flex h-[49px] items-center gap-1 border-b border-zinc-200 bg-white pr-3 pl-4">
-      <img class="mr-1.5 size-5" src="/icons/icon-32x32.png" alt="" />
+    <header class="sticky top-0 z-30 flex h-12.25 items-center gap-1 border-b border-zinc-200 bg-white pr-3 pl-4">
+      <img class="mr-1.5 size-5" src="/icons/icon-32x32.png" alt="">
       <h1 class="flex-1 font-bold text-zinc-950">Youtube Chat Recorder</h1>
       <button class="btn btn-ghost btn-sm" title="使い方" @click="Runtime.openReadmePage()">
         <i class="mdi mdi-help-circle-outline" />
@@ -37,7 +37,7 @@
 
       <section v-if="selectedVideo" class="flex flex-col gap-2.5">
         <!-- 49px = header の高さ -->
-        <div class="sticky top-[49px] z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
+        <div class="sticky top-12.25 z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
           <select v-model="selectedFilterKey" class="select h-7 w-47.5 text-xs" aria-label="表示するチャット">
             <option v-for="filter in chatFilters" :key="filter.key" :value="filter.key">
               {{ filter.title }}
@@ -211,9 +211,9 @@ async function handleDeleteSelectedChats(): Promise<void> {
   const videoId = selectedVideo.value?.id
   const selected = selectedChats.value
   if (
-    videoId &&
-    selected.length > 0 &&
-    window.confirm(`選択した ${selected.length} 件のチャットを削除します。\nこの操作は元に戻せません。`)
+    videoId
+    && selected.length > 0
+    && window.confirm(`選択した ${selected.length} 件のチャットを削除します。\nこの操作は元に戻せません。`)
   ) {
     await ChatStorage.remove(videoId, selected)
     await reloadChats()
@@ -261,7 +261,7 @@ async function handleSaveToMerge(): Promise<void> {
 
     if (urls.length === 0) {
       throw new Error(
-        '画像があるチャットが選択されていません。\n画像が無いチャットも保存したい場合は、設定の「取得できていないチャット画像を独自に生成する」をオンにしてください。'
+        '画像があるチャットが選択されていません。\n画像が無いチャットも保存したい場合は、設定の「取得できていないチャット画像を独自に生成する」をオンにしてください。',
       )
     }
 

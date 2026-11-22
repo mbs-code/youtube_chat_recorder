@@ -32,8 +32,7 @@ command of `npm run`
 |`build-zip`|chrome 公開用に zip 化する (`dist-zip/`)|
 |`check`|型チェック + lint + テスト + ビルド|
 |`typecheck`|vue-tsc|
-|`lint` / `lint:fix`|eslint|
-|`format`|prettier|
+|`lint` / `lint:fix`|eslint (書式も含む。`lint:fix` で自動修正)|
 |`test` / `test:watch`|ユニットテスト (vitest)|
 |`e2e`|実際の YouTube で動作確認する (playwright, 初回は `npx playwright install chromium`)|
 

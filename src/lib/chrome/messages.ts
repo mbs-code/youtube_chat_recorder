@@ -2,8 +2,8 @@
 export type IconState = 'active' | 'waiting' | 'inactive'
 
 /** content script / popup -> background. */
-export type BackgroundMessage =
-  { type: 'YCR_LOAD_CONFIG' } | { type: 'YCR_SET_BADGE'; text: string } | { type: 'YCR_SET_ICON'; state: IconState }
+export type BackgroundMessage
+  = { type: 'YCR_LOAD_CONFIG' } | { type: 'YCR_SET_BADGE', text: string } | { type: 'YCR_SET_ICON', state: IconState }
 
 /** popup -> content script (tab). */
 export type TabMessage = { type: 'YCR_RESET_BADGE' }
@@ -37,7 +37,7 @@ export function isYcrMessage(message: unknown): message is YcrMessage {
  */
 export function listenMessages<M extends YcrMessage>(
   accept: (message: YcrMessage) => message is M,
-  handler: (message: M, sender: chrome.runtime.MessageSender) => Promise<void>
+  handler: (message: M, sender: chrome.runtime.MessageSender) => Promise<void>,
 ): void {
   chrome.runtime.onMessage.addListener((message: unknown, sender, sendResponse: (res: MessageResponse) => void) => {
     if (sender.id !== chrome.runtime.id || !isYcrMessage(message) || !accept(message)) {

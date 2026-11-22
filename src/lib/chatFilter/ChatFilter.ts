@@ -12,15 +12,15 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
     title: '⬜ 通常チャット',
     func: (chat: Chat) => {
       return (
-        !chat.isOwner &&
-        !chat.isVerified &&
-        !chat.isModerator &&
-        !chat.isSuperChat &&
-        !chat.isSuperStickers &&
-        !chat.isMember &&
-        !chat.isJoinMember &&
-        !chat.isMilestone &&
-        chat.topChatRank === undefined
+        !chat.isOwner
+        && !chat.isVerified
+        && !chat.isModerator
+        && !chat.isSuperChat
+        && !chat.isSuperStickers
+        && !chat.isMember
+        && !chat.isJoinMember
+        && !chat.isMilestone
+        && chat.topChatRank === undefined
       )
     },
   },
@@ -95,7 +95,7 @@ export default class ChatFilter {
    * @return {ChatFilterDataInterface[]} chat filter 配列
    */
   public static generatePopupChatFilters(): ChatFilterDataInterface[] {
-    return BASE_FILTERS.map(cf => {
+    return BASE_FILTERS.map((cf) => {
       return {
         key: cf.key,
         title: cf.title,
@@ -112,7 +112,7 @@ export default class ChatFilter {
    */
   public static generateDefaultChatfilterConfigs(): ChatFilterConfigInterface[] {
     return BASE_FILTERS.filter(e => e.key !== 'all') // 全ての条件を除外する
-      .map(e => {
+      .map((e) => {
         return {
           key: e.key,
           title: e.title,
@@ -173,7 +173,7 @@ export default class ChatFilter {
    * @param {Chat} chat 対象の chat
    * @return {{ filter: ChatFilterDataInterface, taskType: ChatTaskType } | undefined} 引っかかったフィルター
    */
-  public checkStuckChatFilter(chat: Chat): { filter: ChatFilterDataInterface; taskType: ChatTaskType } | undefined {
+  public checkStuckChatFilter(chat: Chat): { filter: ChatFilterDataInterface, taskType: ChatTaskType } | undefined {
     // 先頭から全部見ていく
     // もし image があったら即決定
     // save は最後まで image 要素が出てこなかったらで
@@ -217,7 +217,7 @@ export default class ChatFilter {
 
   protected generateChatFilters(configs: ChatFilterConfigInterface[]): ChatFilterDataInterface[] {
     return configs
-      .map(config => {
+      .map((config) => {
         // 関数はモードがあれば自己生成、無ければ検索
         const func = config.textMode
           ? this.generateChatFilterFunc(config)

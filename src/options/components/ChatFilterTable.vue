@@ -54,7 +54,7 @@
               :aria-label="`${chatFilter.title} を保存する`"
               :disabled="isEditing"
               @change="!chatFilter.doSave && (chatFilter.doImage = false)"
-            />
+            >
           </td>
           <td class="text-center">
             <input
@@ -64,7 +64,7 @@
               :aria-label="`${chatFilter.title} を画像化する`"
               :disabled="isEditing"
               @change="chatFilter.doImage && (chatFilter.doSave = true)"
-            />
+            >
           </td>
           <td class="text-right whitespace-nowrap">
             <template v-if="chatFilter.textMode">
@@ -105,17 +105,17 @@
           type="text"
           :placeholder="editFilterMode === 'author' ? '例: @youtube' : '例: 初見'"
           @keydown.enter="handleFilterAdd"
-        />
+        >
         <button class="btn btn-primary" @click="handleFilterAdd">{{ isEditing ? '更新' : '追加' }}</button>
         <button v-if="isEditing" class="btn btn-secondary" @click="handleFilterReset">やめる</button>
       </div>
       <div class="mt-2 flex items-center gap-4 text-[13px]">
         <label class="inline-flex cursor-pointer items-center gap-1.5">
-          <input v-model="editFilterIsExact" type="checkbox" class="checkbox" @change="editFilterIsExact && (editFilterIsRegex = false)" />
+          <input v-model="editFilterIsExact" type="checkbox" class="checkbox" @change="editFilterIsExact && (editFilterIsRegex = false)">
           完全一致
         </label>
         <label class="inline-flex cursor-pointer items-center gap-1.5">
-          <input v-model="editFilterIsRegex" type="checkbox" class="checkbox" @change="editFilterIsRegex && (editFilterIsExact = false)" />
+          <input v-model="editFilterIsRegex" type="checkbox" class="checkbox" @change="editFilterIsRegex && (editFilterIsExact = false)">
           正規表現
         </label>
       </div>
@@ -136,7 +136,7 @@
           placeholder="チャットの本文 または 投稿者名"
           :disabled="isEditing"
           @keydown.enter="handleFilterTest"
-        />
+        >
         <button class="btn btn-secondary" :disabled="isEditing" @click="handleFilterTest">テスト</button>
       </div>
     </div>
@@ -213,9 +213,12 @@ function handleFilterAdd(): void {
   }
 
   // 重複チェック (編集中のものは上書きするので除外)
-  const duplicate = chatFilters.value.find(
-    cf =>
-      cf.key !== key && cf.textMode === mode && cf.match === matchText && Boolean(cf.isRegex) === isRegex && Boolean(cf.isExact) === isExact
+  const duplicate = chatFilters.value.find(cf =>
+    cf.key !== key
+    && cf.textMode === mode
+    && cf.match === matchText
+    && Boolean(cf.isRegex) === isRegex
+    && Boolean(cf.isExact) === isExact,
   )
   if (duplicate) {
     Toast.error('同じ条件が既にあります。')

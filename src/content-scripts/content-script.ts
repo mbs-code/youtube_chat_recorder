@@ -16,7 +16,7 @@ if (import.meta.env.DEV) {
 }
 
 // popup からのメッセージ
-listenMessages(isTabMessage, async message => {
+listenMessages(isTabMessage, async (message) => {
   switch (message.type) {
     case 'YCR_RESET_BADGE':
       await BadgeManager.clearBadgeCounter()

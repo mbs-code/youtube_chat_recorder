@@ -32,7 +32,7 @@ export default class PageEventer {
   protected video?: Video
 
   /** チャットの追加を監視する. */
-  protected chatObserver = new MutationObserver(records => {
+  protected chatObserver = new MutationObserver((records) => {
     for (const record of records) {
       record.addedNodes.forEach(node => void this.handler.invoke(node, this.chatFilter))
     }
@@ -121,7 +121,7 @@ export default class PageEventer {
     const videoData = await retry<VideoData | null | 'cancel'>(
       () => (generation === this.generation ? PageHelper.requestVideoData(videoId) : 'cancel'),
       15,
-      500
+      500,
     )
     if (videoData === 'cancel' || generation !== this.generation) return undefined
     if (!videoData) throw new Error(`missing video data (${videoId})`)

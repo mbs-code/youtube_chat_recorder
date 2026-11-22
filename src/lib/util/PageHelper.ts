@@ -32,7 +32,7 @@ export default class PageHelper {
    * @return 動画情報 (未取得・タイムアウトなら null)
    */
   public static requestVideoData(videoId?: string, timeout = 1000): Promise<VideoData | null> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       const requestId = crypto.randomUUID()
 
       const finish = (data: VideoData | null) => {

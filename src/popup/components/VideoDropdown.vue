@@ -59,13 +59,13 @@ const root = useTemplateRef<HTMLElement>('root')
 // 動画一覧が変わったら、開いているタブの動画 (無ければ最近見た動画) を初期選択にする
 watch(
   () => props.videos,
-  async videos => {
+  async (videos) => {
     const activeTab = await BrowserTabs.getActiveTab()
     const videoId = PageHelper.getPageVideoId(activeTab?.url)
     const find = (videoId ? videos.find(v => v.id === videoId) : undefined) ?? videos[0] ?? null
     selected.value = find
     emit('change', find)
-  }
+  },
 )
 
 function handleSelected(video: Video): void {

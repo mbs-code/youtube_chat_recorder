@@ -145,7 +145,7 @@ export default class ChatParser {
    * - 配信中: "9:50 AM" や "21:50" (現在時刻から日付を補完する)
    * - アーカイブ: "1:23:45" や "-0:05" (配信開始からの経過時間)
    */
-  public static parseTimestamp(timestamp: string | undefined, video?: Video, now = new Date()): { datetime?: Date; seconds?: number } {
+  public static parseTimestamp(timestamp: string | undefined, video?: Video, now = new Date()): { datetime?: Date, seconds?: number } {
     if (!timestamp) return {}
 
     const text = timestamp.replace(/[\s\u00a0\u202f]+/g, ' ').trim()
@@ -227,7 +227,7 @@ export default class ChatParser {
    *
    * - "￥1,000", "$50.00", "NT$75.00", "€5,00"
    */
-  public static parsePurchaseAmount(purchaseAmount?: string): { money: number; unit: string } | undefined {
+  public static parsePurchaseAmount(purchaseAmount?: string): { money: number, unit: string } | undefined {
     if (!purchaseAmount) return undefined
 
     const text = purchaseAmount.replace(/[\s\u00a0\u202f]/g, '')
@@ -235,8 +235,8 @@ export default class ChatParser {
     if (!numberText) return undefined
 
     // 末尾が ",dd" ならヨーロッパ式の小数点とみなす
-    const normalized =
-      /,\d{1,2}$/.test(numberText) && !numberText.includes('.')
+    const normalized
+      = /,\d{1,2}$/.test(numberText) && !numberText.includes('.')
         ? numberText.replace(/\./g, '').replace(',', '.')
         : numberText.replace(/,/g, '')
 

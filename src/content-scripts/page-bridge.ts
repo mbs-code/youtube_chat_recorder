@@ -32,7 +32,7 @@ function findVideoData(videoId?: string): VideoData | null {
   return null
 }
 
-window.addEventListener('message', event => {
+window.addEventListener('message', (event) => {
   if (event.source !== window || !isBridgeRequest(event.data)) return
 
   const response: BridgeResponse = {

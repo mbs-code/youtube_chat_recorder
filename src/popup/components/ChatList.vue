@@ -1,6 +1,12 @@
 <template>
   <div class="flex flex-col gap-2">
-    <ChatPanel v-for="chat in chats" :key="chat.id" :chat="chat" :is-selected="selectedIds.has(chat.id)" @click="toggle(chat)" />
+    <ChatPanel
+      v-for="chat in chats"
+      :key="chat.id"
+      :chat="chat"
+      :is-selected="selectedIds.has(chat.id)"
+      @click="toggle(chat)"
+    />
   </div>
 </template>
 
