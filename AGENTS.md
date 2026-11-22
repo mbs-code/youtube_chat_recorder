@@ -1,0 +1,143 @@
+# AGENTS.md
+
+AI エージェント (Claude Code など) と開発者向けのガイド。人間向けの概要は [readme.md](./readme.md)、利用者向けの使い方は [docs/readme.md](./docs/readme.md)。
+
+## 概要
+
+YouTube のライブ配信・アーカイブのチャット欄を監視し、設定したフィルターに一致するチャットを保存・画像化する Chrome 拡張機能 (Manifest V3)。
+データは全て `chrome.storage.local` に保存し、外部には送信しない。
+
+- TypeScript 5.9 / Vue 3 (`<script setup>`) / Vite 8 / Bulma 1
+- テスト: Vitest (jsdom) / 実ブラウザ確認: Playwright (`npm run e2e`)
+- Node.js 20.19 以上
+
+## コマンド
+
+| コマンド | 内容 |
+| :-- | :-- |
+| `npm run build` | 本番ビルド → `dist/` (Chrome の「パッケージ化されていない拡張機能を読み込む」で読み込む) |
+| `npm run build:dev` | 開発ビルド (minify なし, inline sourcemap) |
+| `npm run watch` | 開発ビルド + 変更監視 (拡張機能の再読み込みは手動) |
+| `npm run check` | 型チェック + lint + テスト + ビルド。**変更後は必ずこれを通す** |
+| `npm run test` | ユニットテスト (Vitest) |
+| `npm run e2e -- [url] [--wait 60] [--screenshot] [--headed]` | `dist/` を読み込んだ Chromium で実際の YouTube を開き、保存結果を表示する |
+| `npm run build-zip` | Chrome Web Store 公開用の zip を `dist-zip/` に作る |
+| `npm run format` | Prettier |
+
+- `npm run e2e` は初回のみ `npx playwright install chromium` が必要。url 省略時はライブ配信を検索して開く。
+- E2E は実際の YouTube に依存するため CI では回さない。チャットの少ない配信だと 0 件になることがある (`--search` で検索語を変えられる)。
+
+## 構成
+
+```
+src/
+  manifest.json              MV3 マニフェスト (version はビルド時に package.json から入る)
+  backgrounds/background.ts  Service Worker。タブごとのアイコン/バッジ更新のみ。状態を持たない
+  content-scripts/
+    page-bridge.ts           MAIN world。ページの playerResponse から動画情報を取り出して返すだけ
+    content-script.ts        isolated world のエントリ
+    PageEventer.ts           ページ遷移の検知 → 動画情報取得 → チャット iframe の監視
+    ChatHandler.ts           チャット要素 → Chat → フィルター → 保存/画像化キュー
+    BadgeManager.ts          background にアイコン/バッジ更新を依頼
+  lib/
+    bridge/protocol.ts       content-script <-> page-bridge の postMessage プロトコル
+    parser/                  YouTube のデータ (DOM, playerResponse) の解析。YouTube 依存はほぼここに集約
+    chrome/                  chrome.* API のラッパー (storage, messages, tabs)
+    queue/                   画像化・保存を順番に処理するキュー
+    chatFilter/              チャットフィルター (保存する/画像化する の判定)
+    util/                    日付整形, dom-to-image, ファイル名整形 など
+  models/                    Chat, Video, Config (fromPlain / toPlain で storage と相互変換)
+  popup/, options/           Vue 3 の画面
+scripts/
+  build.js                   Vite を 3 回呼んで dist/ を組み立てる (下記)
+  e2e.js                     実ブラウザ確認
+test/                        Vitest。fixtures/ に実際の YouTube の DOM / playerResponse を縮小したもの
+```
+
+### ビルドの仕組み (`scripts/build.js`)
+
+content script は ES module を読み込めないため、Vite を 3 回に分けて呼んでいる。
+
+1. popup / options (HTML) + background (ES module の Service Worker)。`manifest.json` と `readme/` もここで出力
+2. `content-script.js` (IIFE, 単一ファイル)
+3. `page-bridge.js` (IIFE, 単一ファイル)
+
+`vite.config.ts` は無い (設定は `scripts/build.js` に集約)。Vitest 用の設定は `vitest.config.ts`。
+
+### データの流れ
+
+```
+YouTube ページ (www.youtube.com/watch?v=...)
+ ├─ page-bridge (MAIN world)   movie_player.getPlayerResponse() 等 → VideoData
+ │     ↑↓ window.postMessage (lib/bridge/protocol.ts)
+ ├─ content-script (isolated)  yt-page-data-updated → PageEventer
+ │     └─ iframe#chatframe (/live_chat or /live_chat_replay, same origin)
+ │          └─ MutationObserver(#item-scroller) → ChatHandler → ChatParser
+ │               → DrawDomQueue (dom-to-image-more) → SaveChatQueue → chrome.storage.local
+ └─ chrome.runtime.sendMessage → background → chrome.action (アイコン/バッジ)
+popup / options → chrome.storage.local を直接読み書き
+```
+
+### storage の形式 (v1 から互換を維持すること)
+
+| key | 値 |
+| :-- | :-- |
+| `@config` | `Config.toPlain()` |
+| `@videos` | `Video.toPlain()[]` (閲覧日時の降順, 最大 `maxVideoLength` 件) |
+| `<動画ID>` | `Chat.toPlain()[]` |
+
+- 日時は **epoch msec の number** で保存する (v1 の class-transformer 時代と同じ)。`lib/util/serialize.ts` の `toTime` / `toDate` を使う。
+- フィールドを追加する場合はクラスの初期値で既存データを補完できるようにする (`fromPlain` は `Object.assign(new X(), plain)`)。
+- フィールドの削除・リネーム・型変更は既存ユーザーのデータを壊すので避ける。必要なら `fromPlain` で移行する。
+
+## YouTube の仕様変更への対応
+
+YouTube の DOM / 内部データは予告なく変わる。動かなくなったら:
+
+1. `npm run build && npm run e2e -- --screenshot` を実行し、出力の `RESULT` と問題点、`=== chat frame (DOM) ===` の要素数を見る
+2. 0 になっているセレクタや `video: (not saved)` から壊れた箇所を特定する
+3. 必要なら一時的な Playwright スクリプトで実際の DOM (`outerHTML`) を調べる (headless では UA を通常の Chrome にしないとチャットが表示されない。`scripts/e2e.js` 参照)
+4. 修正したら `test/fixtures/` を実際の DOM に合わせて更新し、テストを追加する
+
+YouTube に依存している箇所:
+
+| 依存 | 場所 |
+| :-- | :-- |
+| SPA 遷移イベント `yt-page-data-updated` | `content-scripts/PageEventer.ts` |
+| 動画情報 `movie_player.getPlayerResponse()`, `ytd-watch-flexy.playerData`, `ytInitialPlayerResponse` | `content-scripts/page-bridge.ts` |
+| playerResponse の構造 (`videoDetails`, `microformat.playerMicroformatRenderer.liveBroadcastDetails`) | `lib/parser/PlayerResponseParser.ts` |
+| チャット欄 `ytd-live-chat-frame#chat iframe#chatframe`, `yt-live-chat-item-list-renderer #item-scroller` | `content-scripts/PageEventer.ts` |
+| チャット要素のタグ名・`#author-name`・`#message`・`#timestamp`・バッジ等 | `lib/parser/ChatParser.ts` |
+| 時刻表示 (配信中 `9:50 AM`、アーカイブ `1:23:45`) | `ChatParser.parseTimestamp` |
+| 画像化時のスタイル調整 | `lib/util/NodeToPng.ts` |
+
+過去の変更履歴 (2026-11 に確認):
+
+- 動画情報の `<script id="scriptTag">` (JSON-LD) は廃止された → MAIN world の page-bridge で playerResponse を読むように変更
+- チャット iframe は `src` 属性なしで読み込まれる → `load` を待つだけでなく、読み込み済みかを確認してから監視を始める
+- `DOMNodeRemoved` (Mutation Events) は Chrome 127 で削除された → MutationObserver で iframe の切断を検知
+- 時刻表示は ja ロケールでも `9:50 AM` 形式で、間に `U+202F` (narrow no-break space) が入る
+- 投稿者名は `@handle` 形式
+
+未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、メンバーシップギフト (`ytd-sponsorships-live-chat-*`, 未対応)。
+
+## ハマりどころ
+
+- **iframe 内のノードは realm が違う**: content script から見た iframe 内の要素に `instanceof Element` / `HTMLElement` は false になる。`nodeType` / `localName` で判定する。
+- **Service Worker は状態を持てない**: いつでも停止・再起動される。グローバル変数に状態を置かない。
+- **onMessage は Promise を返せない**: `lib/chrome/messages.ts` の `listenMessages` を使う (`sendResponse` + `return true`)。
+- **拡張機能を再読み込みすると、開いているタブの古い content script は `chrome.runtime` が使えなくなる**: `Runtime.isContextValid()` で確認している。ページを再読み込みすれば直る。
+- **dom-to-image-more v3 は高さを指定しないと padding 分が切れる**: `NodeToPng.generate` で width / height を明示している。
+- **headless Chromium の UA (`HeadlessChrome`) だと YouTube のチャットが「ブラウザが古い」になる**: E2E では通常の UA を指定している。
+- **拡張機能は Playwright の headless shell では動かない**: `channel: 'chromium'` を指定している。
+- **Windows でカレントディレクトリが `c:\` (小文字) だと Vitest が壊れる**: `npm test` は `scripts/vitest.js` 経由で起動して回避している。`npx vitest` を直接使わない。
+
+## コーディング規約
+
+- コメント・UI 文言・コミットメッセージは日本語 (既存に合わせる)。
+- Prettier: シングルクォート, セミコロンなし, 140 桁 (`.prettierrc`)。ESLint は flat config (`eslint.config.js`)。
+- 型のみの import は `import type` (`verbatimModuleSyntax`)。
+- chrome API は `chrome.*` の Promise 版を直接使う (webextension-polyfill は使わない)。
+- YouTube に依存するセレクタや構造は parser / PageEventer に閉じ込め、定数にして名前を付ける。
+- 権限 (`permissions`, `host_permissions`) は最小限にする。増やす場合は理由をコミットメッセージに書く。
+- コミットメッセージは `[add]`, `[fix]`, `[update]` などのプレフィックス + 日本語 (既存の履歴に合わせる)。
