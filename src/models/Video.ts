@@ -52,14 +52,17 @@ export default class Video {
   }
 
   /**
-   * 前回保存した動画の最大値を引き継ぎ、今の再生数の方が多ければ更新する.
+   * 前回保存した動画の最大値を引き継ぎ、今の再生数・同時接続数の方が多ければ更新する.
    *
    * @param prev 保存済みの同じ動画 (無ければ今の値だけで決める)
    * @param now 現在時刻 (テスト用)
    */
   public mergeMaxStats(prev: Video | undefined, now = new Date()): void {
-    this.maxViewers = prev?.maxViewers
-    this.maxViewersAt = prev?.maxViewersAt
+    // 同時接続数は開いた時点の値 (this.maxViewers) と前回までの最大の大きい方
+    if ((prev?.maxViewers ?? 0) >= (this.maxViewers ?? 0)) {
+      this.maxViewers = prev?.maxViewers
+      this.maxViewersAt = prev?.maxViewersAt
+    }
     this.maxViewCount = prev?.maxViewCount
     this.maxViewCountAt = prev?.maxViewCountAt
     if (this.viewCount > (this.maxViewCount ?? 0)) {

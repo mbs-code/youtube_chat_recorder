@@ -453,7 +453,7 @@ flowchart LR
 | `PageEventer.init` | `content-script.ts` | — → `loadConfig`, `onPageUpdated` |
 | `PageEventer.loadConfig` | `init` | `ConfigStorage.get()` → `chatFilter.setChatFilters`, `handler.setDrawOnce` |
 | `PageEventer.onPageUpdated` | `init`, `yt-page-data-updated` イベント | — → `loadVideo`, `attachChatFrame` |
-| `PageEventer.loadVideo` | `onPageUpdated` | URL → `VideoData` → `Video` → `VideoStorage.save` |
+| `PageEventer.loadVideo` | `onPageUpdated` | URL → `VideoData` (開いた時点の同接 `concurrentViewers` を含む. page-bridge が `ytd-watch-flexy.data` から `parseConcurrentViewers` で取る) → `Video` → `VideoStorage.save` |
 | `PageEventer.startWatchViewers` | `onPageUpdated` (配信中のみ) | `#view-count` の aria-label → `VideoParser.parseConcurrentViewers` → 最大を超えたら `VideoStorage.updateMaxViewers`. 遷移時に `stopWatchViewers` |
 | `PageEventer.attachChatFrame` | `onPageUpdated`, `removalObserver` | `document` → `iframe` → `connectChat` |
 | `PageEventer.onIframeLoad` | iframe の `load` イベント | `iframe` → `connectChat` |

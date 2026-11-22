@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parsePlayerResponse } from '../src/lib/parser/PlayerResponseParser'
+import { parseConcurrentViewers, parsePlayerResponse } from '../src/lib/parser/PlayerResponseParser'
 import VideoParser from '../src/lib/parser/VideoParser'
 import PageHelper from '../src/lib/util/PageHelper'
 import Video from '../src/models/Video'
@@ -70,6 +70,32 @@ describe('VideoParser.parseConcurrentViewers', () => {
   })
 })
 
+describe('parseConcurrentViewers (動画ページのデータ)', () => {
+  // 2026-11 時点の ytd-watch-flexy.data を縮小したもの
+  const response = (videoId: string, renderer: object) => ({
+    currentVideoEndpoint: { watchEndpoint: { videoId } },
+    contents: { twoColumnWatchNextResults: { results: { results: { contents: [
+      { videoPrimaryInfoRenderer: { viewCount: { videoViewCountRenderer: renderer } } },
+      { videoSecondaryInfoRenderer: {} },
+    ] } } } },
+  })
+  const live = { viewCount: { runs: [{ text: '369' }, { text: ' 人が視聴中' }], simpleText: '369 人が視聴中' }, isLive: true, originalViewCount: '369' }
+
+  it('配信中なら originalViewCount を返す', () => {
+    expect(parseConcurrentViewers(response('89yEOZ_Kr-4', live), '89yEOZ_Kr-4')).toBe(369)
+  })
+
+  it('originalViewCount が無ければ表示の数字を読む', () => {
+    expect(parseConcurrentViewers(response('a', { ...live, originalViewCount: undefined, viewCount: { simpleText: '26,905 人が視聴中' } }), 'a')).toBe(26905)
+  })
+
+  it('配信中でない (再生数) ・別の動画のデータなら undefined', () => {
+    expect(parseConcurrentViewers(response('a', { viewCount: { simpleText: '123 回視聴' }, originalViewCount: '123' }), 'a')).toBeUndefined()
+    expect(parseConcurrentViewers(response('old', live), 'new')).toBeUndefined()
+    expect(parseConcurrentViewers(undefined, 'a')).toBeUndefined()
+  })
+})
+
 describe('VideoParser.readRollingNumber', () => {
   // 実際の DOM (2026-11). margin-top の位置の文字が表示されている: -500 → 5, -20 → ",", -260 → 3, -300 → 5, -340 → 7
   const column = '<div>&nbsp;</div>' + '1234567890'.repeat(3).slice(0, 29).split('').map(c => `<div>${c}</div>`).join('') + '<div>&nbsp;</div>'
@@ -113,6 +139,21 @@ describe('Video の最大値 (同接・再生数)', () => {
     const less = Object.assign(new Video(), { viewCount: 90 })
     less.mergeMaxStats(more, t2)
     expect(less).toMatchObject({ maxViewCount: 150, maxViewCountAt: t2 })
+  })
+
+  it('開いた時点の同接と前回までの最大の、大きい方を残す', () => {
+    const prev = new Video()
+    prev.updateMaxViewers(500, t1)
+
+    const lower = new Video()
+    lower.updateMaxViewers(300, t2)
+    lower.mergeMaxStats(prev, t2)
+    expect(lower).toMatchObject({ maxViewers: 500, maxViewersAt: t1 })
+
+    const higher = new Video()
+    higher.updateMaxViewers(800, t2)
+    higher.mergeMaxStats(prev, t2)
+    expect(higher).toMatchObject({ maxViewers: 800, maxViewersAt: t2 })
   })
 
   it('同接は最大を超えた時だけ更新し、保存形式は epoch msec', () => {
