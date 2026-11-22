@@ -2,6 +2,7 @@ import Logger from '../../../loggers/Logger'
 import Video from '../../../models/Video'
 import BaseStorage from './BaseStorage'
 import ChatStorage from './ChatStorage'
+import TimelineStorage from './TimelineStorage'
 
 export default class VideoStorage extends BaseStorage {
   public static readonly STORAGE_KEY = '@videos'
@@ -54,7 +55,9 @@ export default class VideoStorage extends BaseStorage {
 
     // 溢れた動画のチャットも消しておく
     for (const overflow of overflows) {
-      if (overflow.id) await ChatStorage.clear(overflow.id)
+      if (!overflow.id) continue
+      await ChatStorage.clear(overflow.id)
+      await TimelineStorage.clear(overflow.id)
     }
   }
 
@@ -87,7 +90,10 @@ export default class VideoStorage extends BaseStorage {
     const [del] = dbs.splice(index, 1)
     Logger.debug(`> 💾[remove] video: ${del.id}`)
     await this.replaceObject(this.STORAGE_KEY, dbs)
-    if (del.id) await ChatStorage.clear(del.id)
+    if (del.id) {
+      await ChatStorage.clear(del.id)
+      await TimelineStorage.clear(del.id)
+    }
 
     return del
   }

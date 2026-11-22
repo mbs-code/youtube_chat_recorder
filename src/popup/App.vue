@@ -41,6 +41,9 @@
       <!-- 選んだ動画の記録 (最大同接・最大再生数・スーパーチャット合計) -->
       <VideoStats v-if="selectedVideo" :video="selectedVideo" :chats="chats" />
 
+      <!-- 配信の推移 (同時接続数・コメント数のグラフ) -->
+      <TimelineChart v-if="selectedVideo" :points="timeline" :start-date="selectedVideo.startDate" />
+
       <!-- 選んだ動画のチャット -->
       <section v-if="selectedVideo" class="flex flex-col gap-2.5">
         <!-- ツールバー: 絞り込み・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
@@ -126,6 +129,7 @@ import Filer from '../lib/chrome/Filer'
 import Runtime from '../lib/chrome/Runtime'
 import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
+import TimelineStorage from '../lib/chrome/storage/TimelineStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import ChatCsv from '../lib/util/ChatCsv'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
@@ -135,6 +139,8 @@ import type Video from '../models/Video'
 import ChatList from './components/ChatList.vue'
 import VideoDropdown from './components/VideoDropdown.vue'
 import VideoStats from './components/VideoStats.vue'
+import TimelineChart from './components/TimelineChart.vue'
+import type { TimelinePoint } from '../models/Timeline'
 
 /** 最近見た動画. */
 const videos = shallowRef<Video[]>([])
@@ -143,6 +149,9 @@ const selectedVideo = shallowRef<Video | null>(null)
 
 /** 選んでいる動画の全チャット (絞り込み前). */
 const chats = shallowRef<Chat[]>([])
+/** 選んでいる動画の推移 (1 分ごとの同時接続数・コメント数). */
+const timeline = shallowRef<TimelinePoint[]>([])
+
 /** 選択中のチャット (選択した順). */
 const selectedChats = ref<Chat[]>([])
 
@@ -216,6 +225,10 @@ async function onStorageChanged(changes: Record<string, chrome.storage.StorageCh
     const updated = await VideoStorage.get(videoId)
     if (updated && selectedVideo.value?.id === videoId) selectedVideo.value = updated
   }
+  if (changes[TimelineStorage.key(videoId)]) {
+    const latest = await TimelineStorage.get(videoId)
+    if (selectedVideo.value?.id === videoId) timeline.value = latest
+  }
   if (changes[videoId]) {
     const selectedIds = new Set(selectedChats.value.map(c => c.id))
     const latest = await ChatStorage.get(videoId)
@@ -231,6 +244,7 @@ async function onStorageChanged(changes: Record<string, chrome.storage.StorageCh
 async function reloadChats(): Promise<void> {
   const videoId = selectedVideo.value?.id
   chats.value = videoId ? await ChatStorage.get(videoId) : []
+  timeline.value = videoId ? await TimelineStorage.get(videoId) : []
   selectedChats.value = []
 }
 

@@ -65,6 +65,14 @@ const VIDEOS = [
   },
 ]
 
+/** 配信の推移 (60 分). 同接はゆるやかに増え、コメントは盛り上がりで増える. */
+const TIMELINE = Array.from({ length: 60 }, (_, i) => {
+  const t = Math.floor(start / 60000) * 60000 + i * 60000
+  const viewers = Math.round(18000 + 9000 * Math.sin(i / 19) + (i > 40 && i < 46 ? 1500 : 0) + ((i * 37) % 11) * 60)
+  const comments = Math.round(120 + 80 * Math.abs(Math.sin(i / 5)) + (i > 40 && i < 46 ? 260 : 0) + ((i * 53) % 17) * 4)
+  return i === 22 ? { t, comments } : { t, viewers, comments } // 22 分目は同接が読めなかった
+})
+
 const CHATS = [
   { authorName: '@〇〇ちゃんねる', altMessage: 'みなさんこんにちは～！', isOwner: true, isVerified: true, image: '#fda4af' },
   { authorName: '@moderator_san', altMessage: 'こんにちは！今日もよろしくお願いします', isModerator: true, image: '#93c5fd' },
@@ -111,13 +119,21 @@ async function main() {
   try {
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'))
     const extensionId = new URL(worker.url()).host
-    await worker.evaluate(data => chrome.storage.local.set(data), { '@videos': VIDEOS, 'sample00001': CHATS })
+    await worker.evaluate(data => chrome.storage.local.set(data), { '@videos': VIDEOS, 'sample00001': CHATS, '@timeline:sample00001': TIMELINE })
 
     const popup = await context.newPage()
     await popup.setViewportSize({ width: 600, height: 600 })
     await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`)
     await popup.waitForTimeout(800)
     await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup.png') })
+
+    // 配信の推移のグラフ (マウスを乗せた状態)
+    const chart = popup.locator('section.card').filter({ has: popup.locator('svg') }).first()
+    const chartSvg = chart.locator('svg').last()
+    const box = await chartSvg.boundingBox()
+    if (box) await popup.mouse.move(box.x + box.width * 0.72, box.y + box.height / 2)
+    await chart.screenshot({ path: path.join(RESULTS, 'screenshot-popup-timeline.png') })
+    await popup.mouse.move(0, 0)
 
     await popup.click('.chat >> nth=0')
     await popup.click('.chat >> nth=2')

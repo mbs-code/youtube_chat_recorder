@@ -169,6 +169,11 @@ async function main() {
       console.log(`  ${time} (${chat.seconds}s) [${chat.authorName}] ${chat.altMessage} ${flags.join(',')}${chat.pngUrl ? ' 🖼' : ''}`)
     }
 
+    // 配信の推移 (1 分ごとの同時接続数・コメント数). 配信中のみ, 30 秒ごとに書き込まれる
+    const timeline = storage[`@timeline:${videoId}`] ?? []
+    console.log('\n=== timeline ===')
+    console.log(timeline.map(p => `${new Date(p.t).toLocaleTimeString()} viewers=${p.viewers ?? '-'} comments=${p.comments}`).join('\n') || '(none)')
+
     console.log('\n=== logs (last 15) ===')
     console.log(logs.slice(-15).join('\n'))
 

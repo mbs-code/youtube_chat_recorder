@@ -11,6 +11,7 @@ import type Config from '../models/Config'
 import type Video from '../models/Video'
 import BadgeManager from './BadgeManager'
 import type ChatHandler from './ChatHandler'
+import TimelineRecorder from './TimelineRecorder'
 
 /** YouTube の SPA 遷移を検知するイベント (ページのデータ更新完了). */
 const PAGE_UPDATED_EVENT = 'yt-page-data-updated'
@@ -65,7 +66,14 @@ export default class PageEventer {
   protected generation = 0
   protected doInitialChats = false
 
-  constructor(protected handler: ChatHandler) {}
+  /** 配信中の推移 (1 分ごとの同時接続数・コメント数) の記録. */
+  protected timeline = new TimelineRecorder()
+
+  constructor(protected handler: ChatHandler) {
+    handler.onChat = chat => this.timeline.addChat(chat)
+    // タブを閉じる・再読み込みする時は、貯めている記録を書き込む
+    window.addEventListener('pagehide', () => void this.timeline.flush())
+  }
 
   public async init(): Promise<void> {
     await this.loadConfig()
@@ -99,6 +107,7 @@ export default class PageEventer {
     const generation = ++this.generation
 
     this.stopWatchViewers()
+    void this.timeline.stop()
 
     // 拡張機能が更新・再読み込みされたら、古い content script は何もしない
     if (!Runtime.isContextValid()) {
@@ -158,6 +167,12 @@ export default class PageEventer {
 
     this.video = video
     await VideoStorage.save(video, this.config?.maxVideoLength ?? 20)
+
+    // 配信中なら推移の記録を始める (開いた時点の同時接続数も入れる)
+    if (video.isLiveNow && video.id && generation === this.generation) {
+      this.timeline.start(video.id)
+      if (videoData.concurrentViewers) this.timeline.addViewers(videoData.concurrentViewers)
+    }
     return video
   }
 
@@ -284,6 +299,7 @@ export default class PageEventer {
       observe()
       const viewers = this.readConcurrentViewers()
       Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max})`)
+      if (viewers !== undefined) this.timeline.addViewers(viewers)
       if (viewers === undefined) {
         // 見つからない時は、原因を調べられるようにページの状態を 1 回だけ出す
         if (++misses === VIEWERS_WARN_AFTER) Logger.warn(`👀[viewers] concurrent viewers not found: ${this.describeViewCount()}`)
