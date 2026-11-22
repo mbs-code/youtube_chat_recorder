@@ -75,4 +75,16 @@ describe('ChatCsv', () => {
     expect(cells[3]).toBe(`"'@user"`)
     expect(cells[4]).toBe(`"'=1+1"`)
   })
+
+  it('複数の動画をまとめる (動画は渡された順、動画の中は時間順)', () => {
+    const other = Object.assign(new Video(), { id: 'other000000', title: 'other' })
+    const csv = ChatCsv.generateMany([
+      { video, chats: [chat({ id: 'a2', seconds: 20 }), chat({ id: 'a1', seconds: 10 })] },
+      { video: other, chats: [chat({ id: 'b1', seconds: 5 })] },
+    ])
+    const lines = rows(csv)
+    expect(lines).toHaveLength(4) // ヘッダーは 1 行だけ
+    expect(lines.slice(1).map(r => r.split(',').at(-1))).toEqual(['a1', 'a2', 'b1'])
+    expect(lines[3]).toContain('other000000,other,b1')
+  })
 })

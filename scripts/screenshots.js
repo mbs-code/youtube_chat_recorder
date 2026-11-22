@@ -138,6 +138,13 @@ async function main() {
     await options.waitForTimeout(800)
     await options.screenshot({ path: path.join(RESULTS, 'screenshot-options.png'), fullPage: true })
 
+    // データの管理: 全てのチャットを CSV で出力
+    const [allCsv] = await Promise.all([options.waitForEvent('download'), options.click('button:has-text("CSV で出力")')])
+    await allCsv.saveAs(path.join(RESULTS, 'sample-all.csv'))
+    console.log(`csv (all): ${allCsv.suggestedFilename()}`)
+    await options.locator('text=データの管理').scrollIntoViewIfNeeded()
+    await options.screenshot({ path: path.join(RESULTS, 'screenshot-options-data.png') })
+
     // 変更ありの状態 (保存バー)
     await options.fill('input[placeholder^="例:"]', '@viewer_three')
     await options.click('button:text-is("追加")')

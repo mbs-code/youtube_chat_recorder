@@ -180,6 +180,16 @@
               </label>
             </div>
             <div class="flex items-center gap-2">
+              <span class="flex-1 font-medium">
+                全てのチャット
+                <span class="block text-xs font-normal text-zinc-500">保存している全ての動画のチャットを 1 つの CSV にまとめます</span>
+              </span>
+              <button class="btn btn-secondary btn-sm" :disabled="isExportingCsv" @click="handleExportAllCsv">
+                <i class="mdi" :class="isExportingCsv ? 'mdi-loading mdi-spin' : 'mdi-file-delimited-outline'" />
+                CSV で出力
+              </button>
+            </div>
+            <div class="flex items-center gap-2">
               <span class="flex-1 font-medium">全てのデータ</span>
               <button class="btn btn-secondary btn-sm" @click="handleExportData">
                 <i class="mdi mdi-download" />
@@ -238,6 +248,7 @@ import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import Storage from '../lib/chrome/storage/Storage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
+import ChatCsv, { type VideoChats } from '../lib/util/ChatCsv'
 import { datetimeString, formatByte } from '../lib/util/format'
 import Logger, { LEVELS } from '../loggers/Logger'
 import Config, { type ConfigInterface, MIN_VIDEO_LENGTH } from '../models/Config'
@@ -371,6 +382,37 @@ async function importJson(event: Event, apply: (text: string) => Promise<void>):
 const handleExportConfig = () => exportJson('ycr_config', () => ConfigStorage.export(true))
 const handleImportConfig = (event: Event) => importJson(event, text => ConfigStorage.import(text))
 const handleExportData = () => exportJson('ycr_data', () => Storage.export())
+
+const isExportingCsv = ref(false)
+
+/** 保存している全ての動画のチャットを 1 つの CSV にして保存する (動画は最近見た順). */
+async function handleExportAllCsv(): Promise<void> {
+  isExportingCsv.value = true
+  try {
+    const groups: VideoChats[] = []
+    for (const video of await VideoStorage.getAll()) {
+      const chats = video.id ? await ChatStorage.get(video.id) : []
+      if (chats.length > 0) groups.push({ video, chats })
+    }
+
+    const total = groups.reduce((sum, g) => sum + g.chats.length, 0)
+    if (total === 0) {
+      Toast.warn('保存しているチャットがありません。')
+      return
+    }
+
+    const title = `${dateFormat(new Date(), 'yyyyMMdd_HHmmss')}_ycr_chats.csv`
+    const url = ChatCsv.createManyObjectURL(groups)
+    Filer.downloadFile(url, title)
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    Toast.success(`${groups.length} 本の動画のチャット ${total.toLocaleString()} 件を「${title}」に保存しました。`)
+  } catch (err) {
+    Toast.error('CSV の保存に失敗しました。')
+    Logger.error(err)
+  } finally {
+    isExportingCsv.value = false
+  }
+}
 const handleImportData = (event: Event) => {
   if (window.confirm('今のデータを、選んだファイルの内容で上書きします。')) {
     void importJson(event, text => Storage.import(text))

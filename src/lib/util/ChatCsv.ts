@@ -46,22 +46,52 @@ function escapeCell(cell: Cell): string {
   return /[",\r\n]/.test(text) || text !== cell ? `"${text.replace(/"/g, '""')}"` : text
 }
 
+/** Excel で UTF-8 として開かれるように先頭に付ける BOM. */
+const BOM = String.fromCharCode(0xfeff)
+
+/** 1 つの動画とそのチャット. */
+export interface VideoChats {
+  video: Video
+  chats: Chat[]
+}
+
 export default class ChatCsv {
   /**
-   * チャットを CSV 文字列にする.
+   * 1 つの動画のチャットを CSV 文字列にする.
    *
    * - Excel で文字化けしないよう先頭に BOM を付け、改行は CRLF にする.
-   * - 投稿時間 (経過秒) の順に並べる.
+   * - 投稿時間の早い順に並べる.
    */
   public static generate(video: Video, chats: Chat[]): string {
-    const sorted = [...chats].sort(Chat.compareByTime)
-    const lines = [COLUMNS.map(c => escapeCell(c.header)), ...sorted.map(chat => COLUMNS.map(c => escapeCell(c.value(chat, video))))]
-    return '\uFEFF' + lines.map(cells => cells.join(',')).join('\r\n') + '\r\n'
+    return this.generateMany([{ video, chats }])
+  }
+
+  /**
+   * 複数の動画のチャットを 1 つの CSV 文字列にする.
+   *
+   * - 動画は渡された順、各動画の中は投稿時間の早い順に並べる.
+   */
+  public static generateMany(groups: VideoChats[]): string {
+    const lines = [COLUMNS.map(c => escapeCell(c.header))]
+    for (const { video, chats } of groups) {
+      for (const chat of [...chats].sort(Chat.compareByTime)) {
+        lines.push(COLUMNS.map(c => escapeCell(c.value(chat, video))))
+      }
+    }
+    return BOM + lines.map(cells => cells.join(',')).join('\r\n') + '\r\n'
   }
 
   /** ダウンロード用の object url を作る. (使い終わったら URL.revokeObjectURL すること) */
   public static createObjectURL(video: Video, chats: Chat[]): string {
-    const blob = new Blob([this.generate(video, chats)], { type: 'text/csv;charset=utf-8' })
-    return URL.createObjectURL(blob)
+    return this.toObjectURL(this.generate(video, chats))
+  }
+
+  /** 複数の動画のチャットをまとめた CSV の object url を作る. */
+  public static createManyObjectURL(groups: VideoChats[]): string {
+    return this.toObjectURL(this.generateMany(groups))
+  }
+
+  protected static toObjectURL(csv: string): string {
+    return URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
   }
 }
