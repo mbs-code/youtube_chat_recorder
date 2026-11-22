@@ -82,6 +82,23 @@ function extensionAssetsPlugin() {
   }
 }
 
+/** GitHub と同じ規則で見出しの id を作る (readme の目次リンクを GitHub と拡張機能の両方で動かすため). */
+function headingSlug(text) {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\p{L}\p{N}\s_-]/gu, '')
+    .replace(/\s/g, '-')
+}
+
+marked.use({
+  renderer: {
+    heading({ tokens, depth, text }) {
+      return `<h${depth} id="${headingSlug(text)}">${this.parser.parseInline(tokens)}</h${depth}>\n`
+    },
+  },
+})
+
 function readmeHtml(body) {
   return `<!doctype html>
 <html lang="ja">
@@ -90,6 +107,7 @@ function readmeHtml(body) {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Youtube Chat Recorder - 使い方</title>
   <link rel="stylesheet" href="./assets/style.css">
+  <link rel="stylesheet" href="./assets/readme.css">
 </head>
 <body>
 ${body}

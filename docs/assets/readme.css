@@ -1,0 +1,95 @@
+/* 使い方ページ (readme) 用の追加スタイル. ベースは style.css (water.css) */
+
+body {
+  max-width: 860px;
+  line-height: 1.8;
+}
+
+h1 {
+  margin-top: 24px;
+}
+
+h2 {
+  margin-top: 48px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--border);
+}
+
+h3 {
+  margin-top: 32px;
+}
+
+hr {
+  margin: 32px 0;
+}
+
+/* 見出しへのリンクで飛んだ時に、上端にくっつかないようにする */
+:target {
+  scroll-margin-top: 16px;
+}
+
+img {
+  border-radius: 6px;
+}
+
+/* 列幅は中身に合わせる (water.css は均等割り) */
+table {
+  table-layout: auto;
+}
+
+td:first-child,
+th:first-child {
+  white-space: nowrap;
+}
+
+/* 表の中の小さいアイコンは枠や角丸を付けない */
+td img,
+th img {
+  vertical-align: middle;
+  border-radius: 0;
+}
+
+ol li,
+ul li {
+  margin: 4px 0;
+}
+
+/* 囲み: <div class="note|tip|warn"> */
+.note,
+.tip,
+.warn {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-left: 4px solid;
+  border-radius: 6px;
+  background: var(--background-alt);
+}
+
+.note {
+  border-color: #3e8ed0;
+}
+
+.tip {
+  border-color: #48c78e;
+}
+
+.warn {
+  border-color: #ffb70f;
+  background: #fffaeb;
+}
+
+@media (prefers-color-scheme: dark) {
+  .warn {
+    background: #3a3220;
+  }
+}
+
+/* よくある質問などの開閉する項目 */
+details {
+  display: block;
+  margin: 10px 0;
+}
+
+summary {
+  font-weight: 600;
+}

@@ -134,6 +134,14 @@ YouTube に依存している箇所:
 - **拡張機能は Playwright の headless shell では動かない**: `channel: 'chromium'` を指定している。
 - **Windows でカレントディレクトリが `c:\` (小文字) だと Vitest が壊れる**: `npm test` は `scripts/vitest.js` 経由で起動して回避している。`npx vitest` を直接使わない。
 
+## 使い方ページ (docs/readme.md)
+
+- 拡張機能の利用者 (パソコンに詳しくない人も含む) 向け。専門用語を避け、手順は番号付きで書く。
+- ビルド時に `readme/index.html` に変換され、設定画面の「使い方」から開かれる。GitHub 上でもそのまま読める。
+- 見出しの id は GitHub と同じ規則で付けている (`scripts/build.js` の `headingSlug`) ので、目次リンクは `[文字](#見出し文字)` で両方で動く。
+- 囲みは `<div class="note|tip|warn">`、開閉する項目は `<details><summary>` (スタイルは `docs/assets/readme.css`)。
+- 機能や設定項目を変えたら、ここの説明も更新する。
+
 ## コーディング規約
 
 - コメント・UI 文言・コミットメッセージは日本語 (既存に合わせる)。
