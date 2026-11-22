@@ -19,6 +19,11 @@ const CHAT_FRAME_SELECTOR = 'ytd-live-chat-frame#chat'
 const CHAT_IFRAME_SELECTOR = 'iframe#chatframe'
 const CHAT_SCROLLER_SELECTOR = 'yt-live-chat-item-list-renderer #item-scroller'
 
+/** 配信中の「〇人が視聴中」の表示 (aria-label に数字が全桁で入る). */
+const VIEW_COUNT_SELECTOR = '#view-count[aria-label]'
+/** 同時接続数を読む間隔 (msec). */
+const VIEWERS_INTERVAL = 30 * 1000
+
 /**
  * ページの状態を監視し、チャット欄が現れたら ChatHandler に流す.
  *
@@ -41,6 +46,9 @@ export default class PageEventer {
   /** チャット欄 (iframe) の削除を監視する. (DOMNodeRemoved は Chrome 127 で廃止された) */
   protected removalObserver?: MutationObserver
   protected chatIframe?: HTMLIFrameElement
+
+  /** 同時接続数を定期的に読むタイマー. */
+  protected viewersTimer?: ReturnType<typeof setInterval>
 
   /** 遷移ごとに増える番号. 非同期処理の途中で遷移したら古い処理を捨てるために使う. */
   protected generation = 0
@@ -79,6 +87,8 @@ export default class PageEventer {
     Logger.debug(`🔥<${PAGE_UPDATED_EVENT}>`)
     const generation = ++this.generation
 
+    this.stopWatchViewers()
+
     // 拡張機能が更新・再読み込みされたら、古い content script は何もしない
     if (!Runtime.isContextValid()) {
       this.disconnect()
@@ -101,6 +111,7 @@ export default class PageEventer {
         return
       }
 
+      if (video.isLiveNow) this.startWatchViewers(video, generation)
       await this.attachChatFrame(generation)
     } catch (err) {
       Logger.error(err)
@@ -219,6 +230,33 @@ export default class PageEventer {
       Logger.debug('⚙️[start] handle initial chats')
       void this.handler.findInvoke(scroller, this.chatFilter).then(() => Logger.debug('⚙️[finish] handle initial chats'))
     }
+  }
+
+  /** 配信中の同時接続数を定期的に読み、最大を超えたら保存する. */
+  protected startWatchViewers(video: Video, generation: number): void {
+    const videoId = video.id
+    if (!videoId) return
+
+    let max = video.maxViewers ?? 0
+    const check = async () => {
+      if (generation !== this.generation || !Runtime.isContextValid()) return this.stopWatchViewers()
+      const viewers = Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))
+        .map(e => VideoParser.parseConcurrentViewers(e.getAttribute('aria-label')))
+        .find(v => v !== undefined)
+      if (viewers === undefined || viewers <= max) return
+
+      max = viewers
+      await VideoStorage.updateMaxViewers(videoId, viewers)
+    }
+
+    this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
+    setTimeout(() => void check().catch(err => Logger.error(err)), 5000) // 表示を待ってから 1 回目
+    Logger.debug('⚙️[start] watch concurrent viewers')
+  }
+
+  protected stopWatchViewers(): void {
+    clearInterval(this.viewersTimer)
+    this.viewersTimer = undefined
   }
 
   /** 監視を全て止める. */

@@ -98,6 +98,9 @@ sequenceDiagram
   PE->>PE: VideoParser.parse(videoData) → Video
   PE->>VS: save(video, config.maxVideoLength)
   PE->>BM: waitingIcon() (青)
+  opt video.isLiveNow
+    PE->>PE: startWatchViewers(video, generation)<br/>30 秒ごとに #view-count の「〇人が視聴中」を読む<br/>最大を超えたら VideoStorage.updateMaxViewers
+  end
   PE->>PE: attachChatFrame(generation)<br/>iframe#chatframe を探す / load と削除の監視を付ける
   alt iframe が読み込み済み
     PE->>PE: connectChat(iframe, generation)
@@ -352,8 +355,8 @@ flowchart TD
   V --> VD["VideoDropdown の watch<br/>開いているタブの動画 ID (PageHelper.getPageVideoId)<br/>無ければ videos[0]"]
   VD -- "emit change" --> HV["handleVideoChange(video)"]
   HV --> RC["reloadChats()<br/>ChatStorage.get(video.id) → chats"]
+  RC --> STAT["VideoStats (一覧の上)<br/>最大同接・最大再生数 (日時・配信開始から)<br/>Chat.sumMoney(chats): 一番多い通貨 + 外貨 〇 件"]
   RC --> SC["sortedChats (computed)<br/>絞り込み: chatFilters[selectedFilterKey].func<br/>並び: Chat.compareByTime<br/>sortOrder が 'desc' なら逆順"]
-  SC --> SUM["moneySums = Chat.sumMoney(sortedChats)<br/>スーパーチャット合計 (通貨ごと, 目安)"]
   SC --> CL["ChatList → ChatPanel (全件表示)<br/>クリックで selectedChats に追加 / 削除"]
 
   CL --> DEL["handleDeleteSelectedChats<br/>ChatStorage.remove()"]
@@ -421,7 +424,8 @@ flowchart LR
   OPT["設定画面"] -- "読む・書く" --> K1
   POPS["popup.handleSaveToMerge"] -- "読む" --> K1
 
-  LV["PageEventer.loadVideo<br/>→ VideoStorage.save"] -- "書く" --> K2
+  LV["PageEventer.loadVideo<br/>→ VideoStorage.save<br/>(最大同接・再生数は前回から引き継ぐ)"] -- "書く" --> K2
+  WV["PageEventer.startWatchViewers<br/>→ VideoStorage.updateMaxViewers"] -- "書く" --> K2
   VSS["VideoStorage.save"] -- "溢れた動画のチャットを消す<br/>ChatStorage.clear" --> K3
   POP["popup"] -- "読む" --> K2
 
@@ -432,7 +436,7 @@ flowchart LR
 
 | 関数 | 何をするか |
 | :-- | :-- |
-| `VideoStorage.save(video, maxLength)` | 同じ ID は置き換え (作成日時を引き継ぐ) → 先頭に追加 → `updatedAt` の新しい順に並べて `maxLength` 件に切る → 溢れた動画のチャットを `ChatStorage.clear` |
+| `VideoStorage.save(video, maxLength)` | 同じ ID は置き換え (作成日時と、`Video.mergeMaxStats` で最大同接・最大再生数を引き継ぐ) → 先頭に追加 → `updatedAt` の新しい順に並べて `maxLength` 件に切る → 溢れた動画のチャットを `ChatStorage.clear` |
 | `ChatStorage.save(videoId, chats)` | 同じ ID は置き換え (作成日時と、新しい方に画像が無ければ古い画像を引き継ぐ) → 無ければ末尾に追加 |
 | `ChatStorage.remove(videoId, chats)` | 渡された ID のチャットを消す |
 | `Config.fromPlain` / `Video.fromPlain` / `Chat.fromPlain` | `Object.assign(new X(), plain)` で初期値を補い、日時 (epoch msec) を `Date` に戻す |
@@ -450,6 +454,7 @@ flowchart LR
 | `PageEventer.loadConfig` | `init` | `ConfigStorage.get()` → `chatFilter.setChatFilters`, `handler.setDrawOnce` |
 | `PageEventer.onPageUpdated` | `init`, `yt-page-data-updated` イベント | — → `loadVideo`, `attachChatFrame` |
 | `PageEventer.loadVideo` | `onPageUpdated` | URL → `VideoData` → `Video` → `VideoStorage.save` |
+| `PageEventer.startWatchViewers` | `onPageUpdated` (配信中のみ) | `#view-count` の aria-label → `VideoParser.parseConcurrentViewers` → 最大を超えたら `VideoStorage.updateMaxViewers`. 遷移時に `stopWatchViewers` |
 | `PageEventer.attachChatFrame` | `onPageUpdated`, `removalObserver` | `document` → `iframe` → `connectChat` |
 | `PageEventer.onIframeLoad` | iframe の `load` イベント | `iframe` → `connectChat` |
 | `PageEventer.connectChat` | `attachChatFrame`, `onIframeLoad` | `iframe` → `#item-scroller` → `handler.setVideo`, `chatObserver.observe`, `handler.findInvoke` |
@@ -504,6 +509,8 @@ flowchart LR
 | `PAGE_UPDATED_EVENT` | `PageEventer.ts` | `'yt-page-data-updated'` | YouTube の SPA 遷移を検知するイベント |
 | `CHAT_FRAME_SELECTOR` / `CHAT_IFRAME_SELECTOR` | `PageEventer.ts` | `ytd-live-chat-frame#chat` / `iframe#chatframe` | チャット欄の iframe を探す |
 | `CHAT_SCROLLER_SELECTOR` | `PageEventer.ts` | `yt-live-chat-item-list-renderer #item-scroller` | チャットの追加を監視する要素 |
+| `VIEW_COUNT_SELECTOR` | `PageEventer.ts` | `#view-count[aria-label]` | 配信中の「〇人が視聴中」 |
+| `VIEWERS_INTERVAL` | `PageEventer.ts` | `30000` (msec) | 同時接続数を読む間隔 |
 | `CHAT_NODE_NAMES` | `ChatParser.ts` | text / paid / membership / sticker / ギフト (gift-purchase-announcement) の renderer | `ChatHandler.invoke` が処理するタグ名 |
 | `BASE_FILTERS` | `ChatFilter.ts` | [4-2 の表](#4-2-chatfiltercheckstuckchatfilter-保存するか画像化するか) | チャットの種類の判定 |
 | `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain`, `screply ← plain`, `gift ← joinmember` | 後から追加したフィルターの初期値の引き継ぎ元 |

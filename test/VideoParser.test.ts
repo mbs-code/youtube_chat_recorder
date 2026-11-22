@@ -57,6 +57,44 @@ describe('VideoParser', () => {
   })
 })
 
+describe('VideoParser.parseConcurrentViewers', () => {
+  it('「〇人が視聴中」から同時接続数を取り出す', () => {
+    expect(VideoParser.parseConcurrentViewers('26,905 人が視聴中  ')).toBe(26905)
+    expect(VideoParser.parseConcurrentViewers('354 watching now')).toBe(354)
+    expect(VideoParser.parseConcurrentViewers('123,456 回視聴')).toBeUndefined()
+    expect(VideoParser.parseConcurrentViewers('')).toBeUndefined()
+    expect(VideoParser.parseConcurrentViewers(null)).toBeUndefined()
+  })
+})
+
+describe('Video の最大値 (同接・再生数)', () => {
+  const t1 = new Date(2026, 10, 22, 12, 0, 0)
+  const t2 = new Date(2026, 10, 22, 13, 0, 0)
+
+  it('再生数は前回より多ければ更新し、少なければ前回の最大を引き継ぐ', () => {
+    const prev = Object.assign(new Video(), { viewCount: 100 })
+    prev.mergeMaxStats(undefined, t1)
+    expect(prev).toMatchObject({ maxViewCount: 100, maxViewCountAt: t1 })
+
+    const more = Object.assign(new Video(), { viewCount: 150 })
+    more.mergeMaxStats(prev, t2)
+    expect(more).toMatchObject({ maxViewCount: 150, maxViewCountAt: t2 })
+
+    const less = Object.assign(new Video(), { viewCount: 90 })
+    less.mergeMaxStats(more, t2)
+    expect(less).toMatchObject({ maxViewCount: 150, maxViewCountAt: t2 })
+  })
+
+  it('同接は最大を超えた時だけ更新し、保存形式は epoch msec', () => {
+    const video = new Video()
+    expect(video.updateMaxViewers(300, t1)).toBe(true)
+    expect(video.updateMaxViewers(200, t2)).toBe(false)
+    expect(video).toMatchObject({ maxViewers: 300, maxViewersAt: t1 })
+    expect(video.toPlain().maxViewersAt).toBe(t1.getTime())
+    expect(Video.fromPlain(video.toPlain()).maxViewersAt).toEqual(t1)
+  })
+})
+
 describe('PageHelper.getPageVideoId', () => {
   it.each([
     ['https://www.youtube.com/watch?v=_X07ULFy1-w', '_X07ULFy1-w'],

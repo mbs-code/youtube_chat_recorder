@@ -45,6 +45,10 @@ const VIDEOS = [
     startDate: start,
     publishedAt: start,
     updatedAt: now - 60 * 1000,
+    maxViewers: 26905,
+    maxViewersAt: start + (1 * 3600 + 53 * 60) * 1000 - 60 * 60 * 1000,
+    maxViewCount: 46784,
+    maxViewCountAt: now - 60 * 1000,
     createdAt: start,
   },
   {
@@ -75,6 +79,8 @@ const CHATS = [
   },
   { authorName: '@newcomer', altMessage: 'メンバーシップへようこそ！', isMember: true, isJoinMember: true },
   { authorName: '@viewer_three', altMessage: '初見です！', topChatRank: 1, image: '#86efac' },
+  { authorName: '@overseas_fan', altMessage: 'Congrats!', isSuperChat: true, money: 5, moneyUnit: '$' },
+  { authorName: '@tw_fan', altMessage: '恭喜！', isSuperChat: true, money: 150, moneyUnit: 'NT$' },
 ].map((chat, i) => {
   const { image, ...rest } = chat
   const seconds = 15 + i * 37

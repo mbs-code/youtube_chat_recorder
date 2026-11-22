@@ -26,6 +26,16 @@ export default class VideoParser {
     return video
   }
 
+  /**
+   * 「〇人が視聴中」の表示から同時接続数を取り出す. (配信中の動画ページの #view-count の aria-label)
+   *
+   * - "26,905 人が視聴中", "26,905 watching now". 再生数 ("123 回視聴") など他の表示なら undefined.
+   */
+  public static parseConcurrentViewers(text?: string | null): number | undefined {
+    const count = text?.match(/([\d,]+)\s*(?:人が視聴中|watching)/i)?.[1]
+    return count ? parseInt(count.replace(/,/g, ''), 10) : undefined
+  }
+
   /** 一番大きいサムネイルを選ぶ. */
   protected static pickThumbnail(thumbnails: VideoData['thumbnails']): string | undefined {
     const sorted = [...thumbnails].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))

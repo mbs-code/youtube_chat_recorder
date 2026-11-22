@@ -33,12 +33,11 @@ export default class VideoStorage extends BaseStorage {
     const dbs = await this.getAll()
     const oldLength = dbs.length
 
-    // 既にあるなら作成日時を引き継いで置き換える
+    // 既にあるなら作成日時と最大値 (同接・再生数) を引き継いで置き換える
     const index = dbs.findIndex(v => v.id === video.id)
-    if (index >= 0) {
-      const [del] = dbs.splice(index, 1)
-      video.createdAt = del.createdAt
-    }
+    const prev = index >= 0 ? dbs.splice(index, 1)[0] : undefined
+    if (prev) video.createdAt = prev.createdAt
+    video.mergeMaxStats(prev)
 
     video.updatedAt = new Date()
     video.createdAt = video.createdAt || video.updatedAt
@@ -57,6 +56,21 @@ export default class VideoStorage extends BaseStorage {
     for (const overflow of overflows) {
       if (overflow.id) await ChatStorage.clear(overflow.id)
     }
+  }
+
+  /**
+   * 同時接続数が最大を超えていれば保存する. (一覧の並び順 = updatedAt は変えない)
+   *
+   * @return 更新した video (超えていない・動画が無いなら undefined)
+   */
+  public static async updateMaxViewers(videoId: string, viewers: number): Promise<Video | undefined> {
+    const dbs = await this.getAll()
+    const video = dbs.find(v => v.id === videoId)
+    if (!video?.updateMaxViewers(viewers)) return undefined
+
+    Logger.debug(`> 💾[save] max viewers: ${viewers} (${videoId})`)
+    await this.replaceObject(this.STORAGE_KEY, dbs)
+    return video
   }
 
   /**
