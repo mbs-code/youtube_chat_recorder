@@ -136,6 +136,11 @@ async function main() {
     // 絞り込みの一覧 (件数のバッジ付き)
     await popup.click('[aria-label="表示するチャット"]')
     await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-filter.png') })
+    // 複数選んだ状態 (2 つ目と 3 つ目)
+    await popup.locator('[role="option"]').nth(1).click()
+    await popup.locator('[role="option"]').nth(2).click()
+    await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-filter-multi.png') })
+    await popup.locator('[role="option"]').first().click()
     await popup.keyboard.press('Escape')
 
     // 記録・グラフのタブ (グラフにマウスを乗せた状態)

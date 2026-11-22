@@ -87,7 +87,7 @@
       <section v-else-if="selectedVideo" class="flex flex-col gap-2.5">
         <!-- ツールバー: 絞り込み・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
         <div class="sticky top-12.25 z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
-          <FilterDropdown v-model="selectedFilterKey" :options="filterOptions" />
+          <FilterDropdown v-model="selectedFilterKeys" :options="filterOptions" :count="sortedChats.length" />
           <span class="flex-1 text-xs">
             <strong class="text-sm text-zinc-950">{{ sortedChats.length }}</strong>
             件
@@ -201,7 +201,10 @@ const selectedChats = ref<Chat[]>([])
 
 /** 絞り込みの選択肢と、選んでいるもの. */
 const chatFilters = ChatFilter.generatePopupChatFilters()
-const selectedFilterKey = ref(chatFilters[0].key)
+/** 「すべて表示」の絞り込みの key. */
+const ALL_FILTER_KEY = 'all'
+/** 選んでいる絞り込み (複数選んだら、どれかに当てはまるチャットを出す). */
+const selectedFilterKeys = ref<string[]>([ALL_FILTER_KEY])
 
 type SortOrder = 'asc' | 'desc'
 /** 並び順を覚えておく localStorage の key. */
@@ -270,12 +273,16 @@ const filterOptions = computed(() => chatFilters.map(filter => ({
   key: filter.key,
   title: filter.title,
   count: filter.func ? chats.value.filter(filter.func).length : chats.value.length,
+  exclusive: filter.key === ALL_FILTER_KEY, // 「すべて表示」は他と一緒に選ばない
 })))
 
 /** フィルター & 並び替え済みのチャット. */
 const sortedChats = computed(() => {
-  const chatFilter = chatFilters.find(c => c.key === selectedFilterKey.value)
-  const filtered = chatFilter?.func ? chats.value.filter(chatFilter.func) : chats.value
+  const keys = selectedFilterKeys.value
+  const funcs = keys.includes(ALL_FILTER_KEY)
+    ? []
+    : chatFilters.filter(c => keys.includes(c.key)).flatMap(c => (c.func ? [c.func] : []))
+  const filtered = funcs.length ? chats.value.filter(chat => funcs.some(func => func(chat))) : chats.value
   const sorted = [...filtered].sort(Chat.compareByTime)
   return sortOrder.value === 'desc' ? sorted.reverse() : sorted
 })
