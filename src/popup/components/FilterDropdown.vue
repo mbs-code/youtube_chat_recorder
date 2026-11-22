@@ -7,7 +7,7 @@
       :aria-expanded="isOpen"
       aria-label="表示するチャット"
       :title="allTitles"
-      @click.stop="isOpen = !isOpen"
+      @click.stop="handleToggleOpen"
     >
       <span class="min-w-0 flex-1 truncate">{{ label }}</span>
       <span class="badge">{{ count }}</span>
@@ -16,7 +16,8 @@
     <!-- 絞り込みの一覧 (複数選べる. それぞれの件数付き. 0 件のものは薄くする) -->
     <ul
       v-if="isOpen"
-      class="card absolute top-[calc(100%+4px)] left-0 z-20 max-h-[50vh] w-60 overflow-y-auto p-1 text-xs shadow-xl"
+      class="card absolute top-[calc(100%+4px)] left-0 z-40 w-60 overflow-y-scroll p-1 text-xs shadow-xl"
+      :style="{ maxHeight: `${maxHeight}px` }"
       role="listbox"
       aria-multiselectable="true"
     >
@@ -47,6 +48,7 @@
  * - exclusive な選択肢 (すべて表示) を選ぶと他は外れ、他を選ぶと exclusive なものは外れる.
  * - 全部外したら exclusive な選択肢に戻る.
  * - 選んでいる間は閉じない. 外側のクリックや Esc で閉じる.
+ * - 一覧の高さは、開いた時の画面の下端までに収める (popup は高さが足りないことがあるため. 下のフッターに隠れないようにし、スクロールバーは常に出す).
  */
 import { computed, onBeforeUnmount, onMounted, ref, useTemplateRef } from 'vue'
 
@@ -65,6 +67,20 @@ const props = defineProps<{
 const modelValue = defineModel<string[]>({ required: true })
 
 const isOpen = ref(false)
+/** 一覧の最大の高さ (px). */
+const maxHeight = ref(400)
+/** 一覧の最小の高さ (px). これより狭くても 3 行ほどは見えるようにする. */
+const MIN_LIST_HEIGHT = 120
+
+function handleToggleOpen(): void {
+  if (!isOpen.value && root.value) {
+    // 下に固定のフッター (選択中のチャットへの操作) があれば、その上までにする
+    const bottom = root.value.getBoundingClientRect().bottom
+    const footerTop = document.querySelector('footer')?.getBoundingClientRect().top ?? window.innerHeight
+    maxHeight.value = Math.max(MIN_LIST_HEIGHT, Math.min(window.innerHeight, footerTop) - bottom - 12)
+  }
+  isOpen.value = !isOpen.value
+}
 const root = useTemplateRef<HTMLElement>('root')
 
 const label = computed(() => {
