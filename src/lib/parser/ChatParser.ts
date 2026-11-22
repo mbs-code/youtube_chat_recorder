@@ -5,6 +5,11 @@ import DomQueryHelper from '../util/DomQueryHelper'
 import { hmsToSeconds } from '../util/format'
 import retry from '../util/Retry'
 
+/** ギフト (星など) の要素. 他のチャットと違い id 属性が無く、名前・本文の id も違う. */
+const GIFT_MESSAGE_NODE_NAME = 'yt-gift-message-view-model'
+/** ギフトの本文 "星 を送信しました" からギフトの名前を取り出す. */
+const GIFT_NAME_RE = /^(.+?)\s*を送信しました/
+
 /** 処理対象のチャット要素のタグ名. */
 export const CHAT_NODE_NAMES = [
   'yt-live-chat-text-message-renderer', // 通常チャット
@@ -12,6 +17,7 @@ export const CHAT_NODE_NAMES = [
   'yt-live-chat-membership-item-renderer', // メンバー加入・マイルストーン
   'yt-live-chat-paid-sticker-renderer', // スーパーステッカー
   'ytd-sponsorships-live-chat-gift-purchase-announcement-renderer', // メンバーシップギフト
+  'yt-gift-message-view-model', // ギフト (星など)
   // 'yt-live-chat-banner-renderer', // 固定チャット
 ] as const
 
@@ -25,7 +31,10 @@ export default class ChatParser {
    */
   public static async parse(video: Video, node: Element, now = new Date()): Promise<Chat> {
     const chat = new Chat()
-    chat.id = node.getAttribute('id') || undefined
+    const tagName = node.tagName.toLowerCase()
+    const isGiftMessage = tagName === GIFT_MESSAGE_NODE_NAME
+    // id 属性の無いチャット (ギフトなど) は、選択・削除で区別できるように作る
+    chat.id = node.getAttribute('id') || `ycr-${crypto.randomUUID()}`
 
     // 時刻 ///
     // (ギフトなど時刻表示の無いチャットは、配信中なら今の投稿とみなす)
@@ -37,11 +46,12 @@ export default class ChatParser {
     chat.seconds = times.seconds
 
     // 投稿者 ///
-    chat.authorName = (await retry(() => DomQueryHelper.getTextContent(node, '#author-name'), 3, 300)) || undefined // 稀に描画が遅れる
+    const authorSelector = isGiftMessage ? '#author-name-v2' : '#author-name'
+    chat.authorName = (await retry(() => DomQueryHelper.getTextContent(node, authorSelector), 3, 300)) || undefined // 稀に描画が遅れる
     chat.authorPhoto = DomQueryHelper.getAttribute(node, '#author-photo img', 'src')
 
     // 本文 ///
-    const messageNode = node.querySelector('#message')
+    const messageNode = node.querySelector(isGiftMessage ? '#message-v2' : '#message')
     if (messageNode) {
       chat.message = this.extractText(messageNode, false)
       chat.altMessage = this.extractText(messageNode, true)
@@ -69,8 +79,6 @@ export default class ChatParser {
 
     // スーパーチャットへの返信 (名前の後ろの [@相手の名前 💬] ボタン) ///
     chat.replyTo = this.parseReplyTo(node)
-
-    const tagName = node.tagName.toLowerCase()
 
     // スーパーチャット ///
     const purchaseAmount = DomQueryHelper.getTextContent(node, '#purchase-amount')
@@ -126,6 +134,13 @@ export default class ChatParser {
       chat.giftCount = this.parseGiftCount(primaryText)
       chat.message = primaryText
       chat.altMessage = primaryText
+    }
+
+    // ギフト (星など) ///
+    if (isGiftMessage) {
+      // #message-v2 = "星 を送信しました", #gift-image = ギフトの画像 (www.gstatic.com)
+      const text = chat.message ?? ''
+      chat.giftItem = GIFT_NAME_RE.exec(text)?.[1] ?? (text || 'ギフト')
     }
 
     return chat

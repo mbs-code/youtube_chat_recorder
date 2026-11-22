@@ -34,6 +34,7 @@ export default class Chat {
   replyTo?: string // スーパーチャットへの返信なら、返信先の投稿者名 (@handle)
   isGift = false // メンバーシップギフトを贈った
   giftCount?: number // 贈ったギフトの数
+  giftItem?: string // ギフト (星など) を送ったなら、その名前 ("星")
 
   // スーパーチャット
   isSuperChat = false
@@ -103,6 +104,7 @@ export default class Chat {
     if (this.isJoinMember) emojis.push('🌟')
     if (this.isMilestone) emojis.push('🎉')
     if (this.isGift) emojis.push(`🎁${this.giftCount ?? ''}`)
+    if (this.giftItem) emojis.push(`🎀${this.giftItem}`)
     if (this.topChatRank) emojis.push(`👑${this.topChatRank}`)
     if (this.replyTo) emojis.push('💬')
     if (this.money) emojis.push('💰')

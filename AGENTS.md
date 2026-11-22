@@ -131,6 +131,7 @@ YouTube に依存している箇所:
 - メンバー歴と加入の要素には、それぞれ `has-primary-header-text` / `show-only-header` 属性が付く。要素の追加直後は `#header-primary-text` の文字がまだ無いことがあるので、属性も見て判定する (文字だけで判定すると加入に混ざる)
 - スーパーチャットには購入回数の節目のおまけが付くことがある: `#lower-bumper` に "ライブ配信での 5 回目の Super をお祝いしましょう" (`ChatParser.parseSuperCount`)、`#overlay-image` に飾り画像 (www.gstatic.com, CORS で読めないので画像化しない)
 - メンバーシップギフト (贈った側) は `ytd-sponsorships-live-chat-gift-purchase-announcement-renderer`。文は `#primary-text` ("〇〇 のメンバーシップ ギフトを 10 個贈りました")、**`#timestamp` が無い**ので配信中は現在時刻にする (`ChatParser.liveNowTimes`)。右の飾り画像 `.rhs-image` は www.gstatic.com にあり CORS で読めないので画像化しない
+- ギフト (星など) は `yt-gift-message-view-model`。**id 属性も `#timestamp` も無い**ので、id は `ycr-<uuid>` を作り、配信中は現在時刻にする。名前は `#author-name-v2`、本文は `#message-v2` ("星 を送信しました" → `Chat.giftItem = "星"`)。`#gift-image` は www.gstatic.com で CORS で読めないので画像化しない
 
 未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、ギフトを受け取った側のお知らせ (`ytd-sponsorships-live-chat-gift-redemption-announcement-renderer` と思われる, 未対応)、アーカイブでのギフトの表示。
 

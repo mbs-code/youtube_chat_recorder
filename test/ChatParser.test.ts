@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import ChatParser from '../src/lib/parser/ChatParser'
+import ChatFilter from '../src/lib/chatFilter/ChatFilter'
 import Video from '../src/models/Video'
 import {
   createElement,
+  GIFT_MESSAGE,
   GIFT_PURCHASE,
   MEMBERSHIP_ITEM,
   MEMBERSHIP_JOIN,
@@ -195,6 +197,21 @@ describe('ChatParser.parse', () => {
     expect(chat.message).toBe('Roa Ch. 海月雲ろあ のメンバーシップ ギフトを 10 個贈りました')
     expect(chat.timestamp).toEqual(now)
     expect(chat.seconds).toBe((14 - 8) * 3600 + 20 * 60)
+  })
+
+  it('ギフト (星など): 名前・本文・ギフトの名前を取り出し、id を作る', async () => {
+    const now = new Date(2026, 10, 22, 14, 20, 0)
+    const chat = await ChatParser.parse(liveVideo(), createElement(GIFT_MESSAGE), now)
+
+    expect(chat.id).toMatch(/^ycr-/)
+    expect(chat.authorName).toBe('@AIBO0988')
+    expect(chat.authorPhoto).toContain('yt4.ggpht.com/ytc/gift-sender')
+    expect(chat.message).toBe('星 を送信しました')
+    expect(chat.giftItem).toBe('星')
+    expect(chat.isGift).toBe(false)
+    expect(chat.isSuperChat).toBe(false)
+    expect(chat.timestamp).toEqual(now)
+    expect(ChatFilter.generatePopupChatFilters().find(f => f.key === 'plain')?.func?.(chat)).toBe(false)
   })
 
   it('時刻表示の無いチャットはアーカイブでは時刻なし', async () => {

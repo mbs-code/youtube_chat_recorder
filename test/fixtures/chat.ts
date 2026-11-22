@@ -302,3 +302,17 @@ export const PAID_MESSAGE_SUPER_COUNT = `
   </div>
 </yt-live-chat-paid-message-renderer>
 `
+
+/** ギフト (星など). 2026-11 時点の実際の DOM を縮小したもの. id 属性・#timestamp は無い. */
+export const GIFT_MESSAGE = `
+<yt-gift-message-view-model class="style-scope yt-live-chat-item-list-renderer">
+  <div id="gift-message-v2" tabindex="0" role="article" class="style-scope yt-gift-message-view-model">
+    <yt-img-shadow id="author-photo" class="no-transition style-scope yt-gift-message-view-model" height="24" width="24" loaded=""><img id="img" draggable="false" class="style-scope yt-img-shadow" alt="" height="24" width="24" src="https://yt4.ggpht.com/ytc/gift-sender=s32-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+    <div id="content" class="style-scope yt-gift-message-view-model">
+      <yt-attributed-string id="author-name-v2" class="style-scope yt-gift-message-view-model"><span class="ytAttributedStringHost ytAttributedStringWhiteSpacePreWrap" role="text"><span class="">@AIBO0988 </span></span></yt-attributed-string>
+      <yt-attributed-string id="message-v2" class="style-scope yt-gift-message-view-model"><span class="ytAttributedStringHost ytAttributedStringWhiteSpacePreWrap" role="text"><span class="">星 を送信しました</span></span></yt-attributed-string>
+      <yt-image id="gift-image" class="style-scope yt-gift-message-view-model"><img class="ytCoreImageHost ytCoreImageLoaded" alt="" src="//www.gstatic.com/youtube/img/pdg/gift/assets/silver_star_v2_320x320.png=w480-h480"></yt-image>
+    </div>
+  </div>
+</yt-gift-message-view-model>
+`

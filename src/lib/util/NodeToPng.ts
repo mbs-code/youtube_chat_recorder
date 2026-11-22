@@ -76,7 +76,7 @@ export default class NodeToPng {
       // (iframe 内のノードは realm が違うので instanceof は使わない)
       filter: (child: Node) => {
         const element = child as Element
-        return element.id !== 'menu' && element.id !== 'overlay-image' && !element.classList?.contains('rhs-image')
+        return element.id !== 'menu' && element.id !== 'overlay-image' && element.id !== 'gift-image' && !element.classList?.contains('rhs-image')
       },
       // 指定した CSS だけを埋め込む. (ページの CSS からは探さない: Google Fonts の CSS は別ドメインで読めないため)
       font: fontCss ? { cssText: fontCss } : false,

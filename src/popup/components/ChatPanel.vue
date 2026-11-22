@@ -71,6 +71,7 @@ const tags = computed(() => {
   if (chat.superCount) list.push({ label: `🎊 ${chat.superCount} 回目の Super`, class: 'badge-accent' })
   if (chat.topChatRank) list.push({ label: `👑 #${chat.topChatRank}`, class: 'badge-accent' })
   if (chat.replyTo) list.push({ label: `💬 ${chat.replyTo} へ返信`, class: 'badge-accent' })
+  if (chat.giftItem) list.push({ label: `🎀 ${chat.giftItem}`, class: 'badge-accent' })
   if (chat.isGift) list.push({ label: `🎁 ギフト${chat.giftCount ? ` ×${chat.giftCount}` : ''}`, class: 'badge-success' })
   if (chat.isMilestone) list.push({ label: `🎉 ${chat.milestoneText ?? 'メンバー歴'}`, class: 'badge-success' })
   else if (chat.isJoinMember) list.push({ label: 'メンバー加入', class: 'badge-success' })
