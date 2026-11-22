@@ -85,26 +85,48 @@
 
       <!-- チャットのタブ -->
       <section v-else-if="selectedVideo" class="flex flex-col gap-2.5">
-        <!-- ツールバー: 絞り込み・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
-        <div class="sticky top-12.25 z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
-          <FilterDropdown v-model="selectedFilterKeys" :options="filterOptions" :count="sortedChats.length" />
-          <span class="flex-1 text-xs">
-            <strong class="text-sm text-zinc-950">{{ sortedChats.length }}</strong>
-            件
-            <span v-if="sortedChats.length !== chats.length" class="text-zinc-500">/ 全 {{ chats.length }} 件</span>
-          </span>
-          <button
-            class="btn btn-secondary btn-sm"
-            :title="sortOrder === 'asc' ? '古い順 (クリックで新しい順)' : '新しい順 (クリックで古い順)'"
-            @click="toggleSortOrder"
-          >
-            <i class="mdi" :class="sortOrder === 'asc' ? 'mdi-sort-clock-ascending-outline' : 'mdi-sort-clock-descending-outline'" />
-            {{ sortOrder === 'asc' ? '古い順' : '新しい順' }}
-          </button>
-          <button class="btn btn-secondary btn-sm" :disabled="sortedChats.length === 0" @click="selectedChats = [...sortedChats]">
-            すべて選択
-          </button>
-          <button class="btn btn-secondary btn-sm" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
+        <!-- ツールバー: 絞り込み・検索・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
+        <div class="sticky top-12.25 z-10 -mx-4 flex flex-col gap-2 bg-zinc-50 px-4 py-2">
+          <div class="flex items-center gap-2">
+            <FilterDropdown v-model="selectedFilterKeys" :options="filterOptions" :count="filteredChats.length" />
+            <div class="relative flex-1">
+              <i class="mdi mdi-magnify pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-zinc-400" />
+              <input
+                v-model="searchText"
+                class="input h-7 w-full px-7 text-xs"
+                type="search"
+                placeholder="名前・本文で検索"
+                aria-label="チャットを検索"
+              >
+              <button
+                v-if="searchText"
+                class="absolute top-1/2 right-1.5 -translate-y-1/2 cursor-pointer text-zinc-400 hover:text-zinc-700"
+                title="検索をやめる"
+                @click="searchText = ''"
+              >
+                <i class="mdi mdi-close-circle" />
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="flex-1 text-xs">
+              <strong class="text-sm text-zinc-950">{{ sortedChats.length }}</strong>
+              件
+              <span v-if="sortedChats.length !== chats.length" class="text-zinc-500">/ 全 {{ chats.length }} 件</span>
+            </span>
+            <button
+              class="btn btn-secondary btn-sm"
+              :title="sortOrder === 'asc' ? '古い順 (クリックで新しい順)' : '新しい順 (クリックで古い順)'"
+              @click="toggleSortOrder"
+            >
+              <i class="mdi" :class="sortOrder === 'asc' ? 'mdi-sort-clock-ascending-outline' : 'mdi-sort-clock-descending-outline'" />
+              {{ sortOrder === 'asc' ? '古い順' : '新しい順' }}
+            </button>
+            <button class="btn btn-secondary btn-sm" :disabled="sortedChats.length === 0" @click="selectedChats = [...sortedChats]">
+              すべて選択
+            </button>
+            <button class="btn btn-secondary btn-sm" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
+          </div>
         </div>
 
         <!-- チャットの一覧 (無ければ案内) -->
@@ -160,7 +182,7 @@
  * - 選んだチャットを削除・CSV で保存・画像をつなげて保存する.
  * - 開いた時に、開いているタブのバッジ (取得数) をリセットする.
  */
-import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import BrowserTabs from '../lib/chrome/BrowserTabs'
 import Filer from '../lib/chrome/Filer'
@@ -203,8 +225,32 @@ const selectedChats = ref<Chat[]>([])
 const chatFilters = ChatFilter.generatePopupChatFilters()
 /** 「すべて表示」の絞り込みの key. */
 const ALL_FILTER_KEY = 'all'
-/** 選んでいる絞り込み (複数選んだら、どれかに当てはまるチャットを出す). */
-const selectedFilterKeys = ref<string[]>([ALL_FILTER_KEY])
+/** 絞り込みを覚えておく localStorage の key. */
+const FILTER_KEYS_KEY = 'ycr:popup:filterKeys'
+
+/** 前回の絞り込みを読み込む (読めない・今は無い key だけなら「すべて表示」). */
+function loadFilterKeys(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(FILTER_KEYS_KEY) ?? '[]')
+    const keys = Array.isArray(parsed) ? parsed.filter(k => chatFilters.some(c => c.key === k)) : []
+    return keys.length ? keys : [ALL_FILTER_KEY]
+  } catch {
+    return [ALL_FILTER_KEY]
+  }
+}
+
+/** 選んでいる絞り込み (複数選んだら、どれかに当てはまるチャットを出す). 次に開いた時も同じにする. */
+const selectedFilterKeys = ref<string[]>(loadFilterKeys())
+watch(selectedFilterKeys, (keys) => {
+  try {
+    localStorage.setItem(FILTER_KEYS_KEY, JSON.stringify(keys))
+  } catch {
+    // 保存できなくても絞り込み自体はできる
+  }
+})
+
+/** 検索する文字 (空白区切りで、全部を含むチャットを出す). */
+const searchText = ref('')
 
 type SortOrder = 'asc' | 'desc'
 /** 並び順を覚えておく localStorage の key. */
@@ -277,12 +323,31 @@ const filterOptions = computed(() => chatFilters.map(filter => ({
 })))
 
 /** フィルター & 並び替え済みのチャット. */
-const sortedChats = computed(() => {
+/** 絞り込んだチャット (検索の前). */
+const filteredChats = computed(() => {
   const keys = selectedFilterKeys.value
   const funcs = keys.includes(ALL_FILTER_KEY)
     ? []
     : chatFilters.filter(c => keys.includes(c.key)).flatMap(c => (c.func ? [c.func] : []))
-  const filtered = funcs.length ? chats.value.filter(chat => funcs.some(func => func(chat))) : chats.value
+  return funcs.length ? chats.value.filter(chat => funcs.some(func => func(chat))) : chats.value
+})
+
+/** チャットの検索対象の文字 (名前・本文・返信先・ギフトなど). 大文字小文字は区別しない. */
+function searchableText(chat: Chat): string {
+  return [chat.authorName, chat.altMessage ?? chat.message, chat.replyTo, chat.milestoneText, chat.giftItem]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase()
+}
+
+const sortedChats = computed(() => {
+  const words = searchText.value.toLowerCase().split(/\s+/).filter(Boolean)
+  const filtered = words.length
+    ? filteredChats.value.filter((chat) => {
+        const text = searchableText(chat)
+        return words.every(word => text.includes(word))
+      })
+    : filteredChats.value
   const sorted = [...filtered].sort(Chat.compareByTime)
   return sortOrder.value === 'desc' ? sorted.reverse() : sorted
 })
