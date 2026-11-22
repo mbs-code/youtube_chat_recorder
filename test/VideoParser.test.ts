@@ -61,9 +61,39 @@ describe('VideoParser.parseConcurrentViewers', () => {
   it('「〇人が視聴中」から同時接続数を取り出す', () => {
     expect(VideoParser.parseConcurrentViewers('26,905 人が視聴中  ')).toBe(26905)
     expect(VideoParser.parseConcurrentViewers('354 watching now')).toBe(354)
+    expect(VideoParser.parseConcurrentViewers('5.357 Zuschauer')).toBe(5357)
+    expect(VideoParser.parseConcurrentViewers('5,357')).toBe(5357)
+    expect(VideoParser.parseConcurrentViewers('123 views')).toBeUndefined()
     expect(VideoParser.parseConcurrentViewers('123,456 回視聴')).toBeUndefined()
     expect(VideoParser.parseConcurrentViewers('')).toBeUndefined()
     expect(VideoParser.parseConcurrentViewers(null)).toBeUndefined()
+  })
+})
+
+describe('VideoParser.readRollingNumber', () => {
+  // 実際の DOM (2026-11). margin-top の位置の文字が表示されている: -500 → 5, -20 → ",", -260 → 3, -300 → 5, -340 → 7
+  const column = '<div>&nbsp;</div>' + '1234567890'.repeat(3).slice(0, 29).split('').map(c => `<div>${c}</div>`).join('') + '<div>&nbsp;</div>'
+  const char = (marginTop: number, inner = column) => `<animated-rolling-character class="animatedRollingCharacterHost" style="margin-top: ${marginTop}px;">${inner}</animated-rolling-character>`
+  const html = `<yt-animated-rolling-number style="height: 20px; line-height: 20px;"><span class="animatedRollingNumberDigits" dir="ltr">${[
+    char(-500),
+    char(-20, '<div>&nbsp;</div><div>,</div><div>&nbsp;</div>'),
+    char(-260),
+    char(-300),
+    char(-340),
+  ].join('')}</span></yt-animated-rolling-number>`
+
+  it('margin-top の位置の文字を読む', () => {
+    const host = document.createElement('div')
+    host.innerHTML = html
+    const text = VideoParser.readRollingNumber(host.firstElementChild!)
+    expect(text).toBe('5,357')
+    expect(VideoParser.parseConcurrentViewers(text)).toBe(5357)
+  })
+
+  it('文字が無ければ undefined', () => {
+    const host = document.createElement('div')
+    host.innerHTML = '<yt-animated-rolling-number><span class="animatedRollingNumberDigits"></span></yt-animated-rolling-number>'
+    expect(VideoParser.readRollingNumber(host.firstElementChild!)).toBeUndefined()
   })
 })
 

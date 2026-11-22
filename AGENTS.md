@@ -108,7 +108,7 @@ YouTube に依存している箇所:
 | SPA 遷移イベント `yt-page-data-updated` | `content-scripts/PageEventer.ts` |
 | 動画情報 `movie_player.getPlayerResponse()`, `ytd-watch-flexy.playerData`, `ytInitialPlayerResponse` | `content-scripts/page-bridge.ts` |
 | playerResponse の構造 (`videoDetails`, `microformat.playerMicroformatRenderer.liveBroadcastDetails`) | `lib/parser/PlayerResponseParser.ts` |
-| 同時接続数 `#view-count` の aria-label ("26,905 人が視聴中", 配信中のみ更新される) | `content-scripts/PageEventer.ts`, `VideoParser.parseConcurrentViewers` |
+| 同時接続数 `#view-count` の aria-label ("26,905 人が視聴中", 配信中のみ更新される)。aria-label が無ければ中の `yt-animated-rolling-number` (margin-top で数字の列をずらす表示) を `VideoParser.readRollingNumber` で読む | `content-scripts/PageEventer.ts`, `VideoParser.parseConcurrentViewers` |
 | チャット欄 `ytd-live-chat-frame#chat iframe#chatframe`, `yt-live-chat-item-list-renderer #item-scroller` | `content-scripts/PageEventer.ts` |
 | チャット要素のタグ名・`#author-name`・`#message`・`#timestamp`・バッジ等 | `lib/parser/ChatParser.ts` |
 | 時刻表示 (配信中 `9:50 AM`、アーカイブ `1:23:45`) | `ChatParser.parseTimestamp` |

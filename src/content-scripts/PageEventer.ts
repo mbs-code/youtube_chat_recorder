@@ -19,8 +19,9 @@ const CHAT_FRAME_SELECTOR = 'ytd-live-chat-frame#chat'
 const CHAT_IFRAME_SELECTOR = 'iframe#chatframe'
 const CHAT_SCROLLER_SELECTOR = 'yt-live-chat-item-list-renderer #item-scroller'
 
-/** 配信中の「〇人が視聴中」の表示 (aria-label に数字が全桁で入る). */
-const VIEW_COUNT_SELECTOR = '#view-count[aria-label]'
+/** 配信中の「〇人が視聴中」の表示. aria-label に数字が全桁で入る. 無ければ中の回転する数字 (yt-animated-rolling-number) を読む. */
+const VIEW_COUNT_SELECTOR = 'ytd-watch-info-text #view-count, #view-count'
+const ROLLING_NUMBER_SELECTOR = 'yt-animated-rolling-number, .animatedRollingNumberDigits'
 /** 同時接続数を読む間隔 (msec). */
 const VIEWERS_INTERVAL = 30 * 1000
 
@@ -240,9 +241,8 @@ export default class PageEventer {
     let max = video.maxViewers ?? 0
     const check = async () => {
       if (generation !== this.generation || !Runtime.isContextValid()) return this.stopWatchViewers()
-      const viewers = Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))
-        .map(e => VideoParser.parseConcurrentViewers(e.getAttribute('aria-label')))
-        .find(v => v !== undefined)
+      const viewers = this.readConcurrentViewers()
+      Logger.trace(`concurrent viewers: ${viewers ?? '(not found)'}`)
       if (viewers === undefined || viewers <= max) return
 
       max = viewers
@@ -252,6 +252,19 @@ export default class PageEventer {
     this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
     setTimeout(() => void check().catch(err => Logger.error(err)), 5000) // 表示を待ってから 1 回目
     Logger.debug('⚙️[start] watch concurrent viewers')
+  }
+
+  /** ページから同時接続数を読む. (aria-label → 回転する数字の順に試す) */
+  protected readConcurrentViewers(): number | undefined {
+    for (const element of Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))) {
+      const fromLabel = VideoParser.parseConcurrentViewers(element.getAttribute('aria-label'))
+      if (fromLabel !== undefined) return fromLabel
+
+      const rolling = element.querySelector(ROLLING_NUMBER_SELECTOR)
+      const fromRolling = rolling ? VideoParser.parseConcurrentViewers(VideoParser.readRollingNumber(rolling)) : undefined
+      if (fromRolling !== undefined) return fromRolling
+    }
+    return undefined
   }
 
   protected stopWatchViewers(): void {
