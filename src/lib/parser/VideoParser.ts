@@ -24,7 +24,7 @@ export default class VideoParser {
     video.publishedAt = toDate(data.publishDate ?? data.uploadDate)
 
     // 開いた時点の同時接続数 (前回までの最大とは保存時に比べる)
-    if (video.isLiveNow && data.concurrentViewers) video.updateMaxViewers(data.concurrentViewers)
+    if (video.isLiveNow && data.concurrentViewers) video.updateViewers(data.concurrentViewers)
 
     return video
   }

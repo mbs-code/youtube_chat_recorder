@@ -258,16 +258,17 @@ export default class PageEventer {
     }
   }
 
-  /** 配信中の同時接続数を定期的に読み、最大を超えたら保存する. */
+  /** 配信中の同時接続数を読み続け、変わったら保存する (最大も). */
   protected startWatchViewers(video: Video, generation: number): void {
     const videoId = video.id
     if (!videoId) return
 
     let max = video.maxViewers ?? 0
+    let last = video.viewers
     let misses = 0
     let observed: Element[] = []
 
-    /** 読んだ値を記録する (推移には毎回、最大同接は超えた時だけ). */
+    /** 読んだ値を記録する (推移には毎回、動画の「最新の同接」は変わった時、最大同接は超えた時). */
     const record = async (viewers: number | undefined, from: string) => {
       if (generation !== this.generation) return
       Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max}, from: ${from})`)
@@ -277,10 +278,11 @@ export default class PageEventer {
         return
       }
       this.timeline.addViewers(viewers)
-      if (viewers <= max) return
+      if (viewers === last) return
 
-      max = viewers
-      await VideoStorage.updateMaxViewers(videoId, viewers)
+      last = viewers
+      max = Math.max(max, viewers)
+      await VideoStorage.updateViewers(videoId, viewers)
     }
 
     /** ページ全体から読む (定期的な確認と、回転する数字が止まった後). */

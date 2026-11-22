@@ -58,6 +58,9 @@ const rows = computed<Row[]>(() => {
   const list: Row[] = []
 
   // 同時接続数は配信中にページを開いている間しか取れない (この機能より前に記録した動画にも無い)
+  if (video.viewers && video.isLiveNow) {
+    list.push({ label: '最新の同接', icon: 'mdi-account-outline', value: `${video.viewers.toLocaleString()} 人`, note: formatAt(video.viewersAt) })
+  }
   if (video.maxViewers) {
     list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: `${video.maxViewers.toLocaleString()} 人`, note: formatAt(video.maxViewersAt) })
   } else if (video.isBroadcast) {

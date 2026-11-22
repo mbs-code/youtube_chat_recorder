@@ -62,16 +62,16 @@ export default class VideoStorage extends BaseStorage {
   }
 
   /**
-   * 同時接続数が最大を超えていれば保存する. (一覧の並び順 = updatedAt は変えない)
+   * 読んだ同時接続数を保存する (最大を超えていれば最大も). 一覧の並び順 = updatedAt は変えない.
    *
-   * @return 更新した video (超えていない・動画が無いなら undefined)
+   * @return 更新した video (前回と同じ値・動画が無いなら undefined)
    */
-  public static async updateMaxViewers(videoId: string, viewers: number): Promise<Video | undefined> {
+  public static async updateViewers(videoId: string, viewers: number): Promise<Video | undefined> {
     const dbs = await this.getAll()
     const video = dbs.find(v => v.id === videoId)
-    if (!video?.updateMaxViewers(viewers)) return undefined
+    if (!video?.updateViewers(viewers)) return undefined
 
-    Logger.debug(`> 💾[save] max viewers: ${viewers} (${videoId})`)
+    Logger.debug(`> 💾[save] viewers: ${viewers} (max: ${video.maxViewers}) (${videoId})`)
     await this.replaceObject(this.STORAGE_KEY, dbs)
     return video
   }
