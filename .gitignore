@@ -3,4 +3,5 @@
 /dist
 /dist-zip
 /dist-copy
+/test-results
 .env

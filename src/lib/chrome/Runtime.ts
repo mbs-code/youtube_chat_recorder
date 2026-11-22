@@ -1,34 +1,33 @@
-import { browser, Manifest, Tabs } from 'webextension-polyfill-ts'
 import Logger from '../../loggers/Logger'
-import MessageInterface from './interface/MessageInterface'
+import type { BackgroundMessage, IconState, MessageResponse, TabMessage } from './messages'
 
 export default class Runtime {
   /**
-   * マニュフェストを取得する.
-   *
-   * @static
-   * @return {Manifest.ManifestBase} manifest object
+   * マニフェストを取得する.
    */
-  public static getManifest(): Manifest.ManifestBase {
-    return browser.runtime.getManifest()
+  public static getManifest(): chrome.runtime.Manifest {
+    return chrome.runtime.getManifest()
+  }
+
+  /**
+   * 拡張機能のコンテキストが有効か (拡張機能の更新・再読み込み後の content script では false).
+   */
+  public static isContextValid(): boolean {
+    return Boolean(chrome.runtime?.id)
   }
 
   /**
    * Option page を開く.
-   *
-   * @static
    */
   public static async openOptionPage(): Promise<void> {
-    await browser.runtime.openOptionsPage()
+    await chrome.runtime.openOptionsPage()
   }
 
   /**
    * Readme page を開く.
-   *
-   * @static
    */
   public static async openReadmePage(): Promise<void> {
-    window.open('../readme.html')
+    await chrome.tabs.create({ url: chrome.runtime.getURL('readme/index.html') })
   }
 
   ///
@@ -36,60 +35,65 @@ export default class Runtime {
   /**
    * background にメッセージを送信する.
    *
-   * @static
-   * @param {MessageInterface} message message
-   * @param {Tabs.Tab} [tab] 送信する tab, 未指定で backgound
-   * @return {boolean} 成功可否
+   * @return 成功可否
    */
-  protected static async sendMessage(message: MessageInterface, tab?: Tabs.Tab): Promise<boolean> {
-    const { response } = tab?.id
-      ? await browser.tabs.sendMessage(tab.id, message)
-      : await browser.runtime.sendMessage(message)
+  protected static async sendToBackground(message: BackgroundMessage): Promise<boolean> {
+    if (!this.isContextValid()) return false
 
-    if (response !== true) {
-      Logger.warn(response)
+    try {
+      const response: MessageResponse | undefined = await chrome.runtime.sendMessage(message)
+      if (!response?.ok) {
+        Logger.warn(`message failed: ${message.type} (${response?.error})`)
+        return false
+      }
+      return true
+    } catch (err) {
+      Logger.warn(`message failed: ${message.type} (${String(err)})`)
       return false
     }
-    return true
   }
 
   /**
-   * 設定を読み込ませる (Tab可).
+   * tab の content script にメッセージを送信する.
    *
-   * @static
-   * @param {Tabs.Tab} [tab] 送信する tab, 未指定で backgound
-   * @return {boolean} 成功可否
+   * @return 成功可否 (content script が居ないタブなら false)
    */
-  public static async sendLoadConfig(tab?: Tabs.Tab): Promise<boolean> {
-    return this.sendMessage({ type: 'YCR_LOAD_CONFIG' }, tab)
+  protected static async sendToTab(tabId: number, message: TabMessage): Promise<boolean> {
+    try {
+      const response: MessageResponse | undefined = await chrome.tabs.sendMessage(tabId, message)
+      return Boolean(response?.ok)
+    } catch {
+      return false
+    }
   }
 
   /**
-   * アイコンバッジに文字を設定する.
-   *
-   * @static
-   * @param {Tabs.Tab} [tab] 送信する tab, 未指定で backgound
-   * @param {string} [str] 付与する文字(5文字以降切り捨て)
-   * @return {boolean} 成功可否
+   * background に設定を再読み込みさせる.
    */
-  public static async sendBadgeText(str?: string, tab?: Tabs.Tab): Promise<boolean> {
-    return this.sendMessage({
-      type: 'YCR_BADGE',
-      value: str,
-    }, tab)
+  public static async sendLoadConfig(): Promise<boolean> {
+    return this.sendToBackground({ type: 'YCR_LOAD_CONFIG' })
   }
 
   /**
-   * アイコンのアクティブ状態を設定する.
+   * (送信元タブの) アイコンバッジに文字を設定する.
    *
-   * @static
-   * @param {boolean} bool アクティブな状態かどうか
-   * @return {boolean} 成功可否
+   * @param text 付与する文字 (空文字で消える, 4 文字程度まで)
    */
-  public static async sendIconType(type: 'active' | 'waiting' | 'deactive'): Promise<boolean> {
-    return this.sendMessage({
-      type: 'YCR_ACTIVE',
-      value: type,
-    })
+  public static async sendBadgeText(text = ''): Promise<boolean> {
+    return this.sendToBackground({ type: 'YCR_SET_BADGE', text })
+  }
+
+  /**
+   * (送信元タブの) アイコンの状態を設定する.
+   */
+  public static async sendIconState(state: IconState): Promise<boolean> {
+    return this.sendToBackground({ type: 'YCR_SET_ICON', state })
+  }
+
+  /**
+   * タブのバッジカウンターをリセットさせる.
+   */
+  public static async sendResetBadge(tabId: number): Promise<boolean> {
+    return this.sendToTab(tabId, { type: 'YCR_RESET_BADGE' })
   }
 }

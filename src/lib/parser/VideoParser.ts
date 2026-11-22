@@ -1,46 +1,34 @@
-import { parseISO } from 'date-fns'
-import VideoObjectInterface from '../../interface/VideoObjectInterface'
+import type VideoData from '../../interface/VideoData'
 import Video from '../../models/Video'
+import { toDate } from '../util/serialize'
 
-const THUMBNAIL_TYPES = ['maxres', 'standard', 'high', 'medium', 'default']
-
+/** page-bridge から受け取った動画情報 (VideoData) を Video に変換する. */
 export default class VideoParser {
-  public static async parse(json: VideoObjectInterface): Promise<Video> {
+  public static parse(data: VideoData): Video {
     const video = new Video()
-    video.id = json.videoId
+    video.id = data.videoId
+    video.title = data.title
+    video.channelName = data.author
+    video.thumbnailUrl = this.pickThumbnail(data.thumbnails)
 
-    video.title = json.name
-    // video.description = json.description
-    video.thumbnailUrl = this.parseThumbnails(json.thumbnailUrl)
+    video.duration = data.lengthSeconds ?? 0 // 配信中は 0
+    video.viewCount = data.viewCount ?? 0
 
-    /// 統計系 ///
-    video.viewCount = json.interactionCount
-
-    /// 配信系 ///
-    const pubs = json.publication
-    if (pubs) {
-      for (const pub of pubs) {
-        const type = pub['@type']
-        if (type === 'BroadcastEvent') {
-          video.isBroadcast = true
-          if (pub.startDate) video.startDate = new Date(pub.startDate)
-          if (pub.endDate) video.endDate = new Date(pub.endDate)
-        }
-      }
-    }
-
-    if (json.uploadDate) video.publishedAt = parseISO(json.uploadDate) // 00:00:00
+    // ライブ配信 (配信中・配信予定・アーカイブ) なら liveBroadcastDetails がある
+    const live = data.liveBroadcastDetails
+    video.isBroadcast = data.isLiveContent || data.isUpcoming || Boolean(live)
+    video.isLiveNow = data.isLive || Boolean(live?.isLiveNow)
+    video.isUpcoming = data.isUpcoming
+    video.startDate = toDate(live?.startTimestamp) // 配信予定なら予定時刻
+    video.endDate = toDate(live?.endTimestamp) // 配信中は無い
+    video.publishedAt = toDate(data.publishDate ?? data.uploadDate)
 
     return video
   }
 
-  /// ////////////////////////////////////////////////////////////
-
-  protected static parseThumbnails(thumbnails: string[] = []): string | undefined {
-    for (const THUMBNAIL_TYPE of THUMBNAIL_TYPES) {
-      const find = thumbnails.find(u => u.includes(THUMBNAIL_TYPE))
-      if (find) return find
-    }
-    return undefined
+  /** 一番大きいサムネイルを選ぶ. */
+  protected static pickThumbnail(thumbnails: VideoData['thumbnails']): string | undefined {
+    const sorted = [...thumbnails].sort((a, b) => (b.width ?? 0) - (a.width ?? 0))
+    return sorted[0]?.url
   }
 }

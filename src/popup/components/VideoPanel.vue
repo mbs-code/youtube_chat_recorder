@@ -1,61 +1,47 @@
 <template>
-  <div v-if="video" class="app-chat" :data-videoid="video.id" @click="handleClick">
-    <div class="columns is-mobile">
-      <div class="column is-narrow video-image">
-        <img :src="video.thumbnailUrl" alt="thumbnail">
+  <!-- 左にサムネイル、右にタイトル・種類・チャンネル名・日時 -->
+  <div class="flex min-w-0 gap-3 text-left">
+    <div class="grid aspect-video w-32 shrink-0 place-items-center overflow-hidden rounded-lg bg-zinc-100 text-[28px] text-zinc-400">
+      <img v-if="video.thumbnailUrl" class="size-full object-cover" :src="video.thumbnailUrl" alt="">
+      <i v-else class="mdi mdi-youtube" />
+    </div>
+    <div class="flex min-w-0 flex-1 flex-col gap-1">
+      <p class="line-clamp-2 leading-snug font-semibold text-zinc-950">{{ video.title || '(タイトルなし)' }}</p>
+      <div class="flex min-w-0 items-center gap-x-2.5 text-xs">
+        <span v-if="TYPE_LABELS[video.type]" class="badge" :class="{ 'badge-accent': video.type === 'live' }">
+          {{ TYPE_LABELS[video.type] }}
+        </span>
+        <span v-if="video.channelName" class="truncate text-zinc-500">{{ video.channelName }}</span>
       </div>
-      <div class="column video-text">
-        <p class='line-clamp-3 video-title'>{{ computedTitle }}</p>
-        <div>
-          <span class="icon is-nonspace">
-            <i class="mdi mdi-alarm" aria-hidden="true" />
-          </span>
-          <span>{{ (video.startDate || video.publishedAt) | datetimeString }}</span>
-        </div>
-        <div>
-          <span class="icon is-nonspace">
-            <i class="mdi mdi-eye-outline" aria-hidden="true" />
-          </span>
-          <span>{{ video.updatedAt | distanceHumanized }}</span>
-        </div>
+      <div class="flex items-center gap-x-2.5 text-xs text-zinc-500">
+        <span>
+          <i class="mdi mdi-calendar-blank-outline mr-0.5" />
+          {{ datetimeString(video.startDate || video.publishedAt) }}
+        </span>
+        <span>
+          <i class="mdi mdi-eye-outline mr-0.5" />
+          {{ distanceHumanized(video.updatedAt) }}
+        </span>
       </div>
     </div>
   </div>
 </template>
 
-<script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator'
-import displayFilter from '../../filters/displayFilter'
-import Video from '../../models/Video'
+<script setup lang="ts">
+/**
+ * 動画 1 本の表示 (popup の動画の選択欄で使う).
+ */
+import { datetimeString, distanceHumanized } from '../../lib/util/format'
+import type Video from '../../models/Video'
+import type { VideoType } from '../../models/Video'
 
-@Component({
-  filters: displayFilter,
-})
-export default class VideoPanel extends Vue {
-  @Prop({ default: null })
-  video!: Video | null
+defineProps<{ video: Video }>()
 
-  get computedTitle(): string {
-    const title = this.video?.title || '-'
-    if (this.video?.isBroadcast) {
-      return '🔴' + title
-    }
-    return title
-  }
-
-  handleClick(): void {
-    this.$emit('click', this.video)
-  }
+/** 動画の種類の表示名 (普通の動画は出さない). */
+const TYPE_LABELS: Record<VideoType, string> = {
+  live: '● ライブ',
+  upcoming: '配信予定',
+  archive: 'アーカイブ',
+  video: '',
 }
 </script>
-
-<style lang="scss" scoped>
-.video-image img {
-  width: 200px;
-}
-
-.video-title {
-  height: 72px; // 高さ固定
-  font-weight: 600;
-}
-</style>

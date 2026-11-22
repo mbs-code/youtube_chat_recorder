@@ -1,81 +1,69 @@
-import { classToPlain, plainToClass } from 'class-transformer'
-import { browser } from 'webextension-polyfill-ts'
 import Logger from '../../../loggers/Logger'
+import type { Plain } from '../../util/serialize'
 
-type ClassType<T> = { new(): T }
+/** plain object から復元する関数. */
+export type FromPlain<T> = (plain: Plain) => T
+
+/** plain object に変換できるクラス. */
+export interface ToPlain {
+  toPlain(): Plain
+}
 
 export default class BaseStorage {
-  protected static async getPlain(key: string): Promise<any | undefined> {
-    const value = await browser.storage.local.get(key)
-    const plain = value ? value[key] : undefined
-    return plain
+  protected static async getPlain(key: string): Promise<unknown> {
+    const value = await chrome.storage.local.get(key)
+    return value[key]
   }
 
-  protected static async getClassObject<T>(ctor: ClassType<T>, key: string): Promise<T | undefined> {
+  protected static async getObject<T>(fromPlain: FromPlain<T>, key: string): Promise<T | undefined> {
     const plain = await this.getPlain(key)
-    if (!plain) return undefined
-
-    // デシリアライズする
-    const obj = plainToClass(ctor, plain)
-    return obj
+    if (!plain || typeof plain !== 'object') return undefined
+    return fromPlain(plain as Plain)
   }
 
-  protected static async getClassObjectArray<T>(ctor: ClassType<T>, key: string): Promise<T[]> {
+  protected static async getObjectArray<T>(fromPlain: FromPlain<T>, key: string): Promise<T[]> {
     const plains = await this.getPlain(key)
-    if (!plains) return []
-
-    // デシリアライズする
-    const objs = plains.map((e: any) => plainToClass(ctor, e))
-    return objs
+    if (!Array.isArray(plains)) return []
+    return plains.map(plain => fromPlain(plain as Plain))
   }
 
   /// //////////
 
-  protected static async replaceObject<T>(key: string, obj: T | T[]): Promise<void> {
-    // シリアライズする
-    const plain = (Array.isArray(obj))
-      ? obj.map(e => classToPlain(e))
-      : classToPlain(obj)
+  protected static async replaceObject(key: string, obj: ToPlain | ToPlain[]): Promise<void> {
+    const plain = Array.isArray(obj) ? obj.map(e => e.toPlain()) : obj.toPlain()
     await this.replacePlain(key, plain)
-    // Logger.debug(`> 💾[replace] ${key}`)
   }
 
-  protected static async replacePlain(key: string, plain: any): Promise<void> {
-    await browser.storage.local.set({ [key]: plain })
+  protected static async replacePlain(key: string, plain: unknown): Promise<void> {
+    await chrome.storage.local.set({ [key]: plain })
   }
 
   /// //////////
 
   protected static async removeKey(key: string): Promise<boolean> {
-    const plain = this.getPlain(key)
-    if (plain) {
-      Logger.debug(`> 💾[remove key] ${key}`)
-      await browser.storage.local.remove(key)
-      return true
-    }
+    const plain = await this.getPlain(key)
+    if (plain === undefined) return false
 
-    return false
+    Logger.debug(`> 💾[remove key] ${key}`)
+    await chrome.storage.local.remove(key)
+    return true
   }
 
   /// //////////
 
-  protected static async parseObjectURL(key: string, prettier: boolean = false): Promise<string> {
+  /** key の値を JSON にしてダウンロード用の object url を作る. */
+  protected static async exportObjectURL(key: string, prettier = false): Promise<string> {
     const plain = await this.getPlain(key)
-
-    // 文字列化する
-    const text = plain
-      ? JSON.stringify(plain, null, (prettier ? 2 : undefined))
-      : '{}' // 空文字
-
-    // blob にして url を出力
-    const blob = new Blob([text], { type: 'octet/stream' })
-    const urlText = window.URL.createObjectURL(blob)
-    return urlText
+    return createJsonObjectURL(plain ?? {}, prettier)
   }
 
   protected static async replaceText(key: string, text: string): Promise<void> {
-    // json 変換して置き換える
-    const json = JSON.parse(text)
-    await this.replacePlain(key, json)
+    await this.replacePlain(key, JSON.parse(text))
   }
+}
+
+export function createJsonObjectURL(value: unknown, prettier = false): string {
+  const text = JSON.stringify(value, null, prettier ? 2 : undefined)
+  const blob = new Blob([text], { type: 'application/json' })
+  return URL.createObjectURL(blob)
 }

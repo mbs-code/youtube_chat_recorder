@@ -1,387 +1,287 @@
 <template>
-  <div>
-    <!-- start filter table -->
-    <div class="field">
-      <label class="label">チャットフィルター</label>
-      <table class="table">
-        <thead>
-          <tr>
-            <th class="has-text-centered">項目</th>
-            <th class="has-text-centered">保存する</th>
-            <th class="has-text-centered">画像化する</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="chatFilter in chatFilters"
-            :key="chatFilter.key"
-            :class="{
-              'has-background-white-ter': !chatFilter.textMode,
-              'is-selected': chatFilter.key === editFilterKey,
-              'has-background-link-light': chatFilter.key === testMatchFilterKey,
-            }"
-          >
-            <th>
-              <span v-if="chatFilter.textMode === 'message'">💬</span>
-              <span v-if="chatFilter.textMode === 'author'">🙋</span>
-              <span v-if="chatFilter.textMode" class="tag is-primary is-light">
-                <span class="icon is-small">
-                  <i class="mdi mdi-format-letter-matches"></i>
-                </span>
-              </span>
-              <span v-if="chatFilter.isExact" class="tag is-link">
-                <span class="icon is-small">
-                  <i class="mdi mdi-equal"></i>
-                </span>
-              </span>
-              <span v-if="chatFilter.isRegex" class="tag is-warning">
-                <span class="icon is-small">
-                  <i class="mdi mdi-regex"></i>
-                </span>
-              </span>
-              {{ chatFilter.title }}
-              <span
-                v-if="warnFilterKeys.includes(chatFilter.key)"
-                class="has-text-danger"
-              >
-                (負荷注意)
-              </span>
-            </th>
-
-            <td class="has-text-centered">
-              <input
-                v-model="chatFilter.doSave"
-                type="checkbox"
-                :disabled="editFilterKey"
-                @change="handleFilterDoSave(chatFilter)"
-              />
-            </td>
-
-            <td class="has-text-centered">
-              <input
-                v-model="chatFilter.doImage"
-                type="checkbox"
-                :disabled="editFilterKey"
-                @change="handleFilterDoImage(chatFilter)"
-              />
-            </td>
-
-            <td class="td-in-button">
-              <div v-if="chatFilter.textMode" class="field is-grouped">
-                <p class="control">
-                  <button
-                    class="button is-small is-success is-light has-tooltip-bottom"
-                    data-tooltip="編集"
-                    :disabled="editFilterKey"
-                    @click="handleFilterEdit(chatFilter)"
-                  >
-                    <span class="icon is-small">
-                      <i class="mdi mdi-pencil"></i>
-                    </span>
-                  </button>
-                </p>
-                <p class="control">
-                  <button
-                    class="button is-small is-danger is-light has-tooltip-bottom"
-                    data-tooltip="削除"
-                    :disabled="editFilterKey"
-                    @click="handleFilterDelete(chatFilter)"
-                  >
-                    <span class="icon is-small">
-                      <i class="mdi mdi-delete"></i>
-                    </span>
-                  </button>
-                </p>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <!-- end filter table -->
-
-    <hr class="has-background-white">
-
-    <!-- start add input -->
-    <div class="field">
-      <label class="label">テキストのマッチングを追加</label>
-      <div class="control">
-        <div class="field is-grouped">
-          <div class="control">
-            <div class="select">
-              <select v-model="editFilterMode">
-                <option value="message">💬</option>
-                <option value="author">🙋</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="control is-expanded">
-            <input
-              ref="editFIlterMatchInput"
-              v-model="editFilterMatchText"
-              class="input"
-              type="text"
-              placeholder="マッチング文字列"
-            />
-          </div>
-
-          <p class="control">
-            <button class="button is-link" @click="handleFilterAdd">
-              追加
-            </button>
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <div class="field is-grouped">
-      <p class="control">
-        <button
-          class="button"
-          :class="{ 'is-warning': editFilterKey }"
-          @click="handleFilterReset"
+  <div class="flex flex-col gap-5">
+    <!-- チャットの種類ごとの「保存する」「画像化する」. テキストマッチングの行には編集・削除ボタン -->
+    <table class="w-full border-collapse">
+      <thead>
+        <tr class="border-b border-zinc-200 text-left text-xs text-zinc-500 [&>th]:p-2 [&>th]:font-medium">
+          <th>チャットの種類</th>
+          <th class="w-19 text-center!">保存する</th>
+          <th class="w-19 text-center!">画像化する</th>
+          <th class="w-17"><span class="sr-only">操作</span></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-zinc-200">
+        <tr
+          v-for="chatFilter in chatFilters"
+          :key="chatFilter.key"
+          class="[&>td]:h-10 [&>td]:px-2 [&>td]:py-1"
+          :class="
+            chatFilter.key === editFilterKey
+              ? 'bg-primary-soft'
+              : chatFilter.key === testMatchFilterKey
+                ? 'bg-success-soft'
+                : 'hover:bg-zinc-50'
+          "
         >
-          クリア
-        </button>
-      </p>
-
-      <div class="control">
-        <label class="checkbox field-into-height">
-          <input v-model="editFilterIsExact" type="checkbox" @change="handleFilterIsExact" />
-          &nbsp;完全一致
-        </label>
-      </div>
-
-      <div class="control">
-        <label class="checkbox field-into-height">
-          <input v-model="editFilterIsRegex" type="checkbox" @change="handleFilterIsRegex" />
-          &nbsp;正規表現
-        </label>
-      </div>
-    </div>
-    <!-- end add input -->
-
-    <hr>
-
-    <!-- start test input -->
-    <div class="field">
-      <label class="label">マッチングテスト<small>(Enter で自動)</small></label>
-      <div class="control">
-        <div class="field is-grouped">
-          <div class="control is-expanded">
+          <td>
+            <div class="flex flex-wrap items-center gap-1.5 text-zinc-950">
+              <template v-if="chatFilter.textMode">
+                <i
+                  class="mdi text-zinc-500"
+                  :class="chatFilter.textMode === 'author' ? 'mdi-account-outline' : 'mdi-message-text-outline'"
+                />
+                <span class="font-medium break-all">{{ chatFilter.title }}</span>
+                <span class="badge">{{ chatFilter.textMode === 'author' ? '投稿者名' : '本文' }}</span>
+                <span v-if="chatFilter.isExact" class="badge badge-info">完全一致</span>
+                <span v-if="chatFilter.isRegex" class="badge badge-warning">正規表現</span>
+              </template>
+              <template v-else>
+                <span>{{ chatFilter.title }}</span>
+                <span
+                  v-if="warnFilterKeys.includes(chatFilter.key)"
+                  class="badge badge-warning"
+                  title="数が多いため、オンにすると重くなります"
+                >
+                  負荷注意
+                </span>
+              </template>
+            </div>
+          </td>
+          <td class="text-center">
             <input
-              v-model="testMatchText"
-              class="input"
-              type="text"
-              placeholder="コメント \ 投稿者名"
-              :disabled="editFilterKey"
-              @keydown.enter="handleFilterTest"
-            />
-          </div>
-
-          <p class="control">
-            <button
-              class="button is-link is-outlined"
-              :disabled="editFilterKey"
-              @click="handleFilterTest"
+              v-model="chatFilter.doSave"
+              type="checkbox"
+              class="checkbox align-middle"
+              :aria-label="`${chatFilter.title} を保存する`"
+              :disabled="isEditing"
+              @change="!chatFilter.doSave && (chatFilter.doImage = false)"
             >
-              テスト
-            </button>
-          </p>
-        </div>
+          </td>
+          <td class="text-center">
+            <input
+              v-model="chatFilter.doImage"
+              type="checkbox"
+              class="checkbox align-middle"
+              :aria-label="`${chatFilter.title} を画像化する`"
+              :disabled="isEditing"
+              @change="chatFilter.doImage && (chatFilter.doSave = true)"
+            >
+          </td>
+          <td class="text-right whitespace-nowrap">
+            <template v-if="chatFilter.textMode">
+              <button class="btn btn-ghost btn-icon btn-sm" title="編集" :disabled="isEditing" @click="handleFilterEdit(chatFilter)">
+                <i class="mdi mdi-pencil-outline" />
+              </button>
+              <button
+                class="btn btn-ghost btn-icon btn-sm enabled:hover:bg-danger-soft enabled:hover:text-danger"
+                title="削除"
+                :disabled="isEditing"
+                @click="handleFilterDelete(chatFilter)"
+              >
+                <i class="mdi mdi-delete-outline" />
+              </button>
+            </template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- テキストのマッチングを追加 -->
+    <div class="rounded-[10px] border p-3.5" :class="isEditing ? 'border-primary-ring bg-primary-soft' : 'border-zinc-200 bg-zinc-50'">
+      <h3 class="flex items-center gap-1.5 text-[13px] font-semibold text-zinc-950">
+        <i class="mdi" :class="isEditing ? 'mdi-pencil-outline' : 'mdi-plus'" />
+        {{ isEditing ? 'テキストのマッチングを編集' : 'テキストのマッチングを追加' }}
+      </h3>
+      <p class="help mt-0.5 mb-2.5">特定の人や、特定の言葉を含むチャットを記録できます。</p>
+
+      <div class="flex items-center gap-2">
+        <select v-model="editFilterMode" class="select w-27.5 shrink-0" aria-label="対象">
+          <option value="author">投稿者名</option>
+          <option value="message">本文</option>
+        </select>
+        <input
+          ref="matchInput"
+          v-model="editFilterMatchText"
+          class="input"
+          type="text"
+          :placeholder="editFilterMode === 'author' ? '例: @youtube' : '例: 初見'"
+          @keydown.enter="handleFilterAdd"
+        >
+        <button class="btn btn-primary" @click="handleFilterAdd">{{ isEditing ? '更新' : '追加' }}</button>
+        <button v-if="isEditing" class="btn btn-secondary" @click="handleFilterReset">やめる</button>
+      </div>
+      <div class="mt-2 flex items-center gap-4 text-[13px]">
+        <label class="inline-flex cursor-pointer items-center gap-1.5">
+          <input v-model="editFilterIsExact" type="checkbox" class="checkbox" @change="editFilterIsExact && (editFilterIsRegex = false)">
+          完全一致
+        </label>
+        <label class="inline-flex cursor-pointer items-center gap-1.5">
+          <input v-model="editFilterIsRegex" type="checkbox" class="checkbox" @change="editFilterIsRegex && (editFilterIsExact = false)">
+          正規表現
+        </label>
       </div>
     </div>
-    <!-- end test field -->
+
+    <!-- マッチングテスト -->
+    <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-3.5">
+      <h3 class="flex items-center gap-1.5 text-[13px] font-semibold text-zinc-950">
+        <i class="mdi mdi-flask-outline" />
+        マッチングテスト
+      </h3>
+      <p class="help mt-0.5 mb-2.5">文字を入れて Enter を押すと、どの種類に当てはまるかを試せます。</p>
+      <div class="flex items-center gap-2">
+        <input
+          v-model="testMatchText"
+          class="input"
+          type="text"
+          placeholder="チャットの本文 または 投稿者名"
+          :disabled="isEditing"
+          @keydown.enter="handleFilterTest"
+        >
+        <button class="btn btn-secondary" :disabled="isEditing" @click="handleFilterTest">テスト</button>
+      </div>
+    </div>
   </div>
 </template>
 
-
-<script lang="ts">
-import { Component, Prop, Vue } from 'vue-property-decorator'
+<script setup lang="ts">
+/**
+ * 設定画面の「記録するチャット」.
+ *
+ * - チャットフィルター (基本フィルター + テキストマッチング) の表.
+ * - テキストマッチングの追加・編集・削除と、入力した文字がどれに当てはまるかのテスト.
+ * - 変更は v-model の配列に直接反映する (保存は親の「保存する」で行う).
+ */
+import { computed, ref, useTemplateRef } from 'vue'
 import ChatFilter, { warnFilterKeys } from '../../lib/chatFilter/ChatFilter'
-import { ChatFilterConfigInterface } from '../../lib/chatFilter/ChatFilterInterface'
+import type { ChatFilterConfigInterface } from '../../lib/chatFilter/ChatFilterInterface'
 import Chat from '../../models/Chat'
 import Toast from '../../plugins/Toast'
 
-@Component
-export default class ChatFilterTable extends Vue {
-  warnFilterKeys: string[] = []
+/** 編集対象のフィルター配列 (要素の変更は親に直接反映される). */
+const chatFilters = defineModel<ChatFilterConfigInterface[]>({ required: true })
 
-  editFilterKey: string | null = null
-  editFilterMode: 'message' | 'author' = 'message'
-  editFilterMatchText: string = ''
-  editFilterIsExact: boolean = false
-  editFilterIsRegex: boolean = false
+// ↓ テキストマッチングの入力欄
+/** 編集中のフィルターの key (null なら新規追加). */
+const editFilterKey = ref<string | null>(null)
+const editFilterMode = ref<'message' | 'author'>('author')
+const editFilterMatchText = ref('')
+const editFilterIsExact = ref(false)
+const editFilterIsRegex = ref(false)
 
-  testMatchFilterKey: string | null = null
-  testMatchText: string = ''
+// ↓ マッチングテスト
+/** テストで当てはまったフィルターの key (表の行を強調する). */
+const testMatchFilterKey = ref<string | null>(null)
+const testMatchText = ref('')
 
-  @Prop({ default: [] })
-  value!: ChatFilterConfigInterface[]
+const matchInput = useTemplateRef<HTMLInputElement>('matchInput')
+/** 編集中か (編集中は表のチェックやテストを触れないようにする). */
+const isEditing = computed(() => editFilterKey.value !== null)
 
-  // TODO: これで動いてるのかなw
-  get chatFilters() {
-    return this.value
+/** 表の「編集」: 入力欄にそのフィルターの内容を入れる. */
+function handleFilterEdit(chatFilter: ChatFilterConfigInterface): void {
+  editFilterKey.value = chatFilter.key
+  editFilterMode.value = chatFilter.textMode || 'message'
+  editFilterMatchText.value = chatFilter.match || ''
+  editFilterIsExact.value = chatFilter.isExact || false
+  editFilterIsRegex.value = chatFilter.isRegex || false
+  matchInput.value?.focus()
+
+  testMatchFilterKey.value = null
+}
+
+/** 表の「削除」: 確認してから消す. */
+function handleFilterDelete(chatFilter: ChatFilterConfigInterface): void {
+  if (window.confirm(`「${chatFilter.title}」を削除します。`)) {
+    chatFilters.value = chatFilters.value.filter(cf => cf.key !== chatFilter.key)
+  }
+}
+
+/** 入力欄を空に戻す (編集をやめる). */
+function handleFilterReset(): void {
+  editFilterKey.value = null
+  editFilterMatchText.value = ''
+  editFilterIsExact.value = false
+  editFilterIsRegex.value = false
+
+  testMatchFilterKey.value = null
+}
+
+/** 「追加」「更新」: 入力内容を確認し、フィルターを追加 (または置き換え) する. */
+function handleFilterAdd(): void {
+  const matchText = editFilterMatchText.value.trim()
+  if (!matchText) {
+    Toast.error('マッチングする文字を入力してください。')
+    return
   }
 
-  $refs!: {
-    editFIlterMatchInput: HTMLInputElement,
-  }
+  const key = editFilterKey.value
+  const mode = editFilterMode.value
+  const isRegex = editFilterIsRegex.value
+  const isExact = editFilterIsExact.value
 
-  mounted(): void {
-    this.warnFilterKeys = warnFilterKeys
-  }
-
-  handleFilterDoSave(chatFilter: ChatFilterConfigInterface): void {
-    if (!chatFilter.doSave) chatFilter.doImage = false
-  }
-
-  handleFilterDoImage(chatFilter: ChatFilterConfigInterface): void {
-    if (chatFilter.doImage) chatFilter.doSave = true
-  }
-
-  handleFilterEdit(chatFilter: ChatFilterConfigInterface): void {
-    this.editFilterKey = chatFilter.key
-    this.editFilterMatchText = chatFilter.match || ''
-    this.editFilterIsExact = chatFilter.isExact || false
-    this.editFilterIsRegex = chatFilter.isRegex || false
-    this.$refs.editFIlterMatchInput.focus()
-
-    this.testMatchFilterKey = null
-  }
-
-  handleFilterDelete(chatFilter: ChatFilterConfigInterface): void {
-    // 存在するなら削除する
-    const findIndex = this.chatFilters.findIndex(c => c.key === chatFilter.key)
-    if (findIndex >= 0) {
-      this.chatFilters.splice(findIndex, 1)
-    }
-  }
-
-  ///
-
-  handleFilterReset(): void {
-    this.editFilterKey = null
-    this.editFilterMatchText = ''
-    this.editFilterIsExact = false
-    this.editFilterIsRegex = false
-
-    this.testMatchFilterKey = null
-  }
-
-  handleFilterIsExact(): void {
-    if (this.editFilterIsExact) this.editFilterIsRegex = false
-  }
-
-  handleFilterIsRegex(): void {
-    if (this.editFilterIsRegex) this.editFilterIsExact = false
-  }
-
-  handleFilterAdd(): void {
-    // テキストが存在するなら実行
-    const matchText = this.editFilterMatchText
-    if (!matchText) {
-      Toast.error('マッチング文字列が空です。')
+  if (isRegex) {
+    try {
+      new RegExp(matchText)
+    } catch {
+      Toast.error('正規表現が正しくありません。')
       return
     }
-
-    const key = this.editFilterKey
-    const mode = this.editFilterMode
-    const isRegex = this.editFilterIsRegex
-    const isExact = this.editFilterIsExact
-
-    // 配列から対象の filter を検索
-    const findIndex = this.chatFilters.findIndex(cf => cf.key === key)
-    const find = (findIndex >= 0) ? this.chatFilters[findIndex] : undefined
-
-    // 重複チェック
-    const duplicate = this.chatFilters.find(cf => {
-      return cf.key !== key // キーが一致してるのは上書きするのでスキップ
-        && cf.textMode === mode
-        && cf.match === matchText
-        && cf.isRegex === isRegex
-        && cf.isExact === isExact
-    })
-    if (duplicate) {
-      Toast.error('そのフィルタは既に存在します。')
-      return
-    }
-
-    // フィルターの組み立て
-    const filter: ChatFilterConfigInterface = {
-      key: find?.key || String(new Date().getTime()),
-      title: this.editFilterMatchText,
-      doSave: true, // 追加する => 保存はONにしとく
-      doImage: false,
-
-      textMode: this.editFilterMode,
-      match: matchText,
-      isRegex: isRegex,
-      isExact: isExact,
-    }
-
-    // フィルターの置き換え or 追加
-    if (find) {
-      this.chatFilters.splice(findIndex, 1, filter)
-    } else {
-      this.chatFilters.push(filter)
-    }
-
-    // 値のリセット (テキストはそのまま)
-    this.editFilterKey = null
-    this.editFilterMatchText = ''
   }
 
-  handleFilterTest(): void {
-    const text = this.testMatchText
+  // 重複チェック (編集中のものは上書きするので除外)
+  const duplicate = chatFilters.value.find(cf =>
+    cf.key !== key
+    && cf.textMode === mode
+    && cf.match === matchText
+    && Boolean(cf.isRegex) === isRegex
+    && Boolean(cf.isExact) === isExact,
+  )
+  if (duplicate) {
+    Toast.error('同じ条件が既にあります。')
+    return
+  }
 
-    // チャットをインスタンス生成
-    const chat = new Chat()
-    chat.message = text
-    chat.altMessage = text
-    chat.authorName = text
+  const editing = chatFilters.value.find(cf => cf.key === key)
+  const filter: ChatFilterConfigInterface = {
+    key: editing?.key || String(Date.now()),
+    title: matchText,
+    doSave: editing?.doSave ?? true, // 追加時は保存を ON にしておく
+    doImage: editing?.doImage ?? false,
+    textMode: mode,
+    match: matchText,
+    isRegex,
+    isExact,
+  }
 
-    // フィルターをインスタントで作成する
-    const cf = new ChatFilter()
-    cf.setChatFilters(this.chatFilters)
+  chatFilters.value = editing ? chatFilters.value.map(cf => (cf.key === editing.key ? filter : cf)) : [...chatFilters.value, filter]
+  Toast.success(editing ? `「${matchText}」を更新しました。` : `「${matchText}」を追加しました。画面下の「保存する」で確定してください。`)
 
-    // 判定する
-    const scf = cf.checkStuckChatFilter(chat)
-    if (scf?.filter) {
-      Toast.success(`「${scf.filter.title}」に一致しました。(task: ${String(scf?.taskType)})`)
-      this.testMatchFilterKey = scf.filter.key
-    } else {
-      Toast.warn('一致しませんでした。')
-      this.testMatchFilterKey = null
-    }
+  // 値のリセット (オプションはそのまま)
+  editFilterKey.value = null
+  editFilterMatchText.value = ''
+}
+
+/** 「テスト」: 入力した文字を本文・投稿者名とするチャットを作り、どのフィルターに当てはまるか調べる. */
+function handleFilterTest(): void {
+  const text = testMatchText.value
+
+  const chat = new Chat()
+  chat.message = text
+  chat.altMessage = text
+  chat.authorName = text
+
+  const cf = new ChatFilter()
+  cf.setChatFilters(chatFilters.value)
+
+  const result = cf.checkStuckChatFilter(chat)
+  if (result?.filter) {
+    const task = result.taskType === 'image' ? '画像化する' : '保存する'
+    Toast.success(`「${result.filter.title}」に当てはまりました。(${task})`)
+    testMatchFilterKey.value = result.filter.key
+  } else {
+    Toast.warn('どの種類にも当てはまりませんでした。')
+    testMatchFilterKey.value = null
   }
 }
 </script>
-
-<style lang="scss" scoped>
-// checkbox を x1.5 に
-input[type="checkbox"] {
-  margin: 3px;
-  transform: scale(1.5);
-}
-
-.box {
-  box-shadow: none;
-  border: solid 1px gainsboro;
-}
-
-table {
-  border-top: solid 2px #dbdbdb;
-  border-bottom: solid 1px #dbdbdb;
-}
-
-.td-in-button {
-  padding: 6px;
-}
-
-.field-into-height {
-  padding: 10px;
-}
-</style>

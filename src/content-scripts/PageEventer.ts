@@ -1,258 +1,238 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
-import Runtime from '../lib/chrome/Runtime'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
+import Runtime from '../lib/chrome/Runtime'
+import VideoParser from '../lib/parser/VideoParser'
 import PageHelper from '../lib/util/PageHelper'
 import retry from '../lib/util/Retry'
 import Logger from '../loggers/Logger'
-import Config from '../models/Config'
-import Video from '../models/Video'
+import type VideoData from '../interface/VideoData'
+import type Config from '../models/Config'
+import type Video from '../models/Video'
 import BadgeManager from './BadgeManager'
-import ChatHandler from './ChatHandler'
+import type ChatHandler from './ChatHandler'
 
+/** YouTube の SPA 遷移を検知するイベント (ページのデータ更新完了). */
+const PAGE_UPDATED_EVENT = 'yt-page-data-updated'
+
+const CHAT_FRAME_SELECTOR = 'ytd-live-chat-frame#chat'
+const CHAT_IFRAME_SELECTOR = 'iframe#chatframe'
+const CHAT_SCROLLER_SELECTOR = 'yt-live-chat-item-list-renderer #item-scroller'
+
+/**
+ * ページの状態を監視し、チャット欄が現れたら ChatHandler に流す.
+ *
+ * 流れ:
+ *   yt-page-data-updated -> 動画情報を取得 (page-bridge 経由) -> 保存
+ *     -> (ライブ配信なら) チャット iframe を探す -> iframe 内の #item-scroller を MutationObserver で監視
+ */
 export default class PageEventer {
-  protected handler: ChatHandler
-
-  protected chatFilter: ChatFilter
-  protected observer: MutationObserver
-
-  protected video?: Video
+  protected chatFilter = new ChatFilter()
   protected config?: Config
-  protected doInitialChats: boolean // 初期チャットを取得したかどうか
+  protected video?: Video
 
-  constructor(handler: ChatHandler) {
-    this.handler = handler
+  /** チャットの追加を監視する. */
+  protected chatObserver = new MutationObserver((records) => {
+    for (const record of records) {
+      record.addedNodes.forEach(node => void this.handler.invoke(node, this.chatFilter))
+    }
+  })
 
-    this.chatFilter = new ChatFilter()
-    this.observer = new MutationObserver(records => {
-      records.forEach(record => {
-        record.addedNodes.forEach(node => this.handler.invoke(node as HTMLElement, this.chatFilter))
-      })
-    })
+  /** チャット欄 (iframe) の削除を監視する. (DOMNodeRemoved は Chrome 127 で廃止された) */
+  protected removalObserver?: MutationObserver
+  protected chatIframe?: HTMLIFrameElement
 
-    this.doInitialChats = false
-  }
+  /** 遷移ごとに増える番号. 非同期処理の途中で遷移したら古い処理を捨てるために使う. */
+  protected generation = 0
+  protected doInitialChats = false
+
+  constructor(protected handler: ChatHandler) {}
 
   public async init(): Promise<void> {
-    // config を読み込む
     await this.loadConfig()
-
-    // スクリプトを初期化して実行する
-    if (this.config?.runScript) {
-      const manifest = Runtime.getManifest()
-      Logger.info(manifest.name + ` ver:${manifest.version}`)
-      Logger.info('⚙️[init]')
-
-      // 動画を消しとく
-      this.handler.removeVideo()
-
-      // ページに event listener を付与する
-      await this.attachEventListener()
+    if (!this.config?.runScript) {
+      Logger.info('⚙️[init] script is disabled by config')
+      return
     }
+
+    const manifest = Runtime.getManifest()
+    Logger.info(`⚙️[init] ${manifest.name} ver:${manifest.version}`)
+
+    window.addEventListener(PAGE_UPDATED_EVENT, this.onPageUpdated)
+    await this.onPageUpdated()
   }
 
   public async loadConfig(): Promise<void> {
     const config = await ConfigStorage.get()
+    config.applyToRuntime()
     this.config = config
-    this.config.initApp()
-    this.chatFilter.setChatFilters(this.config.chatFilters)
+    this.chatFilter.setChatFilters(config.chatFilters)
+    this.handler.setDrawOnce(config.chatDrawOnce)
 
-    Logger.info('⚙️[Load] load config')
-    Logger.trace('> config: ' + JSON.stringify(config))
+    Logger.info('⚙️[load] config')
+    Logger.trace('> config: ' + JSON.stringify(config.toPlain()))
   }
 
   /// ////////////////////////////////////////////////////////////
 
-  protected async beforeConnect(): Promise<boolean> {
-    // 初期化
-    this.observer.disconnect() // 一応 observer を止めとく
-    this.doInitialChats = false
-    this.video = undefined
+  protected onPageUpdated = async (): Promise<void> => {
+    Logger.debug(`🔥<${PAGE_UPDATED_EVENT}>`)
+    const generation = ++this.generation
 
-    // icon をグレーにする
-    await BadgeManager.deactivateIcon()
-    await BadgeManager.clearBadgeCounter()
-
-    // url から id を抜き出す
-    const videoId = PageHelper.getPageVideoId()
-    Logger.debug('VideoID(URL): ' + videoId)
-
-    // video を取得する
-    const videoData = await PageHelper.getVideoData()
-    if (!videoData) throw new Error('missing video data')
-
-    // video を変換する
-    const video = await Video.createByElement(videoData)
-    Logger.trace('video: ' + JSON.stringify(video))
-
-    // ただの動画で、除外設定があったら何もせず終了
-    if (!video.isBroadcast && this.config?.ignoreSimpleVideo) {
-      Logger.trace('ignore video without chat')
-      return false
+    // 拡張機能が更新・再読み込みされたら、古い content script は何もしない
+    if (!Runtime.isContextValid()) {
+      this.disconnect()
+      window.removeEventListener(PAGE_UPDATED_EVENT, this.onPageUpdated)
+      return
     }
-
-    // video を保存する
-    this.video = video // 自身で保持する video を変更
-    await VideoStorage.save(video)
-
-    // 動画ページなら icon を待機中にする
-    await BadgeManager.waitingIcon()
-    await BadgeManager.clearBadgeCounter()
-
-    // 配信かどうか確認する
-    if (video.isBroadcast) {
-      Logger.trace('is boadcast')
-
-      return true
-    }
-
-    return false
-  }
-
-  protected async onConnected(e: Element): Promise<void> {
-    Logger.info('⚙️[start] observer')
-    if (!this.video) {
-      throw new Error('Video not found')
-    }
-
-    // video を設定して observer 開始
-    await this.handler.setVideo(this.video)
-    this.observer.observe(e, {
-      childList: true,
-      subtree: true,
-    })
-
-    // icon をアクティブにする
-    await BadgeManager.activateIcon()
-    await BadgeManager.clearBadgeCounter()
-
-    // 今表示されてるものを処理する (promise はスルー)
-    // コメント追加にラグがあるのでいい感じに全部取れるはず
-    if (this.config?.captureInitialChats) {
-      if (!this.doInitialChats) {
-        Logger.debug('⚙️[start] handle initial chats')
-
-        this.doInitialChats = true
-        this.handler.findInvoke(e, this.chatFilter).then(() => {
-          Logger.debug('⚙️[finish] handle initial chats')
-        })
-      }
-    }
-  }
-
-  protected async onDeleted(): Promise<void> {
-    // 二重実行対策
-    if (this.handler.hasVideo()) {
-      Logger.info('⚙️[stop] observer')
-      this.observer.disconnect()
-      await this.handler.removeVideo()
-      // eventer で保持している video は維持する
-
-      // icon を非アクティブにする
-      await BadgeManager.deactivateIcon()
-      await BadgeManager.clearBadgeCounter()
-    }
-  }
-
-  /// ////////////////////////////////////////////////////////////
-
-  protected async attachEventListener(): Promise<void> {
-    // 一度イベントを実行
-    await this.ytPageDataUpdatedEvent()
-
-    // window 更新検知イベントを付与
-    window.addEventListener('yt-page-data-updated', this.boundYtOageDataUpdateEvent)
-  }
-
-  /// ////////////////////////////////////////////////////////////
-
-  // window 更新検知イベントを付与
-  protected boundYtOageDataUpdateEvent = () => this.ytPageDataUpdatedEvent()
-  protected async ytPageDataUpdatedEvent() {
-    Logger.debug('🔥<yt-page-data-updated>')
 
     try {
-      // もし読み込んでたら読み込んでいた監視を終了
-      if (this.handler.hasVideo()) {
-        await this.onDeleted()
-      }
+      this.disconnect()
+      await BadgeManager.deactivateIcon()
+      await BadgeManager.clearBadgeCounter()
 
-      // 前処理 (return false で処理中断)
-      const res = await this.beforeConnect()
-      if (!res) {
-        Logger.info('⚙️[stop] This video is not a target')
+      const video = await this.loadVideo(generation)
+      if (!video || generation !== this.generation) return
+
+      // 動画ページなら待機中にする
+      await BadgeManager.waitingIcon()
+      if (!video.isBroadcast) {
+        Logger.info('⚙️[stop] not a live stream (no chat)')
         return
       }
 
-      // 親の dom を取得
-      const parent = await retry(() => document.querySelector<HTMLElement>('ytd-live-chat-frame#chat'))
-      if (!parent) throw new Error('missing parent chat dom')
-
-      // parent に remove event を付与する
-      parent.addEventListener('DOMNodeRemoved', this.boundParentRemovedEvent)
-      Logger.trace('⚙️[attach] <DOMNodeRemoved> chat parent')
-
-      // iframe を取得
-      const iframe = await retry(() => parent.querySelector<HTMLIFrameElement>('iframe#chatframe'))
-      if (!iframe) throw new Error('missing chat iframe')
-
-      // iframe がロードされ次第処理する
-      iframe.addEventListener('load', this.boundIframeLoadEvent)
-      Logger.trace('⚙️[attach] <load> chat iframe')
-
-      Logger.info('⚙️[bind] bind event to chat iframe')
+      await this.attachChatFrame(generation)
     } catch (err) {
       Logger.error(err)
-
-      // 監視を終了する
-      await this.onDeleted()
+      if (generation === this.generation) this.disconnect()
     }
   }
 
-  // parent に remove event を付与する
-  protected boundParentRemovedEvent = (e: Event) => this.parentRemovedEvent(e)
-  protected async parentRemovedEvent(e: Event) {
-    Logger.debug('🔥<DOMNodeRemoved> chat parent')
+  /** 動画情報を取得して保存する. 対象外なら undefined. */
+  protected async loadVideo(generation: number): Promise<Video | undefined> {
+    const videoId = PageHelper.getPageVideoId()
+    Logger.debug('VideoID(URL): ' + videoId)
+    if (!videoId) {
+      Logger.debug('⚙️[stop] not a video page')
+      return undefined
+    }
 
-    const parent = e.currentTarget
-    if (!parent || !(parent instanceof HTMLElement)) {
-      console.log('parent とれんわ！')
+    // SPA 遷移直後は古い動画のデータが返ってくることがあるので、ID が一致するまで待つ
+    const videoData = await retry<VideoData | null | 'cancel'>(
+      () => (generation === this.generation ? PageHelper.requestVideoData(videoId) : 'cancel'),
+      15,
+      500,
+    )
+    if (videoData === 'cancel' || generation !== this.generation) return undefined
+    if (!videoData) throw new Error(`missing video data (${videoId})`)
+
+    const video = VideoParser.parse(videoData)
+    Logger.trace('video: ' + JSON.stringify(video.toPlain()))
+
+    if (!video.isBroadcast && this.config?.ignoreSimpleVideo) {
+      Logger.info('⚙️[stop] ignore video without chat')
+      return undefined
+    }
+
+    this.video = video
+    await VideoStorage.save(video, this.config?.maxVideoLength ?? 20)
+    return video
+  }
+
+  /** チャット欄の iframe を探して、読み込まれたら監視を始める. */
+  protected async attachChatFrame(generation: number): Promise<void> {
+    const iframe = await retry(() => document.querySelector<HTMLIFrameElement>(`${CHAT_FRAME_SELECTOR} ${CHAT_IFRAME_SELECTOR}`))
+    if (generation !== this.generation) return
+    if (!iframe) {
+      // チャットが無効な配信・非表示にしている場合など
+      Logger.warn('⚙️[stop] chat frame not found')
       return
     }
+    const frame = iframe.closest<HTMLElement>(CHAT_FRAME_SELECTOR)
+    if (!frame) return
 
-    // リスナー削除
-    parent.removeEventListener('DOMNodeRemoved', this.parentRemovedEvent)
+    this.chatIframe = iframe
 
-    // 監視終了
-    await this.onDeleted()
+    // iframe はチャットの種類 (上位/すべて) の切り替えなどで再読み込みされるので、load は付けっぱなしにする
+    iframe.addEventListener('load', this.onIframeLoad)
+
+    // チャット欄が消えたら監視を終了し、作り直されるのを待つ
+    this.removalObserver = new MutationObserver(() => {
+      if (iframe.isConnected || generation !== this.generation) return
+
+      Logger.debug('🔥<removed> chat iframe')
+      this.disconnect()
+      this.attachChatFrame(generation).catch(err => Logger.error(err))
+    })
+    for (const target of [frame, frame.parentElement]) {
+      if (target) this.removalObserver.observe(target, { childList: true })
+    }
+    Logger.info('⚙️[bind] chat iframe')
+
+    // src 属性を使わずに読み込まれるため、既に読み込み済みのことが多い
+    if (this.isChatDocumentReady(iframe)) {
+      await this.connectChat(iframe, generation)
+    }
   }
 
-  // iframe がロードされ次第処理する
-  protected boundIframeLoadEvent = (e: Event) => this.iframeLoadEvent(e)
-  protected async iframeLoadEvent(e: Event): Promise<void> {
+  protected onIframeLoad = async (event: Event): Promise<void> => {
     Logger.debug('🔥<load> chat iframe')
-
-    const iframe = e.currentTarget
-    if (!iframe || !(iframe instanceof HTMLIFrameElement)) {
-      console.log('chat iframe とれんわ！')
-      return
+    const iframe = event.currentTarget as HTMLIFrameElement
+    try {
+      await this.connectChat(iframe, this.generation)
+    } catch (err) {
+      Logger.error(err)
     }
-
-    // iframe document を取得
-    const iframeDoc = iframe.contentWindow?.document
-    if (!iframeDoc) throw new Error('missing chat iframe document')
-
-    // chatapp を取得
-    const chatapp = await retry(() => iframeDoc.querySelector<Element>('yt-live-chat-app'))
-    if (!chatapp) throw new Error('missing chat app dom')
-
-    // スクロールエリアの取得
-    const scroller = await retry(() => iframeDoc.querySelector<Element>('#item-scroller'))
-    if (!scroller) throw new Error('missing scroller dom')
-
-    // 監視開始
-    await this.onConnected(scroller)
-    // iframe.removeEventListener('load', iframeLoadEvent) // イベントは外さない
   }
 
+  protected isChatDocumentReady(iframe: HTMLIFrameElement): boolean {
+    try {
+      const doc = iframe.contentDocument
+      return Boolean(doc && doc.readyState !== 'loading' && /^\/live_chat/.test(doc.location.pathname))
+    } catch {
+      return false
+    }
+  }
+
+  /** iframe 内のチャット一覧の監視を始める. */
+  protected async connectChat(iframe: HTMLIFrameElement, generation: number): Promise<void> {
+    const video = this.video
+    if (!video || generation !== this.generation || iframe !== this.chatIframe) return
+
+    const scroller = await retry(() => {
+      const doc = iframe.contentDocument
+      return doc && /^\/live_chat/.test(doc.location.pathname) ? doc.querySelector<HTMLElement>(CHAT_SCROLLER_SELECTOR) : null
+    })
+    if (generation !== this.generation || !iframe.isConnected) return
+    if (!scroller) throw new Error('missing chat scroller')
+
+    this.chatObserver.disconnect()
+    await this.handler.setVideo(video)
+    this.chatObserver.observe(scroller, { childList: true, subtree: true })
+    Logger.info('⚙️[start] observe chat')
+
+    await BadgeManager.activateIcon()
+
+    // 既に表示されているチャットを処理する
+    if (this.config?.captureInitialChats && !this.doInitialChats) {
+      this.doInitialChats = true
+      Logger.debug('⚙️[start] handle initial chats')
+      void this.handler.findInvoke(scroller, this.chatFilter).then(() => Logger.debug('⚙️[finish] handle initial chats'))
+    }
+  }
+
+  /** 監視を全て止める. */
+  protected disconnect(): void {
+    this.chatObserver.disconnect()
+    this.removalObserver?.disconnect()
+    this.removalObserver = undefined
+    this.chatIframe?.removeEventListener('load', this.onIframeLoad)
+    this.chatIframe = undefined
+    this.doInitialChats = false
+
+    if (this.handler.removeVideo()) {
+      Logger.info('⚙️[stop] observe chat')
+      void BadgeManager.waitingIcon()
+    }
+  }
 }

@@ -1,538 +1,464 @@
 <template>
-  <section class="section">
-    <div class="columns is-flex">
-      <div class="column is-flex-grow-1">
-        <h1 class="title">
+  <div class="mx-auto max-w-300 px-6 pt-8">
+    <!-- ヘッダー: アプリ名・バージョンと「使い方」「目安箱」 -->
+    <header class="mb-5 flex items-center gap-2">
+      <img class="mr-1.5 size-10" src="/icons/icon-48x48.png" alt="">
+      <div class="flex-1">
+        <h1 class="flex items-center gap-2 text-xl/tight font-bold text-zinc-950">
           Youtube Chat Recorder
-          <span class="subtitle is-4">{{ version }}</span>
+          <span class="badge">v{{ version }}</span>
         </h1>
-        <h2 class="subtitle">つべくんのチャットをあれこれするやつ</h2>
+        <p class="text-zinc-500">設定</p>
       </div>
-      <div v-if="FORM_URL" class="column is-flex-grow-0">
-        <a class="button is-link is-outlined full-height" :href="FORM_URL" target="_blank">
-          <span class="icon">
-            <i class="mdi mdi-inbox-arrow-down" />
-          </span>
-          <span>目安箱</span>
-        </a>
-      </div>
-    </div>
+      <button class="btn btn-secondary" @click="Runtime.openReadmePage()">
+        <i class="mdi mdi-help-circle-outline" />
+        使い方
+      </button>
+      <a
+        v-if="FORM_URL"
+        class="btn btn-secondary"
+        :href="FORM_URL"
+        target="_blank"
+        rel="noopener"
+      >
+        <i class="mdi mdi-email-outline" />
+        目安箱
+      </a>
+    </header>
 
-    <div class="field">
-      <div class="notification is-warning is-light">
-        開いているYouTubeのページに適用させる場合は、その<strong>ページを更新</strong>してください。
-      </div>
-    </div>
+    <!-- 設定を変えたらページの更新が必要という案内 -->
+    <p class="notice mb-5">
+      <i class="mdi mdi-information-outline" />
+      <span>
+        設定を変えたら、開いている YouTube のページを
+        <strong>更新 (F5)</strong>
+        してください。更新するまで新しい設定は使われません。
+      </span>
+    </p>
 
-    <div class="field is-grouped">
-      <p class="control">
-        <a class="button is-primary" @click="handleSave">
-          保存する
-        </a>
-      </p>
-      <p class="control">
-        <a class="button" @click="handleReset">
-          リセット
-        </a>
-      </p>
-      <p class="control">
-        <a class="button is-success is-outlined" @click="handleReadme">
-          使い方
-        </a>
-      </p>
-    </div>
+    <main v-if="form" class="grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[7fr_5fr]">
+      <!-- 左: 記録するチャット (チャットフィルターの表・テキストマッチングの追加・テスト) -->
+      <section class="card p-5">
+        <header class="mb-4">
+          <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-message-text-outline text-zinc-500" />
+            記録するチャット
+          </h2>
+          <p class="text-[13px] text-zinc-500">
+            チャットの種類ごとに記録の仕方を選びます。
+            <strong>保存する</strong>
+            は文字だけ、
+            <strong>画像化する</strong>
+            はチャット欄の見た目のまま画像でも記録します (1 件 10KB ほど)。
+          </p>
+        </header>
+        <ChatFilterTable v-model="form.chatFilters" />
+      </section>
 
-    <hr> <!-- //////////////////////////////////////////////////////////// -->
-
-    <div v-if="config" class="columns is-desktop">
-      <!-- start left panel -->
-      <div class="column">
-        <div class="field">
-          <label class="label">チャットの処理設定</label>
-          <div class="control">
-            <div class="box">
-              <ChatFilterTable v-model="chatFilters" />
-            </div>
-          </div>
-        </div>
-
-        <div class="field">
-          <div class="notification">
-            ※ <strong>「保存する」「画像化する」を選択する</strong>と処理されます。
-            <br>
-            ※ 「画像化する」は負荷が高い＆容量を食うので加減して使用してください。( 1枚10KBくらい )
-            <br>
-            ※ 後から画像化するにはもう一度動画を再生してチャットを流す必要があります。
-          </div>
-        </div>
-
-      </div>
-      <!-- end left panel -->
-
-      <!-- start right panel -->
-      <div class="column">
-        <div class="field">
-          <label class="label">動画の保存設定</label>
-        </div>
-
-        <div class="box">
-          <div class="field">
-            <label class="checkbox">
-              <input v-model="ignoreSimpleVideo" type="checkbox" />
-              &nbsp;チャットが無い動画を無視する
-            </label>
-          </div>
-
-          <div class="field">
-            <label class="label">動画の最大保存数(最低 5)</label>
-            <div class="control">
+      <!-- 右: 動画の保存 / チャットの保存 / 詳細設定 / データの管理 -->
+      <div class="flex flex-col gap-5">
+        <!-- 動画の保存: 最大保存数・普通の動画を無視するか -->
+        <section class="card p-5">
+          <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-playlist-play text-zinc-500" />
+            動画の保存
+          </h2>
+          <div class="mb-3">
+            <label class="label" for="maxVideoLength">動画の最大保存数</label>
+            <div class="flex items-center gap-2">
               <input
-                v-model="maxVideoLength"
-                class="input"
+                id="maxVideoLength"
+                v-model.number="form.maxVideoLength"
+                class="input w-25"
                 type="number"
-                name="maxVideoLength"
-                min="5"
-                :placeholder="config.maxVideoLength"
+                :min="MIN_VIDEO_LENGTH"
               >
+              <span>本</span>
             </div>
-          </div>
-        </div>
-
-        <div class="field">
-          <div class="notification">
-            ※ 最大値を超えた場合、参照していない動画とチャットが削除されます。
-            <br>
-            　 適度に大きい値にするか、予め画像の保存などを行ってください。
-          </div>
-        </div>
-
-        <div class="field">
-          <label class="label">チャットの保存設定</label>
-        </div>
-
-        <div class="box">
-          <div class="field">
-            <label class="checkbox">
-              <input v-model="chatDrawOnce" type="checkbox" />
-              &nbsp;一度取得した画像は再取得しない
-            </label>
-          </div>
-
-          <div class="field">
-            <label class="checkbox">
-              <input v-model="captureInitialChats" type="checkbox" />
-              &nbsp;初めに表示されるチャットを処理する（画像データが取れない可能性大｜調査中）
-            </label>
-          </div>
-
-          <div class="field">
-            <label class="checkbox">
-              <input v-model="complementImage" type="checkbox" />
-              &nbsp;取得できていないチャット画像を独自に生成する
-            </label>
-          </div>
-
-          <div class="field">
-            <label class="checkbox">
-              <input v-model="generateOriginalImage" type="checkbox" />
-              &nbsp;全てのチャット画像を独自に生成する
-            </label>
-          </div>
-
-          <div class="field">
-            <label class="label">結合後の画像ファイル名</label>
-            <div class="control">
-              <div class="field has-addons">
-                <p class="control is-expanded">
-                  <input
-                    v-model="mergeImageFileName"
-                    class="input"
-                    type="text"
-                    name="mergeImageFileName"
-                    :placeholder="config.mergeImageFileName"
-                  >
-                </p>
-                <p class="control">
-                  <a class="button is-static">
-                    .png
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="field">
-          <div class="notification">
-            <code>%title%</code>: 動画のタイトル, <code>%id%</code>: 動画のID, <code>%count%</code>: 結合するチャットの数, 
-            <code>%now%</code>: 現在時刻, <code>%upload%</code>: 動画の投稿時刻
-            <br>
-            ※ 時刻系のフォーマットは<code>%now(yyyy-MM-dd_HH_mm_ss)%</code>のように括弧を使用して指定可能。
-            <br>
-            ※ 詳しくはリンク先を参照:
-            <a href="https://date-fns.org/v2.16.0/docs/format" target="_blank">
-              <span class="icon is-small"><i class="mdi mdi-link-variant" /></span>
-              date-fns/format
-            </a>
-            <br>
-            ※ 禁則文字は勝手にエスケープします。
-          </div>
-        </div>
-
-        <hr>
-
-        <div class="field is-grouped">
-          <p class="control">
-            <label class="label field-into-height">スクリプトを実行する</label>
-          </p>
-          <p class="control">
-            <label class="label field-into-height">
-              <input v-model="runScript" type="checkbox" />
-            </label>
-          </p>
-        </div>
-
-        <div class="field is-grouped">
-          <p class="control">
-            <label class="label field-into-height">出力するログレベル</label>
-          </p>
-          <div class="control">
-            <div class="select">
-              <select v-model="showLogLevel">
-                <option v-for="level of LOG_LEVELS" :key="level.name" :value="level.name">
-                  {{ level.name.toUpperCase() }}
-                </option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div class="field is-grouped">
-          <p class="control">
-            <label class="label field-into-height">ストレージ使用量</label>
-          </p>
-          <div class="control">
-            <p class="field-into-height">
-              {{ byteInUse | formatByte }}
-              <span v-if="loadDate">({{ loadDate | datetimeString }} 時点)</span>
+            <p class="help">
+              最近見た動画をこの本数まで残します。超えると古い動画からチャットごと削除されます。({{ MIN_VIDEO_LENGTH }} 以上)
             </p>
           </div>
-        </div>
+          <ToggleSwitch v-model="form.ignoreSimpleVideo">
+            チャットが無い動画を無視する
+            <template #description>ライブ配信ではない普通の動画を、最近見た動画に残しません。</template>
+          </ToggleSwitch>
+        </section>
 
-        <div class="field">
-        </div>
+        <!-- チャットの保存: 画像化の設定とつなげた画像のファイル名 -->
+        <section class="card p-5">
+          <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-image-multiple-outline text-zinc-500" />
+            チャットの保存
+          </h2>
+          <div class="flex flex-col divide-y divide-zinc-200">
+            <ToggleSwitch v-model="form.chatDrawOnce">
+              一度取得した画像は再取得しない
+              <template #description>同じチャットが再び表示されても画像を撮り直しません。動作が軽くなります。</template>
+            </ToggleSwitch>
+            <ToggleSwitch v-model="form.captureInitialChats">
+              初めに表示されるチャットを処理する
+              <template #description>ページを開いた時点で表示されていたチャットも記録します。画像の記録には失敗しやすいです。</template>
+            </ToggleSwitch>
+            <ToggleSwitch v-model="form.complementImage">
+              取得できていないチャット画像を独自に生成する
+              <template #description>画像をつなげて保存するとき、画像が無いチャットを独自のデザインで画像にします。</template>
+            </ToggleSwitch>
+            <ToggleSwitch v-model="form.generateOriginalImage">
+              全てのチャット画像を独自に生成する
+              <template #description>画像をつなげて保存するとき、全てのチャットを独自のデザインで画像にします。</template>
+            </ToggleSwitch>
+          </div>
 
-        <div class="field is-grouped">
-          <p class="control">
-            <a class="button is-danger is-light" @click="handleDeleteVideos">
-              動画とチャットを全て削除する
-            </a>
-          </p>
-          <p class="control">
-            <a class="button is-danger" @click="handleAllDelete">
-              全てを初期化する
-            </a>
-          </p>
-        </div>
+          <div class="mt-3">
+            <label class="label" for="mergeImageFileName">つなげた画像のファイル名</label>
+            <div class="flex">
+              <input
+                id="mergeImageFileName"
+                v-model="form.mergeImageFileName"
+                class="input rounded-r-none"
+                type="text"
+                :placeholder="DEFAULTS.mergeImageFileName"
+              >
+              <span
+                class="grid place-items-center rounded-r-lg border border-l-0 border-zinc-300 bg-zinc-50 px-2.5 text-[13px] text-zinc-500"
+              >
+                .png
+              </span>
+            </div>
+            <p class="help [&_code]:text-[11px]">
+              <code>%title%</code>
+              タイトル ・
+              <code>%id%</code>
+              動画ID ・
+              <code>%count%</code>
+              チャット数 ・
+              <code>%now%</code>
+              保存日時 ・
+              <code>%upload%</code>
+              公開日時
+              <br>
+              日時の形式は
+              <code>%now(yyyy年MM月dd日)%</code>
+              のように指定できます (
+              <a class="underline" href="https://date-fns.org/docs/format" target="_blank" rel="noopener">書き方</a>
+              )。使えない文字は自動で置き換えます。
+            </p>
+          </div>
+        </section>
 
-        <div class="field is-grouped">
-          <p class="control">
-            <a class="button" @click="handleExportConfig">
-              設定のエクスポート
-            </a>
-          </p>
-          <div class="control">
-            <div class="file">
-              <label class="file-label">
-                <input type="file" class="file-input" accept=".json" @change="handleInportConfig">
-                <span class="file-cta">
-                  <span class="file-label">設定のインポート (上書き)</span>
-                </span>
+        <!-- 詳細設定: スクリプトの実行とログレベル -->
+        <section class="card p-5">
+          <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-tune-variant text-zinc-500" />
+            詳細設定
+          </h2>
+          <ToggleSwitch v-model="form.runScript">
+            スクリプトを実行する
+            <template #description>オフにすると、この拡張機能はチャットを記録しなくなります。</template>
+          </ToggleSwitch>
+          <div class="flex items-start gap-4 border-t border-zinc-200 pt-3">
+            <div>
+              <label class="label m-0 font-medium" for="showLogLevel">出力するログレベル</label>
+              <p class="help mt-0.5">不具合を調べるときの記録の詳しさです。ふだんは変えなくて大丈夫です。</p>
+            </div>
+            <select id="showLogLevel" v-model="form.showLogLevel" class="select w-27.5 shrink-0">
+              <option v-for="level of LEVELS" :key="level.name" :value="level.name">
+                {{ level.name.toUpperCase() }}
+              </option>
+            </select>
+          </div>
+        </section>
+
+        <!-- データの管理: 使用量・エクスポート / インポート・全チャットの CSV・削除 -->
+        <section class="card p-5">
+          <header class="mb-4">
+            <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+              <i class="mdi mdi-database-outline text-zinc-500" />
+              データの管理
+            </h2>
+            <p class="text-[13px] text-zinc-500">
+              使用量:
+              <strong>{{ formatByte(byteInUse) }}</strong>
+              <span v-if="loadDate">({{ datetimeString(loadDate) }} 時点)</span>
+            </p>
+          </header>
+
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <span class="flex-1 font-medium">設定</span>
+              <button class="btn btn-secondary btn-sm" @click="handleExportConfig">
+                <i class="mdi mdi-download" />
+                エクスポート
+              </button>
+              <label class="btn btn-secondary btn-sm">
+                <i class="mdi mdi-upload" />
+                インポート
+                <input type="file" class="sr-only" accept=".json" @change="handleImportConfig">
+              </label>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="flex-1 font-medium">
+                全てのチャット
+                <span class="block text-xs font-normal text-zinc-500">保存している全ての動画のチャットを 1 つの CSV にまとめます</span>
+              </span>
+              <button class="btn btn-secondary btn-sm" :disabled="isExportingCsv" @click="handleExportAllCsv">
+                <i class="mdi" :class="isExportingCsv ? 'mdi-loading mdi-spin' : 'mdi-file-delimited-outline'" />
+                CSV で出力
+              </button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="flex-1 font-medium">全てのデータ</span>
+              <button class="btn btn-secondary btn-sm" @click="handleExportData">
+                <i class="mdi mdi-download" />
+                バックアップ
+              </button>
+              <label class="btn btn-secondary btn-sm">
+                <i class="mdi mdi-upload" />
+                復元
+                <input type="file" class="sr-only" accept=".json" @change="handleImportData">
               </label>
             </div>
           </div>
-        </div>
 
-        <div class="field is-grouped">
-          <p class="control">
-            <a class="button" @click="handleExportData">
-              データのバックアップ
-            </a>
-          </p>
-          <div class="control">
-            <div class="file">
-              <label class="file-label">
-                <input type="file" class="file-input" accept=".json" @change="handleInportData">
-                <span class="file-cta">
-                  <span class="file-label">データの復元</span>
-                </span>
-              </label>
+          <div class="mt-4 rounded-[10px] border border-danger-border bg-danger-soft p-3">
+            <p class="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-danger">
+              <i class="mdi mdi-alert-outline" />
+              元に戻せない操作
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-danger btn-sm" @click="handleDeleteVideos">動画とチャットを全て削除</button>
+              <button class="btn btn-danger-solid btn-sm" @click="handleAllDelete">全てを初期化</button>
             </div>
           </div>
-        </div>
-
+        </section>
       </div>
-      <!-- end right panel -->
-    </div>
+    </main>
 
-  </section>
+    <!-- 保存バー: 未保存の変更があるか表示し、保存・取り消し・初期化する (常に下に残る) -->
+    <footer class="sticky bottom-0 z-40 -mx-6 mt-6 flex items-center gap-2 border-t border-zinc-200 bg-white/90 px-6 py-3 backdrop-blur-sm">
+      <span class="flex flex-1 items-center text-[13px]" :class="isDirty ? 'font-semibold text-warning' : 'text-zinc-500'">
+        <template v-if="isDirty">
+          <i class="mdi mdi-circle-medium text-[22px]" />
+          保存されていない変更があります
+        </template>
+        <template v-else>変更はありません</template>
+      </span>
+      <button class="btn btn-ghost" @click="handleReset">初期設定に戻す</button>
+      <button class="btn btn-secondary" :disabled="!isDirty" @click="loadConfig">変更を取り消す</button>
+      <button class="btn btn-primary" :disabled="!isDirty" @click="handleSave">
+        <i class="mdi mdi-check" />
+        保存する
+      </button>
+    </footer>
+
+    <!-- 通知 (画面右上) -->
+    <ToastContainer />
+  </div>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
+/**
+ * 設定画面 (オプションページ).
+ *
+ * - 設定は form で編集し、「保存する」で @config に保存する (それまでは反映しない).
+ * - 保存した設定は、開いている YouTube のページを更新すると使われる.
+ * - データの管理 (エクスポート / インポート / CSV / 削除) もここで行う.
+ */
 import { format as dateFormat } from 'date-fns'
-import { Component, Vue } from 'vue-property-decorator'
-import ChatFilterTable from './components/ChatFilterTable.vue'
-import displayFilter from '../filters/displayFilter'
-
-import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
-import Toast from '../plugins/Toast'
-import Config, { ConfigInterface } from '../models/Config'
-import Runtime from '../lib/chrome/Runtime'
-import { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
-import Logger, { LogLevel, LEVELS } from '../loggers/Logger'
-import VideoStorage from '../lib/chrome/storage/VideoStorage'
-import ChatStorage from '../lib/chrome/storage/ChatStorage'
-import { classToPlain, deserialize, plainToClass, serialize } from 'class-transformer'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import ToastContainer from '../components/ToastContainer.vue'
+import ToggleSwitch from '../components/ToggleSwitch.vue'
 import Filer from '../lib/chrome/Filer'
+import Runtime from '../lib/chrome/Runtime'
+import ChatStorage from '../lib/chrome/storage/ChatStorage'
+import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import Storage from '../lib/chrome/storage/Storage'
+import VideoStorage from '../lib/chrome/storage/VideoStorage'
+import ChatCsv, { type VideoChats } from '../lib/util/ChatCsv'
+import { datetimeString, formatByte } from '../lib/util/format'
+import Logger, { LEVELS } from '../loggers/Logger'
+import Config, { type ConfigInterface, MIN_VIDEO_LENGTH } from '../models/Config'
+import Toast from '../plugins/Toast'
+import ChatFilterTable from './components/ChatFilterTable.vue'
 
-@Component({
-  components: { ChatFilterTable },
-  filters: displayFilter,
+/** 目安箱のリンク先 (.env の VITE_FORM_URL). 無ければボタンを出さない. */
+const FORM_URL = import.meta.env.VITE_FORM_URL || import.meta.env.VUE_APP_FORM_URL || null
+/** 初期設定 (入力欄の placeholder などに使う). */
+const DEFAULTS = new Config()
+
+/** 拡張機能のバージョン. */
+const version = Runtime.getManifest().version
+/** storage の使用量 (byte) と、それを読み込んだ日時. */
+const byteInUse = ref(0)
+const loadDate = ref<Date | null>(null)
+
+/** 編集中の設定値. */
+const form = ref<ConfigInterface | null>(null)
+/** 読み込んだ時点の設定値 (変更の有無の判定用). */
+const saved = ref('')
+
+/** 保存していない変更があるか. */
+const isDirty = computed(() => form.value !== null && JSON.stringify(form.value) !== saved.value)
+
+// 保存せずに閉じようとしたら確認する
+function onBeforeUnload(event: BeforeUnloadEvent): void {
+  if (isDirty.value) event.preventDefault()
+}
+onMounted(async () => {
+  window.addEventListener('beforeunload', onBeforeUnload)
+  await loadConfig()
 })
-export default class App extends Vue implements ConfigInterface {
-  version?: string | null = null
-  byteInUse: number = 0
+onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 
-  config?: Config | null = null
-  loadDate?: Date | null = null
+/** 保存されている設定を読み込んで form に入れる (編集中の内容は捨てる). */
+async function loadConfig(): Promise<void> {
+  const config = await ConfigStorage.get()
+  form.value = {
+    chatFilters: config.chatFilters.map(cf => ({ ...cf })),
+    mergeImageFileName: config.mergeImageFileName,
+    captureInitialChats: config.captureInitialChats,
+    chatDrawOnce: config.chatDrawOnce,
+    complementImage: config.complementImage,
+    generateOriginalImage: config.generateOriginalImage,
+    maxVideoLength: config.maxVideoLength,
+    ignoreSimpleVideo: config.ignoreSimpleVideo,
+    runScript: config.runScript,
+    showLogLevel: config.showLogLevel,
+  }
+  saved.value = JSON.stringify(form.value)
+  loadDate.value = new Date()
+  byteInUse.value = await Storage.getBytesInUseLocalStorage()
 
-  // 表示用変数
-  LOG_LEVELS = LEVELS // select 配列
-  FORM_URL: string | null = null // フォームのURL
+  // background でも設定を読み込む
+  await Runtime.sendLoadConfig()
+}
 
-  // 初期値は適当 (絶対に上書きするので)
-  chatFilters: ChatFilterConfigInterface[] = []
-  mergeImageFileName: string = ''
-  captureInitialChats: boolean = false
-  chatDrawOnce: boolean = false
-  complementImage: boolean = false
-  generateOriginalImage: boolean = false
+/** form の内容を保存する (動画の最大保存数は下限を確認する). */
+async function handleSave(): Promise<void> {
+  if (!form.value) return
 
-  maxVideoLength: number = 0
-  ignoreSimpleVideo: boolean = false
+  const config = Object.assign(new Config(), form.value)
+  config.mergeImageFileName = form.value.mergeImageFileName || DEFAULTS.mergeImageFileName // 空白なら初期値
 
-  runScript: boolean = false
-  showLogLevel: LogLevel = 'info'
-
-  async mounted(): Promise<void> {
-    this.FORM_URL = process.env.VUE_APP_FORM_URL || null
-
-    // manifest を読み込む
-    // TODO: 動いてないかも
-    const manifest = Runtime.getManifest()
-    this.version = manifest.version
-
-    // 設定の読み込み
-    await this.loadConfig()
+  const maxVideoLength = Number(config.maxVideoLength)
+  if (!Number.isFinite(maxVideoLength) || maxVideoLength < MIN_VIDEO_LENGTH) {
+    config.maxVideoLength = MIN_VIDEO_LENGTH
+    Toast.warn(`動画の最大保存数は ${MIN_VIDEO_LENGTH} 以上にしてください。${MIN_VIDEO_LENGTH} で保存しました。`)
+  } else {
+    config.maxVideoLength = Math.floor(maxVideoLength)
   }
 
-  async loadConfig(): Promise<void> {
-    const config = await ConfigStorage.get()
-    this.config = config
-    this.loadDate = new Date()
+  await ConfigStorage.save(config)
+  Toast.success('設定を保存しました。開いている YouTube のページを更新してください。')
+  await loadConfig()
+}
 
-    this.chatFilters = config.chatFilters
-    this.mergeImageFileName = config.mergeImageFileName
-    this.captureInitialChats = config.captureInitialChats
-    this.chatDrawOnce = config.chatDrawOnce
-    this.complementImage = config.complementImage
-    this.generateOriginalImage = config.generateOriginalImage
-
-    this.maxVideoLength = config.maxVideoLength
-    this.ignoreSimpleVideo = config.ignoreSimpleVideo
-
-    this.runScript = config.runScript
-    this.showLogLevel = config.showLogLevel
-
-    // 使用サイズを取得
-    this.byteInUse = await Storage.getBytesInUseLocalStorage()
-
-    // background でも設定を読み込む
-    await Runtime.sendLoadConfig()
+/** 設定を初期設定に戻す (動画やチャットは消さない). */
+async function handleReset(): Promise<void> {
+  if (window.confirm('設定を初期設定に戻します。(記録したチャットは消えません)')) {
+    await ConfigStorage.clear()
+    Toast.success('設定を初期設定に戻しました。')
+    await loadConfig()
   }
+}
 
-  async handleSave(): Promise<void> {
-    // 新しい config に値を追加していく (空白なら前の値)
-    const config = new Config()
-    config.chatFilters = this.chatFilters
-    config.mergeImageFileName = this.mergeImageFileName || config.mergeImageFileName
-    config.captureInitialChats = this.captureInitialChats
-    config.chatDrawOnce = this.chatDrawOnce
-    config.complementImage = this.complementImage
-    config.generateOriginalImage = this.generateOriginalImage
+/** 記録した全ての動画とチャットを削除する (設定は残す). */
+async function handleDeleteVideos(): Promise<void> {
+  if (window.confirm('記録した全ての動画とチャットを削除します。\nこの操作は元に戻せません。')) {
+    for (const video of await VideoStorage.getAll()) {
+      if (video.id) await ChatStorage.clear(video.id)
+    }
+    await VideoStorage.clear()
+    Toast.success('全ての動画とチャットを削除しました。')
+    await loadConfig()
+  }
+}
 
-    config.maxVideoLength = this.maxVideoLength
-    config.ignoreSimpleVideo = this.ignoreSimpleVideo
+/** 設定も含めて全てのデータを削除する. */
+async function handleAllDelete(): Promise<void> {
+  if (window.confirm('設定も含めて、全てのデータを削除します。') && window.confirm('本当に削除しますか？この操作は元に戻せません。')) {
+    await Storage.clear()
+    Toast.success('全てのデータを削除しました。')
+    await loadConfig()
+  }
+}
 
-    config.runScript = this.runScript
-    config.showLogLevel = this.showLogLevel
+///
 
-    // リミット確認
-    if (config.maxVideoLength < 5) {
-      config.maxVideoLength = 5
-      Toast.error('動画の最大保存数は 5 以上です。')
+/** JSON ファイルとしてダウンロードさせる (ファイル名は 日時_name.json). */
+async function exportJson(name: string, createUrl: () => Promise<string>): Promise<void> {
+  try {
+    const title = `${dateFormat(new Date(), 'yyyyMMdd_HHmmss')}_${name}.json`
+    const url = await createUrl()
+    Filer.downloadFile(url, title)
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    Toast.success(`「${title}」を保存しました。`)
+  } catch (err) {
+    Toast.error('ファイルの保存に失敗しました。')
+    Logger.error(err)
+  }
+}
+
+/** 選ばれた JSON ファイルを読み込んで apply に渡す. */
+async function importJson(event: Event, apply: (text: string) => Promise<void>): Promise<void> {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  if (!file) return
+
+  try {
+    await apply(await Filer.readFile(file))
+    Toast.success(`「${file.name}」を読み込みました。`)
+    await loadConfig()
+  } catch (err) {
+    Toast.error('ファイルの読み込みに失敗しました。')
+    Logger.error(err)
+  } finally {
+    input.value = '' // 同じファイルを再度選択できるようにする
+  }
+}
+
+const handleExportConfig = () => exportJson('ycr_config', () => ConfigStorage.export(true))
+const handleImportConfig = (event: Event) => importJson(event, text => ConfigStorage.import(text))
+const handleExportData = () => exportJson('ycr_data', () => Storage.export())
+
+/** 全チャットの CSV を作っている最中か. */
+const isExportingCsv = ref(false)
+
+/** 保存している全ての動画のチャットを 1 つの CSV にして保存する (動画は最近見た順). */
+async function handleExportAllCsv(): Promise<void> {
+  isExportingCsv.value = true
+  try {
+    const groups: VideoChats[] = []
+    for (const video of await VideoStorage.getAll()) {
+      const chats = video.id ? await ChatStorage.get(video.id) : []
+      if (chats.length > 0) groups.push({ video, chats })
     }
 
-    // 保存する
-    await ConfigStorage.save(config)
-    Toast.success('設定を保存しました。')
-
-    // 再読み込み
-    await this.loadConfig()
-  }
-
-  async handleReset(): Promise<void> {
-    const result = window.confirm('設定を初期化します。')
-    if (result) {
-      // config を消して再読み込み
-      await ConfigStorage.clear()
-      Toast.success('設定をリセットしました。')
-
-      await this.loadConfig()
+    const total = groups.reduce((sum, g) => sum + g.chats.length, 0)
+    if (total === 0) {
+      Toast.warn('保存しているチャットがありません。')
+      return
     }
+
+    const title = `${dateFormat(new Date(), 'yyyyMMdd_HHmmss')}_ycr_chats.csv`
+    const url = ChatCsv.createManyObjectURL(groups)
+    Filer.downloadFile(url, title)
+    setTimeout(() => URL.revokeObjectURL(url), 10_000)
+    Toast.success(`${groups.length} 本の動画のチャット ${total.toLocaleString()} 件を「${title}」に保存しました。`)
+  } catch (err) {
+    Toast.error('CSV の保存に失敗しました。')
+    Logger.error(err)
+  } finally {
+    isExportingCsv.value = false
   }
-
-  async handleReadme(): Promise<void> {
-    await Runtime.openReadmePage()
-  }
-
-  async handleDeleteVideos(): Promise<void> {
-    const result = window.confirm('全ての動画とチャットを削除します。')
-    if (result) {
-      // 動画を全て削除する
-      const videos = await VideoStorage.getAll()
-      for (const video of videos) {
-        if (video.id) {
-          await ChatStorage.clear(video.id)
-        }
-      }
-
-      // 再読み込み
-      await this.loadConfig()
-    }
-  }
-
-  async handleAllDelete(): Promise<void> {
-    const result = window.confirm('ストレージを空にします。')
-    if (result) {
-      const result2 = window.confirm('本当に削除しますか？')
-      if (result2) {
-        // config を消して再読み込み
-        await Storage.clear()
-        Toast.success('全てのデータを削除しました。')
-
-        // 再読み込み
-        await this.loadConfig()
-      }
-    }
-  }
-
-  ///
-
-  async handleExportConfig(): Promise<void> {
-    try {
-      // json 化して出力する
-      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_ycr_config.json'
-      const text = await ConfigStorage.export(true)
-      await Filer.downloadFile(text, title)
-
-      Toast.success(`「${title}」を出力しました。`)
-    } catch (err) {
-      Toast.error('ファイルの出力に失敗しました。')
-      Logger.error(err)
-    }
-  }
-
-  async handleInportConfig(event: InputEvent): Promise<void> {
-    const t = event.target as HTMLInputElement
-    const file = t.files ? t.files[0] : null
-
-    if (file) {
-      try {
-        const name = file.name
-        const text = await Filer.readFile(file)
-        if (!text) throw new Error('File not found')
-
-        // config を読み込む
-        await ConfigStorage.import(text)
-        Toast.success(`「${name}」を読み込みました。`)
-
-        // 再読み込み
-        await this.loadConfig()
-      } catch (err) {
-        Toast.error('ファイルの読み込みに失敗しました。')
-        Logger.error(err)
-      }
-    }
-  }
-
-  async handleExportData(): Promise<void> {
-    try {
-      // json 化して出力する
-      const title = dateFormat(new Date(), 'yyyyMMdd_HHmmss') + '_ycr_data.json'
-      const text = await Storage.export()
-      await Filer.downloadFile(text, title)
-
-      Toast.success(`「${title}」を出力しました。`)
-    } catch (err) {
-      Toast.error('ファイルの出力に失敗しました。')
-      Logger.error(err)
-    }
-  }
-
-  async handleInportData(event: InputEvent): Promise<void> {
-    const t = event.target as HTMLInputElement
-    const file = t.files ? t.files[0] : null
-
-    if (file) {
-      try {
-        const name = file.name
-        const text = await Filer.readFile(file)
-        if (!text) throw new Error('File not found')
-
-        // config を読み込む
-        await Storage.import(text)
-        Toast.success(`「${name}」を読み込みました。`)
-
-        // 再読み込み
-        await this.loadConfig()
-      } catch (err) {
-        Toast.error('ファイルの読み込みに失敗しました。')
-        Logger.error(err)
-      }
-    }
+}
+/** 全てのデータを復元する (上書きなので確認する). */
+const handleImportData = (event: Event) => {
+  if (window.confirm('今のデータを、選んだファイルの内容で上書きします。')) {
+    void importJson(event, text => Storage.import(text))
+  } else {
+    ;(event.target as HTMLInputElement).value = ''
   }
 }
 </script>
-
-<style lang="scss" scoped>
-// checkbox を x1.5 に
-input[type="checkbox"] {
-  margin: 3px;
-  transform: scale(1.5);
-}
-
-.box {
-  box-shadow: none;
-  border: solid 1px gainsboro;
-}
-
-.field-into-height {
-  padding: 10px;
-}
-
-.full-height {
-  height: 100%;
-}
-</style>

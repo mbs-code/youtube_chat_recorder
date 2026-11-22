@@ -1,48 +1,52 @@
 import Logger from '../../loggers/Logger'
-import Chat from '../../models/Chat'
+import type Chat from '../../models/Chat'
 import NodeToPng from '../util/NodeToPng'
 import BaseQueue from './BaseQueue'
-import SaveChatQueue from './SaveChatQueue'
+import type SaveChatQueue from './SaveChatQueue'
 
+/** 画像化する 1 件 (画像化するまでチャット欄の要素を持っておく). */
 export interface DrawObjects {
   chat: Chat
   node: HTMLElement
 }
 
+/**
+ * チャット要素を画像化して SaveChatQueue に流すキュー.
+ *
+ * - 画像化は重いので 1 件ずつ順番に処理する.
+ * - 画像化に失敗しても、文字だけは保存する (isImageError = true).
+ */
 export default class DrawDomQueue extends BaseQueue<DrawObjects> {
-  public static DRAW_ONCE = false
+  /** 一度画像化したチャットは再描画しない. */
+  public drawOnce = true
 
-  protected saveChatQueue: SaveChatQueue
+  /** 画像化済みのチャット ID. */
+  protected drawnIds = new Set<string>()
 
-  constructor(saveChatQueue: SaveChatQueue) {
+  constructor(protected saveChatQueue: SaveChatQueue) {
     super()
-    this.saveChatQueue = saveChatQueue
+  }
+
+  /** 画像化済みのチャット ID を設定する. (動画を切り替えた時に storage から読み込む) */
+  public setDrawnIds(ids: Iterable<string>): void {
+    this.drawnIds = new Set(ids)
   }
 
   protected async invoke(objects: DrawObjects[]): Promise<void> {
     Logger.debug(`🎨[DRAW] drawing... (item: ${objects.length})`)
 
-    // 一枚ずつ書いていく
     for (const obj of objects) {
       try {
-        // 値のリセット
         obj.chat.isImageError = false
 
-        // スクロールさせる
-        // const scroller = obj.node.closest('#item-scroller') as HTMLElement
-        // if (obj.scroller) {
-        //   var topPos = obj.node.offsetTop
-        //   obj.scroller.scrollTop = topPos
-        // }
-
-        // chat に url があったら無視する (軽量化対策)
-        if (DrawDomQueue.DRAW_ONCE && obj.chat.pngUrl) {
+        // 画像は保存時に storage の物が引き継がれる
+        if (this.drawOnce && obj.chat.id && this.drawnIds.has(obj.chat.id)) {
           Logger.trace('🎨[DRAW] skip: ' + obj.chat.dump())
           continue
         }
 
-        const dataUrl = await NodeToPng.generateChatImageUrl(obj.node)
-        obj.chat.pngUrl = dataUrl
+        obj.chat.pngUrl = await NodeToPng.generateChatImageUrl(obj.node)
+        if (obj.chat.id) this.drawnIds.add(obj.chat.id)
       } catch (err) {
         Logger.error(err)
         obj.chat.isImageError = true
@@ -50,10 +54,7 @@ export default class DrawDomQueue extends BaseQueue<DrawObjects> {
       }
     }
 
-    Logger.debug(`🎨[DRAW] success!`)
-
-    // チャットを取り出して保存キューへ
-    const chats = objects.map(e => e.chat)
-    this.saveChatQueue.push(...chats)
+    Logger.debug(`🎨[DRAW] done`)
+    this.saveChatQueue.push(...objects.map(e => e.chat))
   }
 }
