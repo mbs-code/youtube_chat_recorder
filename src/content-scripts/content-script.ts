@@ -1,32 +1,28 @@
-import { format as dateFormat } from 'date-fns'
-import { browser, Runtime as BrowserRuntime } from 'webextension-polyfill-ts'
-import MessageHandler from './MessageHandler'
-import MessageInterface from '../lib/chrome/interface/MessageInterface'
-import ReturnMessageInterface from '../lib/chrome/interface/ReturnMessageInterface'
+/**
+ * content script (isolated world).
+ *
+ * YouTube のページでチャット欄を監視し、設定に従ってチャットを保存・画像化する.
+ * ページの JS オブジェクトが必要な処理は page-bridge (MAIN world) に問い合わせる.
+ */
+import { isTabMessage, listenMessages } from '../lib/chrome/messages'
 import Runtime from '../lib/chrome/Runtime'
+import BadgeManager from './BadgeManager'
 import ChatHandler from './ChatHandler'
 import PageEventer from './PageEventer'
 
-// debug logging
-if (process.env.NODE_ENV === 'development') {
+if (import.meta.env.DEV) {
   const manifest = Runtime.getManifest()
-  const date = dateFormat(new Date(), 'yyyy-MM-dd_HH:mm:ss')
-  console.log(`[dev] ${manifest.name} ver: ${manifest.version}, build: ${date}`)
+  console.log(`[YCR][dev] ${manifest.name} ver: ${manifest.version}, loaded: ${new Date().toLocaleString()}`)
 }
 
-// popup, background からの値受信
-browser.runtime.onMessage.addListener(async function (
-  message: MessageInterface,
-  sender: BrowserRuntime.MessageSender
-): Promise<ReturnMessageInterface> {
-  const response = await MessageHandler.invoke(message, sender)
-  return { message, response }
+// popup からのメッセージ
+listenMessages(isTabMessage, async (message) => {
+  switch (message.type) {
+    case 'YCR_RESET_BADGE':
+      await BadgeManager.clearBadgeCounter()
+      return
+  }
 })
 
-// 初期化する
-const init = async () => {
-  const handler = new ChatHandler()
-  const eventer = new PageEventer(handler)
-  await eventer.init()
-}
-init()
+const eventer = new PageEventer(new ChatHandler())
+void eventer.init()

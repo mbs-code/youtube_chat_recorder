@@ -2,49 +2,28 @@ export default class DomQueryHelper {
   /**
    * DOM の属性を取得する.
    *
-   * @param {Element} node root DOM
-   * @param {string | null} [selector=null] DOM selector
-   * @param {string} attrName attribure name
-   * @return {string | undefined} get value
+   * @param node root DOM
+   * @param selector DOM selector (null なら node 自身)
+   * @param attrName attribute name
    */
   public static getAttribute(node: Element, selector: string | null, attrName: string): string | undefined {
     const dom = selector ? node.querySelector(selector) : node
-    if (dom) {
-      const text = dom.getAttribute(attrName)?.trim()
-      return text || undefined
-    }
-    return undefined
+    return dom?.getAttribute(attrName)?.trim() || undefined
   }
 
   /**
    * DOM の属性が存在するか確認する.
-   *
-   * @param {Element} node root DOM
-   * @param {string | null} [selector=null] DOM selector
-   * @param {string} attrName attribure name
-   * @return {boolean} has
    */
   public static hasAttribute(node: Element, selector: string | null, attrName: string): boolean {
     const dom = selector ? node.querySelector(selector) : node
-    if (dom) {
-      return dom.hasAttribute(attrName)
-    }
-    return false
+    return dom ? dom.hasAttribute(attrName) : false
   }
 
   /**
-   * DOM のテキストを取得する..
-   *
-   * @param {Element} node root DOM
-   * @param {string | null} [selector=null] DOM selector
-   * @return {string | undefined} get value
+   * DOM のテキストを取得する.
    */
-  public static getTextContent(node: Element, queryName?: string): string | undefined {
-    const dom = queryName ? node.querySelector(queryName) : node
-    if (dom) {
-      const text = dom.textContent?.trim()
-      return text || undefined
-    }
-    return undefined
+  public static getTextContent(node: Element, selector?: string): string | undefined {
+    const dom = selector ? node.querySelector(selector) : node
+    return dom?.textContent?.trim() || undefined
   }
 }

@@ -1,46 +1,33 @@
 export default class Filer {
   /**
-   * 画像 url を ダウンロードする (png).
+   * 画像 url を png としてダウンロードする.
    *
-   * @param {string} dataUrl image data url
-   * @param {string} [filename] 保存する名前
+   * @param dataUrl image data url
+   * @param filename 保存する名前 (拡張子なし)
    */
   public static downloadImage(dataUrl: string, filename?: string): void {
-    const name = (filename || 'download') + '.png'
-    this.downloadFile(dataUrl, name)
+    this.downloadFile(dataUrl, (filename || 'download') + '.png')
   }
 
   /**
-   * ファイルを ダウンロードする.
+   * ファイルをダウンロードする.
    *
-   * @param {string} dataUrl data url
-   * @param {string} [filename] 保存する名前(拡張子も)
+   * @param url data url / object url
+   * @param filename 保存する名前 (拡張子も)
    */
-  public static downloadFile(dataUrl: string, filename: string): void {
-    const name = filename
-
+  public static downloadFile(url: string, filename: string): void {
     const link = document.createElement('a')
-    link.download = name
-    link.href = dataUrl
+    link.download = filename
+    link.href = url
     link.click()
   }
 
   ///
 
   /**
-   * ファイルを読み込む.
-   * @param {File} file 読み込む file object
-   * @return {string | null} 読み込んだテキストデータ
+   * ファイルをテキストとして読み込む.
    */
-  public static readFile(file: File): Promise<string | null> {
-    return new Promise((resolve) => {
-      if (!file) resolve(null)
-        const reader = new FileReader()
-        reader.onload = async () => {
-          const text = reader.result as string
-          resolve(text)
-        }
-        reader.readAsText(file)
-    })
+  public static async readFile(file: File): Promise<string> {
+    return await file.text()
   }
 }

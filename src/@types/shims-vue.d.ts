@@ -1,4 +1,6 @@
+/** .vue ファイルを TypeScript から import できるようにする型宣言. (型チェックは vue-tsc が行う) */
 declare module '*.vue' {
-  import Vue from 'vue'
-  export default Vue
+  import type { DefineComponent } from 'vue'
+  const component: DefineComponent<object, object, unknown>
+  export default component
 }

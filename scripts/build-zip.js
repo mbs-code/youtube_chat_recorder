@@ -1,53 +1,41 @@
 #!/usr/bin/env node
+/**
+ * dist/ を Chrome Web Store 公開用の zip にまとめる.
+ * 先に `npm run build` を実行しておくこと (`npm run build-zip` なら自動で実行される).
+ */
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { zipSync } from 'fflate'
 
-const fs = require('fs');
-const path = require('path');
-const archiver = require('archiver');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
+const DIST = path.join(ROOT, 'dist')
+const DIST_ZIP = path.join(ROOT, 'dist-zip')
 
-const DEST_DIR = path.join(__dirname, '../dist');
-const DEST_ZIP_DIR = path.join(__dirname, '../dist-zip'); 
-
-const extractExtensionData = () => {
-  const extPackageJson = require('../package.json');
-
-  return {
-    name: extPackageJson.name,
-    version: extPackageJson.version
+function collectFiles(dir, base = dir, files = {}) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name)
+    if (entry.isDirectory()) {
+      collectFiles(fullPath, base, files)
+    } else {
+      const relPath = path.relative(base, fullPath).split(path.sep).join('/')
+      files[relPath] = fs.readFileSync(fullPath)
+    }
   }
-};
-
-const makeDestZipDirIfNotExists = () => {
-  if(!fs.existsSync(DEST_ZIP_DIR)) {
-    fs.mkdirSync(DEST_ZIP_DIR);
-  }
+  return files
 }
 
-const buildZip = (src, dist, zipFilename) => {
-  console.info(`Building ${zipFilename}...`);
+const { name, version } = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8'))
+if (!fs.existsSync(path.join(DIST, 'manifest.json'))) {
+  console.error('dist/manifest.json not found. Run `npm run build` first.')
+  process.exit(1)
+}
 
-  const archive = archiver('zip', { zlib: { level: 9 }});
-  const stream = fs.createWriteStream(path.join(dist, zipFilename));
-  
-  return new Promise((resolve, reject) => {
-    archive
-      .directory(src, false)
-      .on('error', err => reject(err))
-      .pipe(stream);
+const zipFilename = `${name}-v${version}.zip`
+console.info(`Building ${zipFilename}...`)
 
-    stream.on('close', () => resolve());
-    archive.finalize();
-  });
-};
+fs.mkdirSync(DIST_ZIP, { recursive: true })
+const zipped = zipSync(collectFiles(DIST), { level: 9 })
+fs.writeFileSync(path.join(DIST_ZIP, zipFilename), zipped)
 
-const main = () => {
-  const {name, version} = extractExtensionData();
-  const zipFilename = `${name}-v${version}.zip`;
-  
-  makeDestZipDirIfNotExists();
-
-  buildZip(DEST_DIR, DEST_ZIP_DIR, zipFilename)
-    .then(() => console.info('OK'))
-    .catch(console.err); 
-};
-
-main();
+console.info(`OK: dist-zip/${zipFilename} (${zipped.length.toLocaleString()} bytes)`)

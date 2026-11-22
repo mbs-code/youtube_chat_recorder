@@ -1,64 +1,69 @@
-import { Exclude } from 'class-transformer'
-import 'reflect-metadata'
-import textEllipsis from 'text-ellipsis'
-import VideoObjectInterface from '../interface/VideoObjectInterface'
-import TransformDate from '../lib/decorator/TransformDate'
-import VideoParser from '../lib/parser/VideoParser'
+import { ellipsis } from '../lib/util/format'
+import { type Plain, toDate, toTime } from '../lib/util/serialize'
 
+/** 日時のフィールド (storage には epoch msec で保存する). */
+const DATE_KEYS = ['startDate', 'endDate', 'publishedAt', 'createdAt', 'updatedAt'] as const
+
+/** 動画の種類. video: 普通の動画, upcoming: 配信予定, live: 配信中, archive: 配信のアーカイブ. */
+export type VideoType = 'video' | 'upcoming' | 'live' | 'archive'
+
+/**
+ * 動画 (最近見た動画の一覧 @videos に保存する).
+ *
+ * - フィールドを増やす時は初期値を付ける (古い保存データには無いため).
+ */
 export default class Video {
-  id?: string // 76KDBk...
+  id?: string // 動画 ID (11 文字)
 
   title?: string
+  channelName?: string
   thumbnailUrl?: string
-  // description?: string // 容量削減
-  duration = 0 // seconds 配信中は 0
+  duration = 0 // 秒数, 配信中は 0
   viewCount = 0
-  isBroadcast: boolean // 配信かどうか
 
-  @TransformDate()
-  startDate?: Date // 配信予定開始か実開始時間
+  isBroadcast = false // ライブ配信 (チャットがある) かどうか
+  isLiveNow = false // 現在配信中か
+  isUpcoming = false // 配信予定か
 
-  @TransformDate()
-  endDate?: Date // 配信終了時間
-
-  @TransformDate()
+  startDate?: Date // 配信 (予定) 開始時刻
+  endDate?: Date // 配信終了時刻
   publishedAt?: Date
 
-  @TransformDate()
-  createdAt?: Date // 作成日時
+  createdAt?: Date // 初めて見た日時
+  updatedAt?: Date // 最後に見た日時 (一覧の並び順・古い動画の削除に使う)
 
-  @TransformDate()
-  updatedAt?: Date // 更新日時
-
-  constructor() {
-    // 初期値
-    this.isBroadcast = false
+  /** 動画の種類. (保存はしない) */
+  get type(): VideoType {
+    if (!this.isBroadcast && !this.startDate) return 'video'
+    if (this.isUpcoming) return 'upcoming'
+    if (this.isLiveNow || !this.endDate) return 'live'
+    return 'archive'
   }
 
-  public static async createByElement(json: VideoObjectInterface): Promise<Video> {
-    return await VideoParser.parse(json)
-  }
-
-  @Exclude()
-  get type(): 'video' | 'live' | 'archive' {
-    // TODO: 現状 upcomig が分からない
-    if (this.startDate) {
-      if (this.endDate) {
-        return 'archive'
-      } else {
-        return 'live'
-      }
-    }
-    return 'video'
-  }
-
-  @Exclude()
+  /** 動画ページの URL. (保存はしない) */
   get url(): string | undefined {
     return this.id ? `https://www.youtube.com/watch?v=${this.id}` : undefined
   }
 
+  /** storage から復元する. */
+  public static fromPlain(plain: Plain): Video {
+    const fields = { ...plain }
+    delete fields.type // getter のみのプロパティは代入できないので除外
+    delete fields.url
+    const video = Object.assign(new Video(), fields)
+    for (const key of DATE_KEYS) video[key] = toDate(plain[key])
+    return video
+  }
+
+  /** storage に保存する形にする. (getter は含まれない) */
+  public toPlain(): Plain {
+    const plain: Plain = Object.fromEntries(Object.entries(this))
+    for (const key of DATE_KEYS) plain[key] = toTime(this[key])
+    return plain
+  }
+
+  /** ログ用の短い文字列. */
   public dump(): string {
-    const title = this.title || '<notitle>'
-    return `[${this.id}]${textEllipsis(title, 24)}`
+    return `[${this.id}]${ellipsis(this.title || '<notitle>', 24)}`
   }
 }
