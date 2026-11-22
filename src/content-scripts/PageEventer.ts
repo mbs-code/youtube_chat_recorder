@@ -31,8 +31,10 @@ const CONCURRENT_LABEL_RE = /視聴中|watching/i
 const VIEWERS_WARN_AFTER = 3
 /** 同時接続数を読み直す間隔 (msec). 表示の変化を取りこぼした時の予備. */
 const VIEWERS_INTERVAL = 30 * 1000
-/** 推移 (同時接続数・再生数) を記録する間隔 (msec). (最大同接は表示が変わるたびに記録する) */
+/** 推移 (同時接続数) を記録する間隔 (msec). (最大同接は表示が変わるたびに記録する) */
 const VIEWERS_SAMPLE_INTERVAL = 60 * 1000
+/** 動画のプレイヤーの video 要素. */
+const MAIN_VIDEO_SELECTOR = '#movie_player video.html5-main-video'
 /** 表示が変わってから読むまでの待ち (msec). 数字が回転している間に何度も読まないようにまとめる. */
 const VIEWERS_THROTTLE = 2 * 1000
 
@@ -78,6 +80,8 @@ export default class PageEventer {
     handler.onChat = chat => this.timeline.addChat(chat)
     // タブを閉じる・再読み込みする時は、貯めている記録を書き込む
     window.addEventListener('pagehide', () => void this.timeline.flush())
+    // 動画が再生されたら再生数を記録する (play はバブリングしないので capture で拾う)
+    document.addEventListener('play', this.onVideoPlay, true)
   }
 
   public async init(): Promise<void> {
@@ -175,8 +179,8 @@ export default class PageEventer {
 
     if (!this.recordStats || !video.id || generation !== this.generation) return video
 
-    // 開くたびに再生数を記録する
-    void TimelineStorage.addViews(video.id, video.viewCount).catch(err => Logger.error(err))
+    // 動画情報を読む前に再生が始まっていたら、ここで再生数を記録する
+    if (this.findMainVideo()?.paused === false) void this.recordViews(video.id, video.viewCount)
 
     // 開いた時に配信中なら、1 分ごとの推移の記録を始める (開いた時点の同時接続数も入れる)
     if (video.isLiveNow) {
@@ -268,6 +272,29 @@ export default class PageEventer {
     }
   }
 
+  /** 動画のプレイヤーの video 要素. (広告・プレビューの video は除く) */
+  protected findMainVideo(): HTMLVideoElement | null {
+    return document.querySelector<HTMLVideoElement>(MAIN_VIDEO_SELECTOR)
+  }
+
+  /** 動画が再生された (一時停止からの再開も含む). その時点の再生数を記録する. */
+  protected onVideoPlay = (event: Event): void => {
+    const video = this.video
+    if (!this.recordStats || !video?.id || event.target !== this.findMainVideo()) return
+    if (!Runtime.isContextValid()) return
+    const videoId = video.id
+    void PageHelper.requestVideoData(videoId).then((data) => {
+      // 遷移の直後は前の動画の情報が返ることがあるので、ID を確かめる
+      if (data?.videoId === videoId && this.video?.id === videoId) return this.recordViews(videoId, data.viewCount ?? 0)
+    })
+  }
+
+  /** 再生数を記録する. (同じ分は 1 つにまとまる) */
+  protected async recordViews(videoId: string, views: number): Promise<void> {
+    Logger.debug(`▶️[views] ${views} (${videoId})`)
+    await TimelineStorage.addViews(videoId, views).catch(err => Logger.error(err))
+  }
+
   /** 推移・最大同接を記録するか (設定). */
   protected get recordStats(): boolean {
     return this.config?.recordStats ?? true
@@ -277,7 +304,7 @@ export default class PageEventer {
    * 配信中の同時接続数を読み続ける.
    *
    * - 最大同接: 表示が変わるたびに読み、超えたらすぐ保存する.
-   * - 推移: 1 分ごとに、その時点の同時接続数と再生数を記録する.
+   * - 推移: 1 分ごとに、その時点の同時接続数を記録する.
    */
   protected startWatchViewers(video: Video, generation: number): void {
     const videoId = video.id
@@ -292,13 +319,6 @@ export default class PageEventer {
     const sample = () => {
       if (generation !== this.generation || current === undefined) return
       this.timeline.addViewers(current)
-    }
-
-    /** 今の再生数を記録する (1 分ごと). */
-    const sampleViews = async () => {
-      const data = await PageHelper.requestVideoData(videoId)
-      if (generation !== this.generation || data?.videoId !== videoId) return
-      await TimelineStorage.addViews(videoId, data.viewCount ?? 0)
     }
 
     /** 読んだ値を覚え、最大を超えたらすぐ保存する. */
@@ -367,10 +387,7 @@ export default class PageEventer {
     }
 
     this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
-    this.viewersSampleTimer = setInterval(() => {
-      sample()
-      void sampleViews().catch(err => Logger.error(err))
-    }, VIEWERS_SAMPLE_INTERVAL)
+    this.viewersSampleTimer = setInterval(sample, VIEWERS_SAMPLE_INTERVAL)
     // 表示を待ってから 1 回目 (遷移したら stopWatchViewers で取り消す)
     this.viewersPending = setTimeout(() => {
       this.viewersPending = undefined

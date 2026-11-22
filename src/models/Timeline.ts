@@ -85,7 +85,7 @@ export class TimelineBuffer {
 /**
  * 再生数の記録. (`@views:<動画ID>` に時刻の昇順で保存する)
  *
- * - 動画ページを開くたびと、配信中は 1 分ごとに記録する. 同じ分は大きい方を残す.
+ * - 動画が再生されるたびに記録する (ほかの推移とは別). 同じ分は大きい方を残す.
  */
 export interface ViewCountPoint {
   t: number // 分の先頭の時刻 (epoch msec)

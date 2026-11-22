@@ -85,7 +85,7 @@
           </ToggleSwitch>
           <ToggleSwitch v-model="form.recordStats">
             同接・再生数などを記録してグラフにする
-            <template #description>配信中は 1 分ごとに同時接続数・コメント数・再生数を記録し、最大同接も記録します。再生数は動画を開くたびにも記録します。</template>
+            <template #description>配信中は 1 分ごとに同時接続数・コメント数を記録し、最大同接も記録します。再生数は動画を再生するたびに記録します。</template>
           </ToggleSwitch>
         </section>
 

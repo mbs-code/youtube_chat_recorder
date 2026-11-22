@@ -1,6 +1,6 @@
 <template>
   <!-- 配信の推移: 同時接続数 (線) とコメント数 (棒) を、時間の軸をそろえて上下に並べる (1 つのグラフに 2 つの目盛りは使わない) -->
-  <section v-if="points.length" class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
+  <section v-if="shown.length" class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
     <div v-for="panel in panels" :key="panel.key" class="not-first:mt-1.5">
       <h3 class="text-xs font-bold text-zinc-700">{{ panel.title }}</h3>
       <svg
@@ -11,6 +11,17 @@
         @pointermove="handlePointer"
         @pointerdown="handlePointer"
       >
+        <!-- 記録できなかった時間 (ページを閉じていた・同接が読めなかった) はグレーの背景 -->
+        <rect
+          v-for="gap in panel.gaps"
+          :key="gap.t"
+          :x="gap.x"
+          :y="PLOT_TOP"
+          :width="gap.width"
+          :height="PLOT_HEIGHT"
+          :fill="MISSING_COLOR"
+        />
+
         <!-- 目盛り線 (控えめに) と値 -->
         <g v-for="tick in panel.yTicks" :key="tick.value">
           <line
@@ -114,6 +125,11 @@
       </p>
     </div>
 
+    <p v-if="hasGaps" class="mt-1 flex items-center gap-1.5 text-xs text-zinc-500">
+      <span class="inline-block size-2.5 rounded-xs" :style="{ backgroundColor: MISSING_COLOR }" />
+      記録できなかった時間
+    </p>
+
     <!-- 表で見る (色が見分けにくい場合・数字を確かめたい場合) -->
     <details class="mt-1.5 text-xs">
       <summary class="cursor-pointer text-zinc-500 select-none">表で見る</summary>
@@ -129,7 +145,7 @@
             </tr>
           </thead>
           <tbody class="text-zinc-700">
-            <tr v-for="point in points" :key="point.t" class="border-t border-zinc-100">
+            <tr v-for="point in shown" :key="point.t" class="border-t border-zinc-100">
               <td class="py-0.5 text-left">{{ formatTime(point.t) }}</td>
               <td>{{ elapsed(point.t) ?? '-' }}</td>
               <td>{{ point.viewers?.toLocaleString() ?? '-' }}</td>
@@ -162,7 +178,14 @@ const props = defineProps<{
   points: TimelinePoint[]
   chats?: Chat[] // スーパーチャットのグラフ用
   startDate?: Date // 配信開始 (経過時間の表示用)
+  endDate?: Date // 配信終了 (これより後は描かない)
 }>()
+
+/** 描く記録 (配信が終わった後の分は除く). */
+const shown = computed(() => {
+  const end = props.endDate?.getTime()
+  return end === undefined ? props.points : props.points.filter(p => p.t <= end)
+})
 
 // 色 (データ可視化の検証済みパレットの 1, 2 番目) と、控えめな線・文字の色 (zinc)
 const VIEWERS_COLOR = '#2a78d6'
@@ -171,6 +194,7 @@ const SUPER_COLOR = '#1baf7a'
 const GRID_COLOR = '#f4f4f5' // zinc-100
 const AXIS_COLOR = '#d4d4d8' // zinc-300
 const MUTED_TEXT = '#71717a' // zinc-500
+const MISSING_COLOR = '#e4e4e7' // zinc-200
 
 // SVG の座標 (viewBox). 幅は popup に合わせ、表示は w-full で伸縮する
 const WIDTH = 540
@@ -192,8 +216,8 @@ const compact = new Intl.NumberFormat('ja-JP', { notation: 'compact', maximumFra
 
 /** 時刻の範囲 (最初の分の先頭 〜 最後の分の終わり). */
 const range = computed(() => {
-  const first = props.points[0]?.t ?? 0
-  const last = props.points.at(-1)?.t ?? first
+  const first = shown.value[0]?.t ?? 0
+  const last = shown.value.at(-1)?.t ?? first
   return { start: first, end: last + MINUTE }
 })
 
@@ -229,9 +253,9 @@ function superLabel(t: number): string {
   return `${superUnit.value}${sum.money.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${sum.count} 件)`
 }
 
-const viewersMax = computed(() => niceMax(Math.max(0, ...props.points.map(p => p.viewers ?? 0))))
-const commentsMax = computed(() => niceMax(Math.max(0, ...props.points.map(p => p.comments))))
-const superMax = computed(() => niceMax(Math.max(0, ...props.points.map(p => superByMinute.value.get(p.t)?.money ?? 0))))
+const viewersMax = computed(() => niceMax(Math.max(0, ...shown.value.map(p => p.viewers ?? 0))))
+const commentsMax = computed(() => niceMax(Math.max(0, ...shown.value.map(p => p.comments))))
+const superMax = computed(() => niceMax(Math.max(0, ...shown.value.map(p => superByMinute.value.get(p.t)?.money ?? 0))))
 const plotBottom = PLOT_TOP + PLOT_HEIGHT
 
 function viewersY(value: number): number {
@@ -257,23 +281,61 @@ interface Panel {
   yTicks: ReturnType<typeof yTicks>
   bars: { t: number, d: string }[]
   color: string
+  gaps: Gap[]
 }
+
+interface Gap {
+  t: number
+  x: number
+  width: number
+}
+
+/** 記録の無い分 (と、同接のグラフでは同接が読めなかった分) を、続いている所をまとめて帯にする. */
+function findGaps(isMissing: (point: TimelinePoint | undefined) => boolean): Gap[] {
+  const byMinute = new Map(shown.value.map(p => [p.t, p]))
+  const gaps: Gap[] = []
+  let from: number | undefined
+  const { start, end } = range.value
+  for (let t = start; t <= end; t += MINUTE) {
+    const missing = t < end && isMissing(byMinute.get(t))
+    if (missing && from === undefined) from = t
+    if (!missing && from !== undefined) {
+      gaps.push({ t: from, x: timeX(from), width: timeX(t) - timeX(from) })
+      from = undefined
+    }
+  }
+  return gaps
+}
+const commentGaps = computed(() => findGaps(p => p === undefined))
+const viewerGaps = computed(() => findGaps(p => p?.viewers === undefined))
+const hasGaps = computed(() => viewerGaps.value.length > 0)
 
 const panels = computed<Panel[]>(() => {
   const list: Panel[] = [
-    { key: 'viewers', title: '同時接続数', height: plotBottom + 4, plotBottom, showXAxis: false, yTicks: yTicks(viewersMax.value, viewersY), bars: [], color: VIEWERS_COLOR },
+    {
+      key: 'viewers',
+      title: '同時接続数',
+      height: plotBottom + 4,
+      plotBottom,
+      showXAxis: false,
+      yTicks: yTicks(viewersMax.value, viewersY),
+      bars: [],
+      color: VIEWERS_COLOR,
+      gaps: viewerGaps.value,
+    },
     {
       key: 'comments',
-      title: 'コメント数',
+      title: 'コメント数 (上位チャット)',
       height: plotBottom + 4,
       plotBottom,
       showXAxis: false,
       yTicks: yTicks(commentsMax.value, commentsY),
-      bars: bars(props.points.map(p => ({ t: p.t, value: p.comments })), commentsY),
+      bars: bars(shown.value.map(p => ({ t: p.t, value: p.comments })), commentsY),
       color: COMMENTS_COLOR,
+      gaps: commentGaps.value,
     },
   ]
-  const superValues = props.points.map(p => ({ t: p.t, value: superByMinute.value.get(p.t)?.money ?? 0 }))
+  const superValues = shown.value.map(p => ({ t: p.t, value: superByMinute.value.get(p.t)?.money ?? 0 }))
   if (superValues.some(v => v.value > 0)) {
     list.push({
       key: 'super',
@@ -284,6 +346,7 @@ const panels = computed<Panel[]>(() => {
       yTicks: yTicks(superMax.value, superY),
       bars: bars(superValues, superY),
       color: SUPER_COLOR,
+      gaps: commentGaps.value,
     })
   }
   // 時刻の目盛りは一番下のグラフだけ
@@ -298,7 +361,7 @@ const viewerPaths = computed(() => {
   const paths: string[] = []
   let current = ''
   let prevT: number | undefined
-  for (const point of props.points) {
+  for (const point of shown.value) {
     if (point.viewers === undefined || (prevT !== undefined && point.t - prevT > MINUTE)) {
       if (current) paths.push(current)
       current = ''
@@ -347,7 +410,7 @@ const xTicks = computed(() => {
 /// マウスを乗せた時 ///
 
 const hoverIndex = ref<number>()
-const hoverPoint = computed(() => (hoverIndex.value === undefined ? undefined : props.points[hoverIndex.value]))
+const hoverPoint = computed(() => (hoverIndex.value === undefined ? undefined : shown.value[hoverIndex.value]))
 
 /** マウスの位置に一番近い分を選ぶ. (縦の帯全体が当たり判定) */
 function handlePointer(event: PointerEvent): void {
@@ -359,8 +422,8 @@ function handlePointer(event: PointerEvent): void {
     return
   }
   let best = 0
-  props.points.forEach((p, i) => {
-    if (Math.abs(centerX(p.t) - x) < Math.abs(centerX(props.points[best].t) - x)) best = i
+  shown.value.forEach((p, i) => {
+    if (Math.abs(centerX(p.t) - x) < Math.abs(centerX(shown.value[best].t) - x)) best = i
   })
   hoverIndex.value = best
 }
