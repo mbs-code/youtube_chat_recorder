@@ -88,6 +88,7 @@ popup / options → chrome.storage.local を直接読み書き
 
 - 日時は **epoch msec の number** で保存する (v1 の class-transformer 時代と同じ)。`lib/util/serialize.ts` の `toTime` / `toDate` を使う。
 - フィールドを追加する場合はクラスの初期値で既存データを補完できるようにする (`fromPlain` は `Object.assign(new X(), plain)`)。
+- 基本フィルター (`ChatFilter` の `BASE_FILTERS`) を追加した場合、既存ユーザーの `@config` には無いので `ChatFilter.complementChatFilterConfigs` で補完される。既存の挙動を変えないよう、必要なら `INHERIT_FILTER_KEYS` で引き継ぎ元を指定する。
 - フィールドの削除・リネーム・型変更は既存ユーザーのデータを壊すので避ける。必要なら `fromPlain` で移行する。
 
 ## YouTube の仕様変更への対応
@@ -118,6 +119,7 @@ YouTube に依存している箇所:
 - `DOMNodeRemoved` (Mutation Events) は Chrome 127 で削除された → MutationObserver で iframe の切断を検知
 - 時刻表示は ja ロケールでも `9:50 AM` 形式で、間に `U+202F` (narrow no-break space) が入る
 - 投稿者名は `@handle` 形式
+- メンバー歴 (マイルストーン) チャットは加入と同じ `yt-live-chat-membership-item-renderer` で、`#header-primary-text` ("メンバー歴 11 か月") の有無で区別する。`#header-subtext` はメンバーシップ名、`#message` は本文 (省略可)
 
 未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、メンバーシップギフト (`ytd-sponsorships-live-chat-*`, 未対応)。
 

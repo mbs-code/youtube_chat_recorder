@@ -18,7 +18,9 @@ export default class Chat {
 
   memberMonths?: number // undefined, 0(新規), 1, 2, ...
 
-  isJoinMember = false
+  isJoinMember = false // メンバー加入
+  isMilestone = false // メンバー歴 (マイルストーン) チャット
+  milestoneText?: string // "メンバー歴 11 か月"
   isSuperChat = false
   isSuperStickers = false
   money?: number
@@ -54,6 +56,7 @@ export default class Chat {
     if (this.isMember) emojis.push('🟩')
     if (this.isVerified) emojis.push('✅')
     if (this.isJoinMember) emojis.push('🌟')
+    if (this.isMilestone) emojis.push('🎉')
     if (this.money) emojis.push('💰')
 
     const date = this.timestamp?.toLocaleString()

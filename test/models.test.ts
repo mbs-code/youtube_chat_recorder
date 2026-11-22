@@ -44,6 +44,39 @@ describe('storage との相互変換 (v1 の保存形式と互換)', () => {
   })
 })
 
+describe('後から追加した基本フィルターの補完', () => {
+  // v2.0.0 までの保存済み設定 (milestone が無い)
+  const legacy: ChatFilterConfigInterface[] = [
+    { key: 'plain', title: '⬜ 通常チャット', doSave: false, doImage: false },
+    { key: 'joinmember', title: '➕ メンバー加入', doSave: true, doImage: true },
+    { key: '1700000000000', title: 'custom', doSave: true, doImage: false, textMode: 'message', match: 'x' },
+  ]
+
+  it('joinmember の設定を引き継いで、基本フィルターの並びに挿入する', () => {
+    const config = Config.fromPlain({ chatFilters: legacy })
+    const keys = config.chatFilters.map(cf => cf.key)
+
+    expect(keys.indexOf('milestone')).toBe(keys.indexOf('joinmember') + 1)
+    expect(keys.at(-1)).toBe('1700000000000') // カスタムフィルターは末尾のまま
+    expect(config.chatFilters.find(cf => cf.key === 'milestone')).toMatchObject({ doSave: true, doImage: true })
+    expect(config.chatFilters.find(cf => cf.key === 'owner')).toMatchObject({ doSave: true, doImage: true }) // 初期値
+  })
+
+  it('既にあるものは変更しない', () => {
+    const configs = ChatFilter.generateDefaultChatfilterConfigs()
+    expect(ChatFilter.complementChatFilterConfigs(configs)).toEqual(configs)
+  })
+
+  it('マイルストーンは通常チャット・メンバー加入に一致しない', () => {
+    const cf = new ChatFilter()
+    cf.setChatFilters([
+      { key: 'plain', title: '', doSave: true, doImage: false },
+      { key: 'joinmember', title: '', doSave: true, doImage: false },
+    ])
+    expect(cf.checkChatTaskType(Object.assign(new Chat(), { isMilestone: true }))).toBe(false)
+  })
+})
+
 describe('ChatFilter', () => {
   const chat = (props: Partial<Chat>) => Object.assign(new Chat(), props)
   const filter = (configs: ChatFilterConfigInterface[]) => {

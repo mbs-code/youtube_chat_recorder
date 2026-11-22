@@ -60,6 +60,9 @@ export default class Config implements ConfigInterface {
   /** storage から復元する (足りない値は初期値). */
   public static fromPlain(plain: Plain): Config {
     const config = Object.assign(new Config(), plain)
+    if (Array.isArray(plain.chatFilters)) {
+      config.chatFilters = ChatFilter.complementChatFilterConfigs(plain.chatFilters as ChatFilterConfigInterface[])
+    }
     config.createdAt = toDate(plain.createdAt)
     config.updatedAt = toDate(plain.updatedAt)
     return config

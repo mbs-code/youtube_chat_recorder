@@ -14,6 +14,9 @@
             </div>
             <div>{{ chat.authorName }}: {{ chat.altMessage }}</div>
             <div v-if="chat.money">{{ chat.moneyUnit }} {{ chat.money }}</div>
+            <div v-if="chat.isMilestone">
+              <span class="tag is-success is-light">🎉 {{ chat.milestoneText }}</span>
+            </div>
           </div>
           <div class="column is-12 app-chat-image">
             <div v-if="chat.pngUrl">

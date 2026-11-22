@@ -18,7 +18,8 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
         !chat.isSuperChat &&
         !chat.isSuperStickers &&
         !chat.isMember &&
-        !chat.isJoinMember
+        !chat.isJoinMember &&
+        !chat.isMilestone
       )
     },
   },
@@ -52,7 +53,20 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
     title: '➕ メンバー加入',
     func: (chat: Chat) => chat.isJoinMember,
   },
+  {
+    key: 'milestone',
+    title: '🎉 メンバー歴',
+    func: (chat: Chat) => chat.isMilestone,
+  },
 ]
+
+/**
+ * 後から追加したフィルターが、既存の設定に無い場合の初期値の引き継ぎ元.
+ * (milestone は v2.0.0 まで joinmember として扱っていた)
+ */
+const INHERIT_FILTER_KEYS: Record<string, string> = {
+  milestone: 'joinmember',
+}
 
 // 警告を出すフィルターキー
 export const warnFilterKeys = ['plain', 'member']
@@ -99,6 +113,33 @@ export default class ChatFilter {
           doImage: defaultTrueKeys.includes(e.key),
         }
       })
+  }
+
+  /**
+   * 保存済みの設定に、後から追加された基本フィルターを補完する.
+   *
+   * - 追加分は基本フィルターの並び順の位置に挿入する.
+   * - 初期値は INHERIT_FILTER_KEYS の引き継ぎ元があればその値、無ければ初期設定.
+   *
+   * @param configs 保存済みの config chat filter 配列
+   */
+  public static complementChatFilterConfigs(configs: ChatFilterConfigInterface[]): ChatFilterConfigInterface[] {
+    const result = [...configs]
+    const defaults = this.generateDefaultChatfilterConfigs()
+
+    defaults.forEach((def, index) => {
+      if (result.some(cf => cf.key === def.key)) return
+
+      const inherit = result.find(cf => cf.key === INHERIT_FILTER_KEYS[def.key])
+      const filter = inherit ? { ...def, doSave: inherit.doSave, doImage: inherit.doImage } : def
+
+      // 直前の基本フィルターの後ろに入れる (見つからなければ先頭側)
+      const prevKeys = defaults.slice(0, index).map(d => d.key)
+      const insertAt = result.reduce((at, cf, i) => (prevKeys.includes(cf.key) ? i + 1 : at), 0)
+      result.splice(insertAt, 0, filter)
+    })
+
+    return result
   }
 
   ///

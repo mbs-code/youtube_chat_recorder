@@ -49,6 +49,7 @@ const E2E_CONFIG = {
     { key: 'superchat', title: '💰 スーパーチャット', doSave: true, doImage: true },
     { key: 'member', title: '🟩 メンバー', doSave: true, doImage: true },
     { key: 'joinmember', title: '➕ メンバー加入', doSave: true, doImage: true },
+    { key: 'milestone', title: '🎉 メンバー歴', doSave: true, doImage: true },
   ],
   showLogLevel: 'debug',
 }
@@ -155,9 +156,16 @@ async function main() {
     console.log({ total: chats.length, withImage, imageErrors, missingAuthor, missingTime, badge })
     for (const chat of chats.slice(-8)) {
       const time = chat.timestamp ? new Date(chat.timestamp).toLocaleTimeString() : '-'
-      const flags = ['isOwner', 'isModerator', 'isMember', 'isVerified', 'isSuperChat', 'isSuperStickers', 'isJoinMember'].filter(
-        k => chat[k]
-      )
+      const flags = [
+        'isOwner',
+        'isModerator',
+        'isMember',
+        'isVerified',
+        'isSuperChat',
+        'isSuperStickers',
+        'isJoinMember',
+        'isMilestone',
+      ].filter(k => chat[k])
       console.log(`  ${time} (${chat.seconds}s) [${chat.authorName}] ${chat.altMessage} ${flags.join(',')}${chat.pngUrl ? ' 🖼' : ''}`)
     }
 

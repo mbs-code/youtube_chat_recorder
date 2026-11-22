@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import ChatParser from '../src/lib/parser/ChatParser'
 import Video from '../src/models/Video'
-import { createElement, MEMBERSHIP_ITEM, PAID_MESSAGE, TEXT_MESSAGE_MEMBER, TEXT_MESSAGE_OWNER } from './fixtures/chat'
+import {
+  createElement,
+  MEMBERSHIP_ITEM,
+  MEMBERSHIP_MILESTONE,
+  PAID_MESSAGE,
+  TEXT_MESSAGE_MEMBER,
+  TEXT_MESSAGE_OWNER,
+} from './fixtures/chat'
 
 function liveVideo(): Video {
   const video = new Video()
@@ -69,7 +76,32 @@ describe('ChatParser.parse', () => {
     expect(chat.isMember).toBe(true)
     expect(chat.memberMonths).toBe(0)
     expect(chat.altMessage).toBe('ホロライブ応援デラックス へようこそ！')
+    expect(chat.isMilestone).toBe(false)
     expect(chat.seconds).toBe(-(1 * 3600 + 14 * 60 + 32))
+  })
+
+  it('メンバー歴 (マイルストーン) を解析できる', async () => {
+    const now = new Date(2026, 10, 22, 10, 26, 40)
+    const chat = await ChatParser.parse(liveVideo(), createElement(MEMBERSHIP_MILESTONE), now)
+
+    expect(chat.authorName).toBe('@一文字紅牙')
+    expect(chat.isMilestone).toBe(true)
+    expect(chat.isJoinMember).toBe(false)
+    expect(chat.isMember).toBe(true)
+    expect(chat.memberMonths).toBe(11) // バッジ (6 か月) よりヘッダーを優先
+    expect(chat.milestoneText).toBe('メンバー歴 11 か月')
+    expect(chat.message).toBe('「この世の全て⇒世界平和」ですね、分かります。')
+    expect(chat.altMessage).toBe('「この世の全て⇒世界平和」ですね、分かります。')
+    expect(chat.timestamp).toEqual(now)
+  })
+
+  it('メンバー歴 (本文なし) はヘッダーを本文にする', async () => {
+    const node = createElement(MEMBERSHIP_MILESTONE)
+    node.querySelector('#message')!.textContent = ''
+    const chat = await ChatParser.parse(liveVideo(), node)
+
+    expect(chat.isMilestone).toBe(true)
+    expect(chat.altMessage).toBe('メンバー歴 11 か月')
   })
 })
 

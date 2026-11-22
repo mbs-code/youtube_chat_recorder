@@ -84,10 +84,21 @@ export default class ChatParser {
 
     // メンバー加入・マイルストーン ///
     if (tagName === 'yt-live-chat-membership-item-renderer') {
-      chat.isJoinMember = true
+      // マイルストーン: #header-primary-text = "メンバー歴 11 か月", #header-subtext = メンバーシップ名, #message = 本文 (省略可)
+      // 加入: #header-primary-text なし, #header-subtext = "〇〇 へようこそ！"
+      const headerPrimaryText = DomQueryHelper.getTextContent(node, '#header-primary-text')
       const headerSubtext = DomQueryHelper.getTextContent(node, '#header-subtext')
-      if (!chat.altMessage) chat.altMessage = headerSubtext || ''
-      if (!chat.message) chat.message = headerSubtext || ''
+      if (headerPrimaryText) {
+        chat.isMilestone = true
+        chat.memberMonths = this.parseMemberMonth(headerPrimaryText) ?? chat.memberMonths // バッジより正確
+        chat.milestoneText = headerPrimaryText
+      } else {
+        chat.isJoinMember = true
+      }
+
+      const fallback = headerPrimaryText || headerSubtext || ''
+      if (!chat.altMessage) chat.altMessage = fallback
+      if (!chat.message) chat.message = fallback
     }
 
     return chat
@@ -184,7 +195,7 @@ export default class ChatParser {
     if (ariaLabel.includes('新規') || /new/i.test(ariaLabel)) return 0
 
     const years = ariaLabel.match(/(\d+)\s*(年|years?)/i)
-    const months = ariaLabel.match(/(\d+)\s*(か月|ヶ月|カ月|months?)/i)
+    const months = ariaLabel.match(/(\d+)\s*(か月|ヶ月|カ月|ヵ月|months?)/i)
     if (years || months) {
       return parseInt(years?.[1] ?? '0', 10) * 12 + parseInt(months?.[1] ?? '0', 10)
     }
