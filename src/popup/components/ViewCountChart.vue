@@ -1,6 +1,6 @@
 <template>
   <!-- 再生数の記録: 動画を開くたび (配信中は 1 分ごと) に記録した値を線でつなぐ. 時刻は記録した間隔のまま (数日にまたがることもある) -->
-  <section v-if="points.length" class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
+  <section class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
     <h3 class="text-xs font-bold text-zinc-700">再生数</h3>
     <svg
       class="block w-full touch-none"
@@ -28,6 +28,16 @@
           font-size="10"
         >{{ tick.label }}</text>
       </g>
+
+      <text
+        v-if="points.length === 0"
+        :x="PLOT_LEFT + plotWidth / 2"
+        :y="PLOT_TOP + PLOT_HEIGHT / 2"
+        text-anchor="middle"
+        dominant-baseline="middle"
+        :fill="MUTED_TEXT"
+        font-size="11"
+      >記録なし</text>
 
       <path
         :d="linePath"
@@ -85,7 +95,7 @@
       </p>
     </div>
 
-    <details class="mt-1.5 text-xs">
+    <details v-if="points.length" class="mt-1.5 text-xs">
       <summary class="cursor-pointer text-zinc-500 select-none">表で見る</summary>
       <div class="mt-1 max-h-48 overflow-y-auto">
         <table class="w-full text-right tabular-nums">
@@ -154,7 +164,7 @@ function niceStep(span: number): number {
 
 /** 縦軸の範囲 (切りのいい値に広げる). */
 const yRange = computed(() => {
-  const values = props.points.map(p => p.views)
+  const values = props.points.length ? props.points.map(p => p.views) : [0]
   const lo = Math.min(...values)
   const hi = Math.max(...values)
   const step = niceStep(hi - lo || hi * 0.1 || 1)
@@ -169,6 +179,7 @@ function y(value: number): number {
 }
 const yTicks = computed(() => {
   const { min, max, step } = yRange.value
+  if (props.points.length === 0) return [{ value: min, y: y(min), label: '0' }]
   const ticks = []
   for (let v = min; v <= max + step / 2; v += step) ticks.push({ value: v, y: y(v), label: compact.format(v) })
   return ticks
@@ -176,7 +187,7 @@ const yTicks = computed(() => {
 
 /** 横軸 (記録した最初 〜 最後. 1 点だけなら真ん中). */
 const xRange = computed(() => {
-  const start = props.points[0]?.t ?? 0
+  const start = props.points[0]?.t ?? Date.now()
   const end = props.points.at(-1)?.t ?? start
   return { start, end }
 })

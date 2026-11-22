@@ -1,6 +1,6 @@
 <template>
   <!-- 配信の推移: 同時接続数 (線) とコメント数 (棒) を、時間の軸をそろえて上下に並べる (1 つのグラフに 2 つの目盛りは使わない) -->
-  <section v-if="shown.length" class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
+  <section class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
     <div v-for="panel in panels" :key="panel.key" class="not-first:mt-1.5">
       <h3 class="text-xs font-bold text-zinc-700">{{ panel.title }}</h3>
       <svg
@@ -11,6 +11,17 @@
         @pointermove="handlePointer"
         @pointerdown="handlePointer"
       >
+        <!-- 記録が無い時も枠と目盛りは出す -->
+        <text
+          v-if="panel.empty"
+          :x="PLOT_LEFT + (WIDTH - PLOT_LEFT - PLOT_RIGHT) / 2"
+          :y="PLOT_TOP + PLOT_HEIGHT / 2"
+          text-anchor="middle"
+          dominant-baseline="middle"
+          :fill="MUTED_TEXT"
+          font-size="11"
+        >記録なし</text>
+
         <!-- 記録できなかった時間 (ページを閉じていた・同接が読めなかった) はグレーの背景 -->
         <rect
           v-for="gap in panel.gaps"
@@ -131,7 +142,7 @@
     </p>
 
     <!-- 表で見る (色が見分けにくい場合・数字を確かめたい場合) -->
-    <details class="mt-1.5 text-xs">
+    <details v-if="shown.length" class="mt-1.5 text-xs">
       <summary class="cursor-pointer text-zinc-500 select-none">表で見る</summary>
       <div class="mt-1 max-h-48 overflow-y-auto">
         <table class="w-full text-right tabular-nums">
@@ -216,7 +227,13 @@ const compact = new Intl.NumberFormat('ja-JP', { notation: 'compact', maximumFra
 
 /** 時刻の範囲 (最初の分の先頭 〜 最後の分の終わり). */
 const range = computed(() => {
-  const first = shown.value[0]?.t ?? 0
+  // 記録が無い時は配信の時間 (分からなければ直近 1 時間) を軸にする
+  if (shown.value.length === 0) {
+    const end = toMinute(props.endDate ?? new Date())
+    const start = props.startDate ? Math.min(toMinute(props.startDate), end) : end - 60 * MINUTE
+    return { start, end: end + MINUTE }
+  }
+  const first = shown.value[0].t
   const last = shown.value.at(-1)?.t ?? first
   return { start: first, end: last + MINUTE }
 })
@@ -269,7 +286,8 @@ function superY(value: number): number {
 }
 
 function yTicks(max: number, toY: (v: number) => number) {
-  return [0, max / 2, max].map(value => ({ value, y: toY(value), label: compact.format(value) }))
+  // 0 ばかりの時 (最大 1) に 0.5 の目盛りを出さない
+  return [0, max / 2, max].filter(v => Number.isInteger(v)).map(value => ({ value, y: toY(value), label: compact.format(value) }))
 }
 
 interface Panel {
@@ -282,6 +300,7 @@ interface Panel {
   bars: { t: number, d: string }[]
   color: string
   gaps: Gap[]
+  empty: boolean // 記録が無い (「記録なし」と出す)
 }
 
 interface Gap {
@@ -294,6 +313,7 @@ interface Gap {
 function findGaps(isMissing: (point: TimelinePoint | undefined) => boolean): Gap[] {
   const byMinute = new Map(shown.value.map(p => [p.t, p]))
   const gaps: Gap[] = []
+  if (byMinute.size === 0) return gaps // 全く無い時は「記録なし」と出すので塗らない
   let from: number | undefined
   const { start, end } = range.value
   for (let t = start; t <= end; t += MINUTE) {
@@ -322,6 +342,7 @@ const panels = computed<Panel[]>(() => {
       bars: [],
       color: VIEWERS_COLOR,
       gaps: viewerGaps.value,
+      empty: !shown.value.some(p => p.viewers !== undefined),
     },
     {
       key: 'comments',
@@ -333,22 +354,23 @@ const panels = computed<Panel[]>(() => {
       bars: bars(shown.value.map(p => ({ t: p.t, value: p.comments })), commentsY),
       color: COMMENTS_COLOR,
       gaps: commentGaps.value,
+      empty: shown.value.length === 0,
     },
   ]
+  // スーパーチャットが 1 件も無くても出す (0 が続くグラフ)
   const superValues = shown.value.map(p => ({ t: p.t, value: superByMinute.value.get(p.t)?.money ?? 0 }))
-  if (superValues.some(v => v.value > 0)) {
-    list.push({
-      key: 'super',
-      title: `スーパーチャット (${superUnit.value})`,
-      height: plotBottom + X_AXIS_HEIGHT,
-      plotBottom,
-      showXAxis: true,
-      yTicks: yTicks(superMax.value, superY),
-      bars: bars(superValues, superY),
-      color: SUPER_COLOR,
-      gaps: commentGaps.value,
-    })
-  }
+  list.push({
+    key: 'super',
+    title: superUnit.value ? `スーパーチャット (${superUnit.value})` : 'スーパーチャット',
+    height: plotBottom + X_AXIS_HEIGHT,
+    plotBottom,
+    showXAxis: true,
+    yTicks: yTicks(superMax.value, superY),
+    bars: bars(superValues, superY),
+    color: SUPER_COLOR,
+    gaps: commentGaps.value,
+    empty: shown.value.length === 0,
+  })
   return list
 })
 

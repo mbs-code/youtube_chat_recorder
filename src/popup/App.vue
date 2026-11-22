@@ -70,7 +70,6 @@
             :end-date="selectedVideo.endDate"
           />
           <ViewCountChart :points="viewCounts" :start-date="selectedVideo.startDate" />
-          <p v-if="timeline.length === 0 && viewCounts.length === 0" class="py-6 text-center text-xs text-zinc-500">推移の記録はありません</p>
         </template>
       </section>
 
