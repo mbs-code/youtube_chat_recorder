@@ -18,12 +18,19 @@ export default class TimelineStorage {
     return Array.isArray(points) ? (points as TimelinePoint[]) : []
   }
 
+  /** 書き込みを 1 つずつ順番に行うための待ち行列. (読んで足して書く間に、別の書き込みが割り込まないように) */
+  protected static queue: Promise<void> = Promise.resolve()
+
   /** 記録を足して保存する. (同じ分はコメント数を合計し、同時接続数は大きい方を残す) */
-  public static async add(videoId: string, points: TimelinePoint[]): Promise<void> {
-    if (points.length === 0) return
-    const merged = mergeTimeline(await this.get(videoId), points)
-    Logger.debug(`> 💾[save] timeline: ${merged.length} (+${points.length}) (${videoId})`)
-    await chrome.storage.local.set({ [this.key(videoId)]: merged })
+  public static add(videoId: string, points: TimelinePoint[]): Promise<void> {
+    if (points.length === 0) return Promise.resolve()
+    const task = this.queue.then(async () => {
+      const merged = mergeTimeline(await this.get(videoId), points)
+      Logger.debug(`> 💾[save] timeline: ${merged.length} (+${points.length}) (${videoId})`)
+      await chrome.storage.local.set({ [this.key(videoId)]: merged })
+    })
+    this.queue = task.catch(() => {}) // 失敗しても次の書き込みは続ける
+    return task
   }
 
   /** 記録を消す. */

@@ -436,7 +436,7 @@ flowchart LR
   CH["ChatHandler.setVideo"] -- "画像化済み ID を読む" --> K3
   POP -- "読む・削除" --> K3
 
-  TR["TimelineRecorder.flush (30 秒ごと / 遷移時 / pagehide)<br/>← ChatHandler.onChat (全チャット)<br/>← startWatchViewers (同接)"] -- "足す" --> K4
+  TR["TimelineRecorder.flush (3 秒後・以降 10 秒ごと / 遷移時 / pagehide)<br/>← ChatHandler.onChat (全チャット)<br/>← startWatchViewers (同接)"] -- "足す" --> K4
   VSS -- "溢れた動画の推移も消す<br/>TimelineStorage.clear" --> K4
   POP -- "読む (TimelineChart)" --> K4
 ```
@@ -461,7 +461,7 @@ flowchart LR
 | `PageEventer.loadConfig` | `init` | `ConfigStorage.get()` → `chatFilter.setChatFilters`, `handler.setDrawOnce` |
 | `PageEventer.onPageUpdated` | `init`, `yt-page-data-updated` イベント | — → `loadVideo`, `attachChatFrame` |
 | `PageEventer.loadVideo` | `onPageUpdated` | URL → `VideoData` (開いた時点の同接 `concurrentViewers` を含む. page-bridge が `ytd-watch-flexy.data` から `parseConcurrentViewers` で取る) → `Video` → `VideoStorage.save` |
-| `TimelineRecorder.start / addChat / addViewers / flush / stop` | `PageEventer` (配信中のみ), `ChatHandler.onChat` | 1 分ごとのコメント数 (開く前のチャット・同じ ID は数えない) と同接の最大をメモリに貯め、30 秒ごと・遷移時・`pagehide` で `TimelineStorage.add` |
+| `TimelineRecorder.start / addChat / addViewers / flush / stop` | `PageEventer` (配信中のみ), `ChatHandler.onChat` | 1 分ごとのコメント数 (開く前のチャット・同じ ID は数えない) と同接の最大をメモリに貯め、3 秒後・以降 10 秒ごと・遷移時・`pagehide` で `TimelineStorage.add` (書き込みは 1 つずつ順番に) |
 | `PageEventer.startWatchViewers` | `onPageUpdated` (配信中のみ) | `#view-count` の aria-label → `VideoParser.parseConcurrentViewers` → 最大を超えたら `VideoStorage.updateMaxViewers`. 遷移時に `stopWatchViewers` |
 | `PageEventer.attachChatFrame` | `onPageUpdated`, `removalObserver` | `document` → `iframe` → `connectChat` |
 | `PageEventer.onIframeLoad` | iframe の `load` イベント | `iframe` → `connectChat` |

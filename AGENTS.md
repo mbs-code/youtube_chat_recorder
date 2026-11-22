@@ -86,7 +86,7 @@ popup / options → chrome.storage.local を直接読み書き
 | `@config` | `Config.toPlain()` |
 | `@videos` | `Video.toPlain()[]` (閲覧日時の降順, 最大 `maxVideoLength` 件) |
 | `<動画ID>` | `Chat.toPlain()[]` |
-| `@timeline:<動画ID>` | `TimelinePoint[]` (1 分ごとの `{ t, viewers?, comments }`, 時刻の昇順). 配信中のみ `TimelineRecorder` が 30 秒ごとに足す (コメント数は合計、同接は大きい方) |
+| `@timeline:<動画ID>` | `TimelinePoint[]` (1 分ごとの `{ t, viewers?, comments }`, 時刻の昇順). 配信中のみ `TimelineRecorder` が 10 秒ごと (最初は 3 秒後) に足す (コメント数は合計、同接は大きい方) |
 
 - 日時は **epoch msec の number** で保存する (v1 の class-transformer 時代と同じ)。`lib/util/serialize.ts` の `toTime` / `toDate` を使う。
 - フィールドを追加する場合はクラスの初期値で既存データを補完できるようにする (`fromPlain` は `Object.assign(new X(), plain)`)。

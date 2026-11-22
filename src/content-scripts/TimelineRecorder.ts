@@ -4,7 +4,9 @@ import type Chat from '../models/Chat'
 import { MINUTE, TimelineBuffer } from '../models/Timeline'
 
 /** storage に書き込む間隔 (msec). */
-const FLUSH_INTERVAL = 30 * 1000
+const FLUSH_INTERVAL = 10 * 1000
+/** 記録を始めてから最初に書き込むまで (msec). 開いてすぐ popup で見られるように早めに書く. */
+const FIRST_FLUSH_DELAY = 3 * 1000
 
 /**
  * 配信中の推移 (1 分ごとの同時接続数・コメント数) を記録する.
@@ -20,6 +22,7 @@ export default class TimelineRecorder {
   protected buffer = new TimelineBuffer()
   protected countedIds = new Set<string>()
   protected timer?: ReturnType<typeof setInterval>
+  protected firstTimer?: ReturnType<typeof setTimeout>
 
   /** 配信中の動画の記録を始める. */
   public start(videoId: string, now = new Date()): void {
@@ -27,6 +30,7 @@ export default class TimelineRecorder {
     this.videoId = videoId
     this.startedAt = now.getTime()
     this.timer = setInterval(() => void this.flush(), FLUSH_INTERVAL)
+    this.firstTimer = setTimeout(() => void this.flush(), FIRST_FLUSH_DELAY)
     Logger.debug(`📈[timeline] start (${videoId})`)
   }
 
@@ -37,7 +41,9 @@ export default class TimelineRecorder {
    */
   public stop(): Promise<void> {
     clearInterval(this.timer)
+    clearTimeout(this.firstTimer)
     this.timer = undefined
+    this.firstTimer = undefined
     const pending = this.flush()
     this.videoId = undefined
     this.countedIds.clear()
