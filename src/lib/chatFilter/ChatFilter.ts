@@ -19,7 +19,8 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
         !chat.isSuperStickers &&
         !chat.isMember &&
         !chat.isJoinMember &&
-        !chat.isMilestone
+        !chat.isMilestone &&
+        chat.topChatRank === undefined
       )
     },
   },
@@ -58,14 +59,20 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
     title: '🎉 メンバー歴',
     func: (chat: Chat) => chat.isMilestone,
   },
+  {
+    key: 'topchat',
+    title: '👑 トップチャット(順位あり)',
+    func: (chat: Chat) => chat.topChatRank !== undefined,
+  },
 ]
 
 /**
  * 後から追加したフィルターが、既存の設定に無い場合の初期値の引き継ぎ元.
- * (milestone は v2.0.0 まで joinmember として扱っていた)
+ * (milestone は v2.0.0 まで joinmember、topchat は plain として扱っていた)
  */
 const INHERIT_FILTER_KEYS: Record<string, string> = {
   milestone: 'joinmember',
+  topchat: 'plain',
 }
 
 // 警告を出すフィルターキー

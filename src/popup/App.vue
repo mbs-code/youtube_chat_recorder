@@ -79,19 +79,13 @@
         </template>
         <span v-else class="muted">チャットをクリックして選択</span>
       </span>
-      <button
-        class="btn btn-secondary"
-        :disabled="csvTargets.length === 0"
-        :title="selectedChats.length ? '選択したチャットを CSV で保存' : '絞り込みに当てはまる全てのチャットを CSV で保存'"
-        @click="handleSaveCsv"
-      >
-        <i class="mdi mdi-file-delimited-outline" />
-        CSV で保存
-        <span class="csv-count">{{ csvTargets.length }}</span>
-      </button>
       <button class="btn btn-danger" :disabled="selectedChats.length === 0" @click="handleDeleteSelectedChats">
         <i class="mdi mdi-delete-outline" />
         削除
+      </button>
+      <button class="btn btn-secondary" :disabled="selectedChats.length === 0" title="選択したチャットを CSV で保存" @click="handleSaveCsv">
+        <i class="mdi mdi-file-delimited-outline" />
+        CSV で保存
       </button>
       <button class="btn btn-primary" :disabled="selectedChats.length === 0 || isSaving" @click="handleSaveToMerge">
         <i class="mdi" :class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-download'" />
@@ -197,12 +191,10 @@ async function generateOriginalImage(chat: Chat): Promise<string | undefined> {
   return node ? await NodeToPng.generate(node) : undefined
 }
 
-/** CSV に出力するチャット: 選択中ならそれ、無ければ絞り込みに当てはまる全て (表示上限なし). */
-const csvTargets = computed(() => (selectedChats.value.length ? selectedChats.value : sortedChats.value))
-
+/** 選択したチャットを CSV で保存する (投稿時間順). */
 function handleSaveCsv(): void {
   const video = selectedVideo.value
-  const targets = csvTargets.value
+  const targets = selectedChats.value
   if (!video || targets.length === 0) return
 
   const url = ChatCsv.createObjectURL(video, targets)
@@ -375,16 +367,6 @@ html {
   padding: 10px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
-}
-
-.csv-count {
-  min-width: 18px;
-  padding: 0 5px;
-  border-radius: 999px;
-  background: var(--hover);
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 18px;
 }
 
 .selection {

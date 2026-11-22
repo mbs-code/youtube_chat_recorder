@@ -59,6 +59,9 @@ export default class ChatParser {
       }
     }
 
+    // トップチャット (名前の後ろの 👑#1 のような順位ボタン) ///
+    chat.topChatRank = this.parseTopChatRank(node)
+
     const tagName = node.tagName.toLowerCase()
 
     // スーパーチャット ///
@@ -183,6 +186,21 @@ export default class ChatParser {
     }
 
     return {}
+  }
+
+  /**
+   * トップチャットの順位を取り出す.
+   *
+   * - `#before-content-buttons` 内の `<button aria-label="#1">` (王冠アイコン + "#1").
+   * - 順位が無ければ undefined.
+   */
+  public static parseTopChatRank(node: Element): number | undefined {
+    for (const button of Array.from(node.querySelectorAll('#before-content-buttons button'))) {
+      const label = button.getAttribute('aria-label') || button.textContent || ''
+      const rank = label.trim().match(/^#(\d+)$/)?.[1]
+      if (rank) return parseInt(rank, 10)
+    }
+    return undefined
   }
 
   /**

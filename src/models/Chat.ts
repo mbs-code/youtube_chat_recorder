@@ -21,6 +21,7 @@ export default class Chat {
   isJoinMember = false // メンバー加入
   isMilestone = false // メンバー歴 (マイルストーン) チャット
   milestoneText?: string // "メンバー歴 11 か月"
+  topChatRank?: number // トップチャットの順位 (👑#1 なら 1)
   isSuperChat = false
   isSuperStickers = false
   money?: number
@@ -57,6 +58,7 @@ export default class Chat {
     if (this.isVerified) emojis.push('✅')
     if (this.isJoinMember) emojis.push('🌟')
     if (this.isMilestone) emojis.push('🎉')
+    if (this.topChatRank) emojis.push(`👑${this.topChatRank}`)
     if (this.money) emojis.push('💰')
 
     const date = this.timestamp?.toLocaleString()

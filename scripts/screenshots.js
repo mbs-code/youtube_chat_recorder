@@ -74,7 +74,7 @@ const CHATS = [
     milestoneText: 'メンバー歴 12 か月',
   },
   { authorName: '@newcomer', altMessage: 'メンバーシップへようこそ！', isMember: true, isJoinMember: true },
-  { authorName: '@viewer_three', altMessage: '初見です！', image: '#86efac' },
+  { authorName: '@viewer_three', altMessage: '初見です！', topChatRank: 1, image: '#86efac' },
 ].map((chat, i) => {
   const { image, ...rest } = chat
   const seconds = 15 + i * 37

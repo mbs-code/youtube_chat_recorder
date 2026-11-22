@@ -24,6 +24,7 @@ const COLUMNS: Column[] = [
   { header: 'メンバー歴(月)', value: chat => chat.memberMonths },
   { header: 'メンバー加入', value: chat => chat.isJoinMember },
   { header: 'メンバー歴チャット', value: chat => chat.isMilestone },
+  { header: 'トップチャット順位', value: chat => chat.topChatRank },
   { header: 'スーパーチャット', value: chat => chat.isSuperChat || chat.isSuperStickers },
   { header: '金額', value: chat => chat.money },
   { header: '通貨', value: chat => chat.moneyUnit },

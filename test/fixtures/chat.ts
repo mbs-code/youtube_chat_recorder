@@ -2,7 +2,7 @@
  * YouTube ライブチャットの DOM から、パースに関係する部分だけを残したもの.
  *
  * - TEXT_MESSAGE_*: 2026-11 時点の実際の DOM を縮小したもの.
- * - MEMBERSHIP_MILESTONE: 2026-11 時点の実際の DOM を縮小したもの.
+ * - MEMBERSHIP_MILESTONE / TEXT_MESSAGE_TOPCHAT: 2026-11 時点の実際の DOM を縮小したもの.
  * - PAID_MESSAGE / MEMBERSHIP_ITEM: 既知の構造から再現したもの (実 DOM との突き合わせは未確認).
  *
  * YouTube の DOM が変わったら `npm run e2e` で確認し、ここも更新すること.
@@ -121,6 +121,35 @@ export const MEMBERSHIP_MILESTONE = `
     </div>
   </div>
 </yt-live-chat-membership-item-renderer>
+`
+
+/** トップチャット (👑#1 の順位ボタン付き). 2026-11 時点の実際の DOM を縮小したもの. */
+export const TEXT_MESSAGE_TOPCHAT = `
+<yt-live-chat-text-message-renderer class="style-scope yt-live-chat-item-list-renderer" id="ChwKGlRvcENoYXQ" author-type="member">
+  <yt-img-shadow id="author-photo"><img id="img" src="https://yt4.ggpht.com/topchat"></yt-img-shadow>
+  <div id="content">
+    <span id="timestamp">10:49 AM</span>
+    <yt-live-chat-author-chip>
+      <span id="prepend-chat-badges"></span>
+      <span id="author-name" dir="auto" class="member">@ひろスペh1122<span id="chip-badges"></span></span>
+      <span id="chat-badges">
+        <yt-live-chat-author-badge-renderer aria-label="メンバー（2 か月）" type="member" shared-tooltip-text="メンバー（2 か月）">
+          <div id="image"><img src="https://yt3.ggpht.com/badge=s16-c-k" alt="メンバー（2 か月）"></div>
+        </yt-live-chat-author-badge-renderer>
+      </span>
+    </yt-live-chat-author-chip>&ZeroWidthSpace;<div id="before-content-buttons">
+      <yt-button-view-model><button-view-model class="ytSpecButtonViewModelHost">
+        <button class="ytSpecButtonShapeNextHost" title="" aria-label="#1" aria-disabled="false">
+          <div aria-hidden="true" class="ytSpecButtonShapeNextIcon"><svg viewBox="0 0 24 24"><path d="M12 2"></path></svg></div>
+          <div class="ytSpecButtonShapeNextButtonTextContent">#1</div>
+        </button>
+      </button-view-model></yt-button-view-model>
+    </div>&ZeroWidthSpace;<span id="message-container">
+      <span id="message-prefix-icon-container"></span>
+      <span id="message" dir="auto">たくさん徳を積みます</span>
+    </span>
+  </div>
+</yt-live-chat-text-message-renderer>
 `
 
 export function createElement(html: string): HTMLElement {

@@ -51,6 +51,7 @@ const tags = computed(() => {
   if (chat.isModerator) list.push({ label: 'モデレーター', class: 'is-info' })
   if (chat.isVerified) list.push({ label: '確認済み' })
   if (chat.money) list.push({ label: `${chat.moneyUnit ?? ''}${chat.money.toLocaleString()}`, class: 'is-accent' })
+  if (chat.topChatRank) list.push({ label: `👑 #${chat.topChatRank}`, class: 'is-accent' })
   if (chat.isMilestone) list.push({ label: `🎉 ${chat.milestoneText ?? 'メンバー歴'}`, class: 'is-success' })
   else if (chat.isJoinMember) list.push({ label: 'メンバー加入', class: 'is-success' })
   else if (chat.isMember) list.push({ label: 'メンバー', class: 'is-success' })

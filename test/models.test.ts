@@ -60,6 +60,7 @@ describe('後から追加した基本フィルターの補完', () => {
     expect(keys.at(-1)).toBe('1700000000000') // カスタムフィルターは末尾のまま
     expect(config.chatFilters.find(cf => cf.key === 'milestone')).toMatchObject({ doSave: true, doImage: true })
     expect(config.chatFilters.find(cf => cf.key === 'owner')).toMatchObject({ doSave: true, doImage: true }) // 初期値
+    expect(config.chatFilters.find(cf => cf.key === 'topchat')).toMatchObject({ doSave: false, doImage: false }) // plain を引き継ぐ
   })
 
   it('既にあるものは変更しない', () => {
@@ -74,6 +75,7 @@ describe('後から追加した基本フィルターの補完', () => {
       { key: 'joinmember', title: '', doSave: true, doImage: false },
     ])
     expect(cf.checkChatTaskType(Object.assign(new Chat(), { isMilestone: true }))).toBe(false)
+    expect(cf.checkChatTaskType(Object.assign(new Chat(), { topChatRank: 3 }))).toBe(false)
   })
 })
 

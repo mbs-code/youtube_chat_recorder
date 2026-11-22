@@ -8,6 +8,7 @@ import {
   PAID_MESSAGE,
   TEXT_MESSAGE_MEMBER,
   TEXT_MESSAGE_OWNER,
+  TEXT_MESSAGE_TOPCHAT,
 } from './fixtures/chat'
 
 function liveVideo(): Video {
@@ -93,6 +94,21 @@ describe('ChatParser.parse', () => {
     expect(chat.message).toBe('「この世の全て⇒世界平和」ですね、分かります。')
     expect(chat.altMessage).toBe('「この世の全て⇒世界平和」ですね、分かります。')
     expect(chat.timestamp).toEqual(now)
+  })
+
+  it('トップチャットの順位を解析できる', async () => {
+    const chat = await ChatParser.parse(liveVideo(), createElement(TEXT_MESSAGE_TOPCHAT))
+
+    expect(chat.topChatRank).toBe(1)
+    expect(chat.authorName).toBe('@ひろスペh1122')
+    expect(chat.message).toBe('たくさん徳を積みます')
+    expect(chat.isMember).toBe(true)
+    expect(chat.memberMonths).toBe(2)
+  })
+
+  it('順位ボタンが無ければトップチャットではない', async () => {
+    const chat = await ChatParser.parse(liveVideo(), createElement(TEXT_MESSAGE_MEMBER))
+    expect(chat.topChatRank).toBeUndefined()
   })
 
   it('メンバー歴 (本文なし) はヘッダーを本文にする', async () => {

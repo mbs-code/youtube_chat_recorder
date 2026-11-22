@@ -121,6 +121,7 @@ YouTube に依存している箇所:
 - 時刻表示は ja ロケールでも `9:50 AM` 形式で、間に `U+202F` (narrow no-break space) が入る
 - 投稿者名は `@handle` 形式
 - メンバー歴 (マイルストーン) チャットは加入と同じ `yt-live-chat-membership-item-renderer` で、`#header-primary-text` ("メンバー歴 11 か月") の有無で区別する。`#header-subtext` はメンバーシップ名、`#message` は本文 (省略可)
+- トップチャット (名前の後ろの 👑#1) は `#before-content-buttons` 内の `<button aria-label="#1">`。`ChatParser.parseTopChatRank` で順位を取る
 
 未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、メンバーシップギフト (`ytd-sponsorships-live-chat-*`, 未対応)。
 
