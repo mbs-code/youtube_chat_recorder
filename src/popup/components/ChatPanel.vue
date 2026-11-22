@@ -43,11 +43,21 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * チャット 1 件の表示 (popup の一覧で使う).
+ *
+ * - 上段: 投稿日時・経過時間・種類のタグ、中段: 投稿者と本文、下段: 記録した画像.
+ * - クリック (またはスペースキー) で click を emit する. 選択状態は親が持つ.
+ */
 import { computed } from 'vue'
 import { datetimeString, hmsString } from '../../lib/util/format'
 import type Chat from '../../models/Chat'
 
-const props = defineProps<{ chat: Chat, isSelected: boolean }>()
+const props = defineProps<{
+  chat: Chat
+  /** 選択中なら枠を強調する. */
+  isSelected: boolean
+}>()
 const emit = defineEmits<{ click: [chat: Chat] }>()
 
 /** チャットの種類を表すタグ. */

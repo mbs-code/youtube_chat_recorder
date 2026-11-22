@@ -1,5 +1,6 @@
 <template>
   <div ref="root" class="relative">
+    <!-- 選んでいる動画 (クリックで一覧を開く) -->
     <!-- .trigger は scripts/screenshots.js から参照している -->
     <button
       class="trigger card flex w-full cursor-pointer items-center gap-2 p-2.5 transition-colors hover:border-zinc-300"
@@ -16,6 +17,7 @@
       <i class="mdi mdi-chevron-down text-xl text-zinc-400 transition-transform" :class="{ 'rotate-180': isOpen }" />
     </button>
 
+    <!-- 動画の一覧 (開いている時だけ) -->
     <Transition
       enter-from-class="-translate-y-1 opacity-0"
       leave-to-class="-translate-y-1 opacity-0"
@@ -43,16 +45,30 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 動画の選択欄 (ドロップダウン).
+ *
+ * - 一覧が変わったら、開いているタブの動画 (無ければ最近見た動画) を選んで change を emit する.
+ * - 外側のクリックや Esc で閉じる.
+ */
 import { onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
 import BrowserTabs from '../../lib/chrome/BrowserTabs'
 import PageHelper from '../../lib/util/PageHelper'
 import type Video from '../../models/Video'
 import VideoPanel from './VideoPanel.vue'
 
-const props = defineProps<{ videos: Video[] }>()
-const emit = defineEmits<{ change: [video: Video | null] }>()
+const props = defineProps<{
+  /** 最近見た動画 (新しい順). */
+  videos: Video[]
+}>()
+const emit = defineEmits<{
+  /** 選んだ動画が変わった. */
+  change: [video: Video | null]
+}>()
 
+/** 一覧を開いているか. */
 const isOpen = ref(false)
+/** 選んでいる動画. */
 const selected = shallowRef<Video | null>(null)
 const root = useTemplateRef<HTMLElement>('root')
 
@@ -68,6 +84,7 @@ watch(
   },
 )
 
+/** 一覧から動画を選んだ. */
 function handleSelected(video: Video): void {
   selected.value = video
   emit('change', video)

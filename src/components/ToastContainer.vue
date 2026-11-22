@@ -23,8 +23,14 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 画面右上の通知 (トースト) の表示場所.
+ *
+ * - 画面に 1 つ置いておき、通知は plugins/Toast.ts の Toast.success() などで出す.
+ */
 import { dismissToast, type ToastType, toasts } from '../plugins/Toast'
 
+/** 通知の種類ごとのアイコンと色. */
 const ICONS: Record<ToastType, string> = {
   success: 'mdi-check-circle text-success',
   warn: 'mdi-alert text-warning',

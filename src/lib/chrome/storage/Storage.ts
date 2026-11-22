@@ -9,6 +9,7 @@ export default class Storage {
     return await chrome.storage.local.getBytesInUse(null)
   }
 
+  /** 全てのデータ (設定・動画・チャット) を削除する. */
   public static async clear(): Promise<void> {
     await chrome.storage.local.clear()
   }
@@ -21,6 +22,7 @@ export default class Storage {
     return createJsonObjectURL(plain, prettier)
   }
 
+  /** JSON (export で出力したもの) で上書きする. 含まれていない key はそのまま残る. */
   public static async import(text: string): Promise<void> {
     await chrome.storage.local.set(JSON.parse(text))
   }

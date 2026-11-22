@@ -1,30 +1,41 @@
 import { ellipsis } from '../lib/util/format'
 import { type Plain, toDate, toTime } from '../lib/util/serialize'
 
+/** 日時のフィールド (storage には epoch msec で保存する). */
 const DATE_KEYS = ['timestamp', 'createdAt', 'updatedAt'] as const
 
+/**
+ * チャット 1 件 (動画 ID を key にして配列で保存する).
+ *
+ * - YouTube のチャット欄の要素から ChatParser で作る.
+ * - フィールドを増やす時は初期値を付ける (古い保存データには無いため).
+ */
 export default class Chat {
-  id?: string // ChwKGkNP...
+  id?: string // YouTube のチャット ID (ChwKGkNP...). 同じチャットの重複保存の判定に使う
 
-  authorName?: string
-  authorPhoto?: string // url
-  message?: string
+  authorName?: string // 投稿者名 (@handle)
+  authorPhoto?: string // アイコンの url
+  message?: string // 本文 (絵文字の画像は含まない. フィルターの判定に使う)
   altMessage?: string // 画像要素 (絵文字など) を展開した文
 
-  isOwner = false
-  isModerator = false
-  isMember = false
-  isVerified = false
+  // 投稿者の種類
+  isOwner = false // 配信者 (チャンネルの所有者)
+  isModerator = false // モデレーター
+  isMember = false // チャンネルメンバー
+  isVerified = false // 確認済みチャンネル (✅)
 
-  memberMonths?: number // undefined, 0(新規), 1, 2, ...
+  memberMonths?: number // メンバー歴の月数. undefined, 0(新規), 1, 2, ...
 
+  // チャットの種類
   isJoinMember = false // メンバー加入
   isMilestone = false // メンバー歴 (マイルストーン) チャット
   milestoneText?: string // "メンバー歴 11 か月"
   topChatRank?: number // トップチャットの順位 (👑#1 なら 1)
+
+  // スーパーチャット
   isSuperChat = false
   isSuperStickers = false
-  money?: number
+  money?: number // 金額
   moneyUnit?: string // 通貨単位
 
   pngUrl?: string // チャット欄の画像 (data url)
@@ -33,8 +44,8 @@ export default class Chat {
   seconds?: number // 配信開始からの経過秒
   timestamp?: Date // 投稿日時 (配信中は分単位の精度)
 
-  createdAt?: Date
-  updatedAt?: Date
+  createdAt?: Date // 初めて保存した日時
+  updatedAt?: Date // 最後に保存した日時
 
   /**
    * 投稿時間の早い順に並べるための比較関数. (`chats.sort(Chat.compareByTime)`)
@@ -60,6 +71,7 @@ export default class Chat {
     return plain
   }
 
+  /** ログ用の短い文字列. */
   public dump(): string {
     const emojis = []
     if (this.isOwner) emojis.push('🟨')

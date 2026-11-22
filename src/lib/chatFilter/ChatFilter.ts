@@ -1,6 +1,12 @@
 import type Chat from '../../models/Chat'
 import type { ChatFilterConfigInterface, ChatFilterDataInterface, ChatTaskType } from './ChatFilterInterface'
 
+/**
+ * 基本フィルター (チャットの種類).
+ *
+ * - 'all' は popup の絞り込み専用 (設定には出さない).
+ * - 追加した場合、既存ユーザーの設定には complementChatFilterConfigs で補完される.
+ */
 const BASE_FILTERS: ChatFilterDataInterface[] = [
   {
     key: 'all',
@@ -81,7 +87,14 @@ export const warnFilterKeys = ['plain', 'member']
 // 初期設定で保存するフィルターキー
 export const defaultTrueKeys = ['owner', 'verified', 'moderator']
 
+/**
+ * チャットフィルター.
+ *
+ * - 設定 (保存する / 画像化する) から判定関数を作り、チャットをどう処理するか決める.
+ * - 画像化するフィルターに 1 つでも当てはまれば 'image'、保存するだけなら 'save'.
+ */
 export default class ChatFilter {
+  /** 判定に使うフィルター (処理しないものは除外済み、画像化するものが先). */
   protected chatFilters: ChatFilterDataInterface[]
 
   constructor() {
@@ -215,6 +228,7 @@ export default class ChatFilter {
 
   ///
 
+  /** 設定から判定関数付きのフィルターを作る (判定関数が作れないものは除外). */
   protected generateChatFilters(configs: ChatFilterConfigInterface[]): ChatFilterDataInterface[] {
     return configs
       .map((config) => {
@@ -234,6 +248,7 @@ export default class ChatFilter {
       .filter(cf => cf.func !== undefined) // 未定義を削除する
   }
 
+  /** テキストマッチングのフィルターの判定関数を作る (本文 / 投稿者名 × 部分一致 / 完全一致 / 正規表現). */
   protected generateChatFilterFunc(cf: ChatFilterConfigInterface): ((chat: Chat) => boolean) | undefined {
     // モードがあるなら自己生成する
     const mode = cf.textMode

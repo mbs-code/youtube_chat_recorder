@@ -1,10 +1,17 @@
 import { ellipsis } from '../lib/util/format'
 import { type Plain, toDate, toTime } from '../lib/util/serialize'
 
+/** 日時のフィールド (storage には epoch msec で保存する). */
 const DATE_KEYS = ['startDate', 'endDate', 'publishedAt', 'createdAt', 'updatedAt'] as const
 
+/** 動画の種類. video: 普通の動画, upcoming: 配信予定, live: 配信中, archive: 配信のアーカイブ. */
 export type VideoType = 'video' | 'upcoming' | 'live' | 'archive'
 
+/**
+ * 動画 (最近見た動画の一覧 @videos に保存する).
+ *
+ * - フィールドを増やす時は初期値を付ける (古い保存データには無いため).
+ */
 export default class Video {
   id?: string // 動画 ID (11 文字)
 
@@ -22,9 +29,10 @@ export default class Video {
   endDate?: Date // 配信終了時刻
   publishedAt?: Date
 
-  createdAt?: Date
-  updatedAt?: Date
+  createdAt?: Date // 初めて見た日時
+  updatedAt?: Date // 最後に見た日時 (一覧の並び順・古い動画の削除に使う)
 
+  /** 動画の種類. (保存はしない) */
   get type(): VideoType {
     if (!this.isBroadcast && !this.startDate) return 'video'
     if (this.isUpcoming) return 'upcoming'
@@ -32,6 +40,7 @@ export default class Video {
     return 'archive'
   }
 
+  /** 動画ページの URL. (保存はしない) */
   get url(): string | undefined {
     return this.id ? `https://www.youtube.com/watch?v=${this.id}` : undefined
   }
@@ -53,6 +62,7 @@ export default class Video {
     return plain
   }
 
+  /** ログ用の短い文字列. */
   public dump(): string {
     return `[${this.id}]${ellipsis(this.title || '<notitle>', 24)}`
   }

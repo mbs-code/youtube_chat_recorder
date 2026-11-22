@@ -1,5 +1,6 @@
 <template>
   <div class="mx-auto max-w-300 px-6 pt-8">
+    <!-- ヘッダー: アプリ名・バージョンと「使い方」「目安箱」 -->
     <header class="mb-5 flex items-center gap-2">
       <img class="mr-1.5 size-10" src="/icons/icon-48x48.png" alt="">
       <div class="flex-1">
@@ -25,6 +26,7 @@
       </a>
     </header>
 
+    <!-- 設定を変えたらページの更新が必要という案内 -->
     <p class="notice mb-5">
       <i class="mdi mdi-information-outline" />
       <span>
@@ -35,7 +37,7 @@
     </p>
 
     <main v-if="form" class="grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[7fr_5fr]">
-      <!-- 左: 記録するチャット -->
+      <!-- 左: 記録するチャット (チャットフィルターの表・テキストマッチングの追加・テスト) -->
       <section class="card p-5">
         <header class="mb-4">
           <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
@@ -53,8 +55,9 @@
         <ChatFilterTable v-model="form.chatFilters" />
       </section>
 
-      <!-- 右 -->
+      <!-- 右: 動画の保存 / チャットの保存 / 詳細設定 / データの管理 -->
       <div class="flex flex-col gap-5">
+        <!-- 動画の保存: 最大保存数・普通の動画を無視するか -->
         <section class="card p-5">
           <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
             <i class="mdi mdi-playlist-play text-zinc-500" />
@@ -82,6 +85,7 @@
           </ToggleSwitch>
         </section>
 
+        <!-- チャットの保存: 画像化の設定とつなげた画像のファイル名 -->
         <section class="card p-5">
           <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
             <i class="mdi mdi-image-multiple-outline text-zinc-500" />
@@ -143,6 +147,7 @@
           </div>
         </section>
 
+        <!-- 詳細設定: スクリプトの実行とログレベル -->
         <section class="card p-5">
           <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
             <i class="mdi mdi-tune-variant text-zinc-500" />
@@ -165,6 +170,7 @@
           </div>
         </section>
 
+        <!-- データの管理: 使用量・エクスポート / インポート・全チャットの CSV・削除 -->
         <section class="card p-5">
           <header class="mb-4">
             <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
@@ -229,6 +235,7 @@
       </div>
     </main>
 
+    <!-- 保存バー: 未保存の変更があるか表示し、保存・取り消し・初期化する (常に下に残る) -->
     <footer class="sticky bottom-0 z-40 -mx-6 mt-6 flex items-center gap-2 border-t border-zinc-200 bg-white/90 px-6 py-3 backdrop-blur-sm">
       <span class="flex flex-1 items-center text-[13px]" :class="isDirty ? 'font-semibold text-warning' : 'text-zinc-500'">
         <template v-if="isDirty">
@@ -245,11 +252,19 @@
       </button>
     </footer>
 
+    <!-- 通知 (画面右上) -->
     <ToastContainer />
   </div>
 </template>
 
 <script setup lang="ts">
+/**
+ * 設定画面 (オプションページ).
+ *
+ * - 設定は form で編集し、「保存する」で @config に保存する (それまでは反映しない).
+ * - 保存した設定は、開いている YouTube のページを更新すると使われる.
+ * - データの管理 (エクスポート / インポート / CSV / 削除) もここで行う.
+ */
 import { format as dateFormat } from 'date-fns'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import ToastContainer from '../components/ToastContainer.vue'
@@ -267,10 +282,14 @@ import Config, { type ConfigInterface, MIN_VIDEO_LENGTH } from '../models/Config
 import Toast from '../plugins/Toast'
 import ChatFilterTable from './components/ChatFilterTable.vue'
 
+/** 目安箱のリンク先 (.env の VITE_FORM_URL). 無ければボタンを出さない. */
 const FORM_URL = import.meta.env.VITE_FORM_URL || import.meta.env.VUE_APP_FORM_URL || null
+/** 初期設定 (入力欄の placeholder などに使う). */
 const DEFAULTS = new Config()
 
+/** 拡張機能のバージョン. */
 const version = Runtime.getManifest().version
+/** storage の使用量 (byte) と、それを読み込んだ日時. */
 const byteInUse = ref(0)
 const loadDate = ref<Date | null>(null)
 
@@ -279,6 +298,7 @@ const form = ref<ConfigInterface | null>(null)
 /** 読み込んだ時点の設定値 (変更の有無の判定用). */
 const saved = ref('')
 
+/** 保存していない変更があるか. */
 const isDirty = computed(() => form.value !== null && JSON.stringify(form.value) !== saved.value)
 
 // 保存せずに閉じようとしたら確認する
@@ -291,6 +311,7 @@ onMounted(async () => {
 })
 onBeforeUnmount(() => window.removeEventListener('beforeunload', onBeforeUnload))
 
+/** 保存されている設定を読み込んで form に入れる (編集中の内容は捨てる). */
 async function loadConfig(): Promise<void> {
   const config = await ConfigStorage.get()
   form.value = {
@@ -313,6 +334,7 @@ async function loadConfig(): Promise<void> {
   await Runtime.sendLoadConfig()
 }
 
+/** form の内容を保存する (動画の最大保存数は下限を確認する). */
 async function handleSave(): Promise<void> {
   if (!form.value) return
 
@@ -332,6 +354,7 @@ async function handleSave(): Promise<void> {
   await loadConfig()
 }
 
+/** 設定を初期設定に戻す (動画やチャットは消さない). */
 async function handleReset(): Promise<void> {
   if (window.confirm('設定を初期設定に戻します。(記録したチャットは消えません)')) {
     await ConfigStorage.clear()
@@ -340,6 +363,7 @@ async function handleReset(): Promise<void> {
   }
 }
 
+/** 記録した全ての動画とチャットを削除する (設定は残す). */
 async function handleDeleteVideos(): Promise<void> {
   if (window.confirm('記録した全ての動画とチャットを削除します。\nこの操作は元に戻せません。')) {
     for (const video of await VideoStorage.getAll()) {
@@ -351,6 +375,7 @@ async function handleDeleteVideos(): Promise<void> {
   }
 }
 
+/** 設定も含めて全てのデータを削除する. */
 async function handleAllDelete(): Promise<void> {
   if (window.confirm('設定も含めて、全てのデータを削除します。') && window.confirm('本当に削除しますか？この操作は元に戻せません。')) {
     await Storage.clear()
@@ -361,6 +386,7 @@ async function handleAllDelete(): Promise<void> {
 
 ///
 
+/** JSON ファイルとしてダウンロードさせる (ファイル名は 日時_name.json). */
 async function exportJson(name: string, createUrl: () => Promise<string>): Promise<void> {
   try {
     const title = `${dateFormat(new Date(), 'yyyyMMdd_HHmmss')}_${name}.json`
@@ -374,6 +400,7 @@ async function exportJson(name: string, createUrl: () => Promise<string>): Promi
   }
 }
 
+/** 選ばれた JSON ファイルを読み込んで apply に渡す. */
 async function importJson(event: Event, apply: (text: string) => Promise<void>): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
@@ -395,6 +422,7 @@ const handleExportConfig = () => exportJson('ycr_config', () => ConfigStorage.ex
 const handleImportConfig = (event: Event) => importJson(event, text => ConfigStorage.import(text))
 const handleExportData = () => exportJson('ycr_data', () => Storage.export())
 
+/** 全チャットの CSV を作っている最中か. */
 const isExportingCsv = ref(false)
 
 /** 保存している全ての動画のチャットを 1 つの CSV にして保存する (動画は最近見た順). */
@@ -425,6 +453,7 @@ async function handleExportAllCsv(): Promise<void> {
     isExportingCsv.value = false
   }
 }
+/** 全てのデータを復元する (上書きなので確認する). */
 const handleImportData = (event: Event) => {
   if (window.confirm('今のデータを、選んだファイルの内容で上書きします。')) {
     void importJson(event, text => Storage.import(text))

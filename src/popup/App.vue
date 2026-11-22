@@ -1,5 +1,6 @@
 <template>
   <div class="flex min-h-150 flex-col">
+    <!-- ヘッダー: アプリ名と「使い方」「設定」 -->
     <header class="sticky top-0 z-30 flex h-12.25 items-center gap-1 border-b border-zinc-200 bg-white pr-3 pl-4">
       <img class="mr-1.5 size-5" src="/icons/icon-32x32.png" alt="">
       <h1 class="flex-1 font-bold text-zinc-950">Youtube Chat Recorder</h1>
@@ -14,8 +15,10 @@
     </header>
 
     <main class="flex flex-1 flex-col gap-3 p-4">
+      <!-- 動画の選択欄 -->
       <VideoDropdown :videos="videos" @change="handleVideoChange" />
 
+      <!-- 選んだ動画への操作 -->
       <div v-if="selectedVideo" class="-mt-1.5 flex items-center gap-0.5">
         <button class="btn btn-ghost btn-sm" :disabled="!selectedVideo.url" @click="handleOpenUrl(selectedVideo.url)">
           <i class="mdi mdi-open-in-new" />
@@ -35,8 +38,9 @@
         </button>
       </div>
 
+      <!-- 選んだ動画のチャット -->
       <section v-if="selectedVideo" class="flex flex-col gap-2.5">
-        <!-- 49px = header の高さ -->
+        <!-- ツールバー: 絞り込み・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
         <div class="sticky top-12.25 z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
           <select v-model="selectedFilterKey" class="select h-7 w-47.5 text-xs" aria-label="表示するチャット">
             <option v-for="filter in chatFilters" :key="filter.key" :value="filter.key">
@@ -62,11 +66,13 @@
           <button class="btn btn-secondary btn-sm" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
         </div>
 
+        <!-- 表示の上限を超えた時の注意 -->
         <p v-if="isOver" class="notice notice-warning">
           <i class="mdi mdi-alert-outline" />
           表示できるのは {{ MAX_CHAT_LENGTH }} 件までです。上の選択欄で絞り込んでください。
         </p>
 
+        <!-- チャットの一覧 (無ければ案内) -->
         <ChatList v-if="filteredChats.length" v-model:selected="selectedChats" :chats="filteredChats" />
         <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
           <i class="mdi mdi-message-text-outline mb-1 text-4xl text-zinc-400" />
@@ -75,6 +81,7 @@
         </div>
       </section>
 
+      <!-- 動画がまだ 1 本も無い時の案内 -->
       <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
         <i class="mdi mdi-youtube mb-1 text-4xl text-zinc-400" />
         <p>まだ記録した動画がありません</p>
@@ -82,6 +89,7 @@
       </div>
     </main>
 
+    <!-- フッター: 選択中のチャットへの操作 (常に下に残る) -->
     <footer v-if="selectedVideo" class="sticky bottom-0 z-30 flex items-center gap-2 border-t border-zinc-200 bg-white px-4 py-2.5">
       <span class="flex-1">
         <template v-if="selectedChats.length">
@@ -107,6 +115,13 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * popup (ツールバーのアイコンをクリックした画面).
+ *
+ * - 最近見た動画を選び、記録したチャットを一覧で見る.
+ * - 選んだチャットを削除・CSV で保存・画像をつなげて保存する.
+ * - 開いた時に、開いているタブのバッジ (取得数) をリセットする.
+ */
 import { computed, onMounted, ref, shallowRef } from 'vue'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import BrowserTabs from '../lib/chrome/BrowserTabs'
@@ -125,18 +140,25 @@ import VideoDropdown from './components/VideoDropdown.vue'
 
 const MAX_CHAT_LENGTH = 100 // 最大表示チャット数
 
+/** 最近見た動画. */
 const videos = shallowRef<Video[]>([])
+/** 選んでいる動画. */
 const selectedVideo = shallowRef<Video | null>(null)
 
+/** 選んでいる動画の全チャット (絞り込み前). */
 const chats = shallowRef<Chat[]>([])
+/** 選択中のチャット (選択した順). */
 const selectedChats = ref<Chat[]>([])
 
+/** 絞り込みの選択肢と、選んでいるもの. */
 const chatFilters = ChatFilter.generatePopupChatFilters()
 const selectedFilterKey = ref(chatFilters[0].key)
 
 type SortOrder = 'asc' | 'desc'
+/** 並び順を覚えておく localStorage の key. */
 const SORT_ORDER_KEY = 'ycr:popup:sortOrder'
 
+/** 前回の並び順を読み込む (読めなければ古い順). */
 function loadSortOrder(): SortOrder {
   try {
     return localStorage.getItem(SORT_ORDER_KEY) === 'desc' ? 'desc' : 'asc'
@@ -145,13 +167,16 @@ function loadSortOrder(): SortOrder {
   }
 }
 
+/** 画像をつなげて保存している最中か. */
 const isSaving = ref(false)
 
+/** CSV のファイル名 (FilenameFormatter の書式). */
 const CSV_FILENAME = '%title%_チャット_%now%'
 
 /** 並び順 (asc: 古い順, desc: 新しい順). 次に開いたときも同じ並び順にする. */
 const sortOrder = ref<SortOrder>(loadSortOrder())
 
+/** 古い順 / 新しい順を切り替えて覚えておく. */
 function toggleSortOrder(): void {
   sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   try {
@@ -168,7 +193,9 @@ const sortedChats = computed(() => {
   const sorted = [...filtered].sort(Chat.compareByTime)
   return sortOrder.value === 'desc' ? sorted.reverse() : sorted
 })
+/** 表示の上限を超えているか. */
 const isOver = computed(() => sortedChats.value.length > MAX_CHAT_LENGTH)
+/** 実際に表示するチャット (上限まで). */
 const filteredChats = computed(() => sortedChats.value.slice(0, MAX_CHAT_LENGTH))
 
 onMounted(async () => {
@@ -179,17 +206,20 @@ onMounted(async () => {
   videos.value = await VideoStorage.getAll()
 })
 
+/** 選んでいる動画のチャットを読み込み直す (選択は解除). */
 async function reloadChats(): Promise<void> {
   const videoId = selectedVideo.value?.id
   chats.value = videoId ? await ChatStorage.get(videoId) : []
   selectedChats.value = []
 }
 
+/** 動画の選択欄で動画が選ばれた. */
 async function handleVideoChange(video: Video | null): Promise<void> {
   selectedVideo.value = video
   await reloadChats()
 }
 
+/** 動画ページやサムネイルを新しいタブで開く. */
 async function handleOpenUrl(url?: string): Promise<void> {
   if (!url) return
   // 現在表示されているページなら開かない
@@ -199,6 +229,7 @@ async function handleOpenUrl(url?: string): Promise<void> {
   }
 }
 
+/** 選んでいる動画のチャットを全て削除する. */
 async function handleDeleteChats(video: Video): Promise<void> {
   // 動画を削除すると色々と不都合なので、全チャットのみ削除する
   if (video.id && window.confirm(`「${video.title}」のチャットを全て削除します。\nこの操作は元に戻せません。`)) {
@@ -207,6 +238,7 @@ async function handleDeleteChats(video: Video): Promise<void> {
   }
 }
 
+/** 選択中のチャットを削除する. */
 async function handleDeleteSelectedChats(): Promise<void> {
   const videoId = selectedVideo.value?.id
   const selected = selectedChats.value
@@ -237,6 +269,11 @@ function handleSaveCsv(): void {
   setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
+/**
+ * 選択中のチャットの画像を縦につなげて PNG で保存する.
+ *
+ * - 設定によっては、画像が無いチャット (または全て) を popup 上の表示から独自に画像化する.
+ */
 async function handleSaveToMerge(): Promise<void> {
   const video = selectedVideo.value
   const selected = selectedChats.value // 選択した順に結合する

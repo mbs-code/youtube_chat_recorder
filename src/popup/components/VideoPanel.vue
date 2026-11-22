@@ -1,4 +1,5 @@
 <template>
+  <!-- 左にサムネイル、右にタイトル・種類・チャンネル名・日時 -->
   <div class="flex min-w-0 gap-3 text-left">
     <div class="grid aspect-video w-32 shrink-0 place-items-center overflow-hidden rounded-lg bg-zinc-100 text-[28px] text-zinc-400">
       <img v-if="video.thumbnailUrl" class="size-full object-cover" :src="video.thumbnailUrl" alt="">
@@ -27,12 +28,16 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 動画 1 本の表示 (popup の動画の選択欄で使う).
+ */
 import { datetimeString, distanceHumanized } from '../../lib/util/format'
 import type Video from '../../models/Video'
 import type { VideoType } from '../../models/Video'
 
 defineProps<{ video: Video }>()
 
+/** 動画の種類の表示名 (普通の動画は出さない). */
 const TYPE_LABELS: Record<VideoType, string> = {
   live: '● ライブ',
   upcoming: '配信予定',

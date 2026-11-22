@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col gap-5">
+    <!-- チャットの種類ごとの「保存する」「画像化する」. テキストマッチングの行には編集・削除ボタン -->
     <table class="w-full border-collapse">
       <thead>
         <tr class="border-b border-zinc-200 text-left text-xs text-zinc-500 [&>th]:p-2 [&>th]:font-medium">
@@ -144,6 +145,13 @@
 </template>
 
 <script setup lang="ts">
+/**
+ * 設定画面の「記録するチャット」.
+ *
+ * - チャットフィルター (基本フィルター + テキストマッチング) の表.
+ * - テキストマッチングの追加・編集・削除と、入力した文字がどれに当てはまるかのテスト.
+ * - 変更は v-model の配列に直接反映する (保存は親の「保存する」で行う).
+ */
 import { computed, ref, useTemplateRef } from 'vue'
 import ChatFilter, { warnFilterKeys } from '../../lib/chatFilter/ChatFilter'
 import type { ChatFilterConfigInterface } from '../../lib/chatFilter/ChatFilterInterface'
@@ -153,18 +161,24 @@ import Toast from '../../plugins/Toast'
 /** 編集対象のフィルター配列 (要素の変更は親に直接反映される). */
 const chatFilters = defineModel<ChatFilterConfigInterface[]>({ required: true })
 
+// ↓ テキストマッチングの入力欄
+/** 編集中のフィルターの key (null なら新規追加). */
 const editFilterKey = ref<string | null>(null)
 const editFilterMode = ref<'message' | 'author'>('author')
 const editFilterMatchText = ref('')
 const editFilterIsExact = ref(false)
 const editFilterIsRegex = ref(false)
 
+// ↓ マッチングテスト
+/** テストで当てはまったフィルターの key (表の行を強調する). */
 const testMatchFilterKey = ref<string | null>(null)
 const testMatchText = ref('')
 
 const matchInput = useTemplateRef<HTMLInputElement>('matchInput')
+/** 編集中か (編集中は表のチェックやテストを触れないようにする). */
 const isEditing = computed(() => editFilterKey.value !== null)
 
+/** 表の「編集」: 入力欄にそのフィルターの内容を入れる. */
 function handleFilterEdit(chatFilter: ChatFilterConfigInterface): void {
   editFilterKey.value = chatFilter.key
   editFilterMode.value = chatFilter.textMode || 'message'
@@ -176,12 +190,14 @@ function handleFilterEdit(chatFilter: ChatFilterConfigInterface): void {
   testMatchFilterKey.value = null
 }
 
+/** 表の「削除」: 確認してから消す. */
 function handleFilterDelete(chatFilter: ChatFilterConfigInterface): void {
   if (window.confirm(`「${chatFilter.title}」を削除します。`)) {
     chatFilters.value = chatFilters.value.filter(cf => cf.key !== chatFilter.key)
   }
 }
 
+/** 入力欄を空に戻す (編集をやめる). */
 function handleFilterReset(): void {
   editFilterKey.value = null
   editFilterMatchText.value = ''
@@ -191,6 +207,7 @@ function handleFilterReset(): void {
   testMatchFilterKey.value = null
 }
 
+/** 「追加」「更新」: 入力内容を確認し、フィルターを追加 (または置き換え) する. */
 function handleFilterAdd(): void {
   const matchText = editFilterMatchText.value.trim()
   if (!matchText) {
@@ -245,6 +262,7 @@ function handleFilterAdd(): void {
   editFilterMatchText.value = ''
 }
 
+/** 「テスト」: 入力した文字を本文・投稿者名とするチャットを作り、どのフィルターに当てはまるか調べる. */
 function handleFilterTest(): void {
   const text = testMatchText.value
 
