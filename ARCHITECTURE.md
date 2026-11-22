@@ -99,7 +99,7 @@ sequenceDiagram
   PE->>VS: save(video, config.maxVideoLength)
   PE->>BM: waitingIcon() (青)
   opt video.isLiveNow
-    PE->>PE: startWatchViewers(video, generation)<br/>30 秒ごとに #view-count の「〇人が視聴中」を読む<br/>最大を超えたら VideoStorage.updateMaxViewers
+    PE->>PE: startWatchViewers(video, generation)<br/>#view-count の表示の変化を MutationObserver で監視 (+ 30 秒ごと)<br/>最大を超えたら VideoStorage.updateMaxViewers
   end
   PE->>PE: attachChatFrame(generation)<br/>iframe#chatframe を探す / load と削除の監視を付ける
   alt iframe が読み込み済み
@@ -355,6 +355,8 @@ flowchart TD
   V --> VD["VideoDropdown の watch<br/>開いているタブの動画 ID (PageHelper.getPageVideoId)<br/>無ければ videos[0]"]
   VD -- "emit change" --> HV["handleVideoChange(video)"]
   HV --> RC["reloadChats()<br/>ChatStorage.get(video.id) → chats"]
+  ST0["chrome.storage.onChanged<br/>(@videos / 選んでいる動画のチャット)"] --> STAT
+  ST0 --> SC
   RC --> STAT["VideoStats (一覧の上)<br/>最大同接・最大再生数 (日時・配信開始から)<br/>Chat.sumMoney(chats): 一番多い通貨 + 外貨 〇 件"]
   RC --> SC["sortedChats (computed)<br/>絞り込み: chatFilters[selectedFilterKey].func<br/>並び: Chat.compareByTime<br/>sortOrder が 'desc' なら逆順"]
   SC --> CL["ChatList → ChatPanel (全件表示)<br/>クリックで selectedChats に追加 / 削除"]
@@ -510,7 +512,8 @@ flowchart LR
 | `CHAT_FRAME_SELECTOR` / `CHAT_IFRAME_SELECTOR` | `PageEventer.ts` | `ytd-live-chat-frame#chat` / `iframe#chatframe` | チャット欄の iframe を探す |
 | `CHAT_SCROLLER_SELECTOR` | `PageEventer.ts` | `yt-live-chat-item-list-renderer #item-scroller` | チャットの追加を監視する要素 |
 | `VIEW_COUNT_SELECTOR` | `PageEventer.ts` | `#view-count[aria-label]` | 配信中の「〇人が視聴中」 |
-| `VIEWERS_INTERVAL` | `PageEventer.ts` | `30000` (msec) | 同時接続数を読む間隔 |
+| `VIEWERS_INTERVAL` | `PageEventer.ts` | `30000` (msec) | 同時接続数を読む間隔 (表示の変化を監視できなかった時の予備) |
+| `VIEWERS_THROTTLE` | `PageEventer.ts` | `2000` (msec) | 同時接続数の表示が変わってから読むまでの待ち (回転中に何度も読まない) |
 | `CHAT_NODE_NAMES` | `ChatParser.ts` | text / paid / membership / sticker / ギフト (gift-purchase-announcement) の renderer | `ChatHandler.invoke` が処理するタグ名 |
 | `BASE_FILTERS` | `ChatFilter.ts` | [4-2 の表](#4-2-chatfiltercheckstuckchatfilter-保存するか画像化するか) | チャットの種類の判定 |
 | `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain`, `screply ← plain`, `gift ← joinmember` | 後から追加したフィルターの初期値の引き継ぎ元 |

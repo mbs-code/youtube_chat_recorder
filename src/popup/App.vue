@@ -119,7 +119,7 @@
  * - 選んだチャットを削除・CSV で保存・画像をつなげて保存する.
  * - 開いた時に、開いているタブのバッジ (取得数) をリセットする.
  */
-import { computed, onMounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef } from 'vue'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import BrowserTabs from '../lib/chrome/BrowserTabs'
 import Filer from '../lib/chrome/Filer'
@@ -196,7 +196,36 @@ onMounted(async () => {
   if (activeTab?.id !== undefined) void Runtime.sendResetBadge(activeTab.id)
 
   videos.value = await VideoStorage.getAll()
+  chrome.storage.onChanged.addListener(onStorageChanged)
 })
+
+onUnmounted(() => chrome.storage.onChanged.removeListener(onStorageChanged))
+
+/**
+ * 開いている間に記録された内容を反映する. (配信中は同時接続数・チャットが増えていく)
+ *
+ * - 動画一覧 (@videos) が変わったら、選んでいる動画の情報 (最大同接など) だけ差し替える.
+ *   (一覧ごと差し替えると選択欄が選び直されてしまうため)
+ * - 選んでいる動画のチャットが変わったら読み込み直す. 選択中のチャットはそのまま残す.
+ */
+async function onStorageChanged(changes: Record<string, chrome.storage.StorageChange>, area: string): Promise<void> {
+  const videoId = selectedVideo.value?.id
+  if (area !== 'local' || !videoId) return
+
+  if (changes[VideoStorage.STORAGE_KEY]) {
+    const updated = await VideoStorage.get(videoId)
+    if (updated && selectedVideo.value?.id === videoId) selectedVideo.value = updated
+  }
+  if (changes[videoId]) {
+    const selectedIds = new Set(selectedChats.value.map(c => c.id))
+    const latest = await ChatStorage.get(videoId)
+    if (selectedVideo.value?.id !== videoId) return
+    chats.value = latest
+    selectedChats.value = selectedChats.value
+      .map(s => latest.find(c => c.id === s.id))
+      .filter((c): c is Chat => c !== undefined && selectedIds.has(c.id))
+  }
+}
 
 /** 選んでいる動画のチャットを読み込み直す (選択は解除). */
 async function reloadChats(): Promise<void> {

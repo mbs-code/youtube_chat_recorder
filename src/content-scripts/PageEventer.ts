@@ -29,6 +29,8 @@ const CONCURRENT_LABEL_RE = /視聴中|watching/i
 const VIEWERS_WARN_AFTER = 3
 /** 同時接続数を読む間隔 (msec). */
 const VIEWERS_INTERVAL = 30 * 1000
+/** 表示が変わってから読むまでの待ち (msec). 数字が回転している間に何度も読まないようにまとめる. */
+const VIEWERS_THROTTLE = 2 * 1000
 
 /**
  * ページの状態を監視し、チャット欄が現れたら ChatHandler に流す.
@@ -55,6 +57,9 @@ export default class PageEventer {
 
   /** 同時接続数を定期的に読むタイマー. */
   protected viewersTimer?: ReturnType<typeof setInterval>
+  /** 同時接続数の表示の変化を監視する. (変わったらすぐ読む) */
+  protected viewersObserver?: MutationObserver
+  protected viewersPending?: ReturnType<typeof setTimeout>
 
   /** 遷移ごとに増える番号. 非同期処理の途中で遷移したら古い処理を捨てるために使う. */
   protected generation = 0
@@ -245,8 +250,38 @@ export default class PageEventer {
 
     let max = video.maxViewers ?? 0
     let misses = 0
+    let observed: Element | undefined
+
+    // 表示が変わったら (VIEWERS_THROTTLE 後に) 読む. 30 秒ごとの確認は、監視が外れた時の予備
+    const schedule = () => {
+      if (this.viewersPending) return
+      this.viewersPending = setTimeout(() => {
+        this.viewersPending = undefined
+        void check().catch(err => Logger.error(err))
+      }, VIEWERS_THROTTLE)
+    }
+    this.viewersObserver = new MutationObserver(schedule)
+
+    // 表示の要素は作り直されることがあるので、読むたびに監視先を確かめる
+    const observe = () => {
+      const target = this.findViewCountContainer()
+      if (!target || target === observed) return
+      observed = target
+      this.viewersObserver?.disconnect()
+      this.viewersObserver?.observe(target, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['aria-label', 'style'], // aria-label の数字 / 回転する数字の margin-top
+      })
+    }
+
     const check = async () => {
-      if (generation !== this.generation || !Runtime.isContextValid()) return this.stopWatchViewers()
+      // 遷移した後の古い呼び出しは何もしない. (ここで stop すると、新しい動画の監視まで止めてしまう)
+      if (generation !== this.generation) return
+      if (!Runtime.isContextValid()) return this.stopWatchViewers()
+      observe()
       const viewers = this.readConcurrentViewers()
       Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max})`)
       if (viewers === undefined) {
@@ -261,8 +296,21 @@ export default class PageEventer {
     }
 
     this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
-    setTimeout(() => void check().catch(err => Logger.error(err)), 5000) // 表示を待ってから 1 回目
+    // 表示を待ってから 1 回目 (遷移したら stopWatchViewers で取り消す)
+    this.viewersPending = setTimeout(() => {
+      this.viewersPending = undefined
+      void check().catch(err => Logger.error(err))
+    }, 5000)
     Logger.debug('⚙️[start] watch concurrent viewers')
+  }
+
+  /** 同時接続数の表示を囲む要素 (監視先). */
+  protected findViewCountContainer(): Element | undefined {
+    const viewCount = document.querySelector(VIEW_COUNT_SELECTOR)
+    if (viewCount) return viewCount.parentElement ?? viewCount
+    const rolling = Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))
+      .find(r => CONCURRENT_LABEL_RE.test(this.rollingLabel(r)))
+    return rolling?.parentElement?.parentElement ?? undefined
   }
 
   /**
@@ -320,6 +368,10 @@ export default class PageEventer {
   protected stopWatchViewers(): void {
     clearInterval(this.viewersTimer)
     this.viewersTimer = undefined
+    clearTimeout(this.viewersPending)
+    this.viewersPending = undefined
+    this.viewersObserver?.disconnect()
+    this.viewersObserver = undefined
   }
 
   /** 監視を全て止める. */
