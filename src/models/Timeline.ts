@@ -81,3 +81,23 @@ export class TimelineBuffer {
     return point
   }
 }
+
+/**
+ * 再生数の記録. (`@views:<動画ID>` に時刻の昇順で保存する)
+ *
+ * - 動画ページを開くたびと、配信中は 1 分ごとに記録する. 同じ分は大きい方を残す.
+ */
+export interface ViewCountPoint {
+  t: number // 分の先頭の時刻 (epoch msec)
+  views: number
+}
+
+/** 再生数の記録を足し合わせる. (時刻の昇順で返す) */
+export function mergeViewCounts(base: ViewCountPoint[], add: ViewCountPoint[]): ViewCountPoint[] {
+  const byMinute = new Map<number, ViewCountPoint>()
+  for (const point of [...base, ...add]) {
+    const prev = byMinute.get(point.t)
+    byMinute.set(point.t, { t: point.t, views: Math.max(prev?.views ?? 0, point.views) })
+  }
+  return [...byMinute.values()].sort((a, b) => a.t - b.t)
+}

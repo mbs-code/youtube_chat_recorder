@@ -58,8 +58,15 @@
       <!-- 記録・グラフのタブ: 最大同接・最大再生数・スーパーチャット合計と、推移のグラフ -->
       <section v-if="selectedVideo && tab === 'stats'" class="flex flex-col gap-3">
         <VideoStats :video="selectedVideo" :chats="chats" />
-        <TimelineChart :points="timeline" :chats="chats" :start-date="selectedVideo.startDate" />
-        <p v-if="timeline.length === 0" class="py-6 text-center text-xs text-zinc-500">推移の記録はありません</p>
+        <template v-if="recordStats">
+          <TimelineChart :points="timeline" :chats="chats" :start-date="selectedVideo.startDate" />
+          <ViewCountChart :points="viewCounts" :start-date="selectedVideo.startDate" />
+          <p v-if="timeline.length === 0 && viewCounts.length === 0" class="py-6 text-center text-xs text-zinc-500">推移の記録はありません</p>
+          <p v-else class="help">
+            <i class="mdi mdi-information-outline" />
+            ページを開いている間に、画面に表示された数字・チャットをもとに数えています。開いていない間の分はありません。
+          </p>
+        </template>
       </section>
 
       <!-- チャットのタブ -->
@@ -161,7 +168,8 @@ import ChatList from './components/ChatList.vue'
 import VideoDropdown from './components/VideoDropdown.vue'
 import VideoStats from './components/VideoStats.vue'
 import TimelineChart from './components/TimelineChart.vue'
-import type { TimelinePoint } from '../models/Timeline'
+import ViewCountChart from './components/ViewCountChart.vue'
+import type { TimelinePoint, ViewCountPoint } from '../models/Timeline'
 
 /** 最近見た動画. */
 const videos = shallowRef<Video[]>([])
@@ -172,6 +180,10 @@ const selectedVideo = shallowRef<Video | null>(null)
 const chats = shallowRef<Chat[]>([])
 /** 選んでいる動画の推移 (1 分ごとの同時接続数・コメント数). */
 const timeline = shallowRef<TimelinePoint[]>([])
+/** 選んでいる動画の再生数の記録. */
+const viewCounts = shallowRef<ViewCountPoint[]>([])
+/** 推移を記録・表示するか (設定). */
+const recordStats = ref(true)
 
 /** 選択中のチャット (選択した順). */
 const selectedChats = ref<Chat[]>([])
@@ -251,6 +263,7 @@ const sortedChats = computed(() => {
 })
 
 onMounted(async () => {
+  void ConfigStorage.get().then(config => (recordStats.value = config.recordStats))
   // 開いているタブのバッジをリセットする (content script が居なければ何もしない)
   const activeTab = await BrowserTabs.getActiveTab()
   if (activeTab?.id !== undefined) void Runtime.sendResetBadge(activeTab.id)
@@ -280,6 +293,10 @@ async function onStorageChanged(changes: Record<string, chrome.storage.StorageCh
     const latest = await TimelineStorage.get(videoId)
     if (selectedVideo.value?.id === videoId) timeline.value = latest
   }
+  if (changes[TimelineStorage.viewsKey(videoId)]) {
+    const latest = await TimelineStorage.getViews(videoId)
+    if (selectedVideo.value?.id === videoId) viewCounts.value = latest
+  }
   if (changes[videoId]) {
     const selectedIds = new Set(selectedChats.value.map(c => c.id))
     const latest = await ChatStorage.get(videoId)
@@ -296,6 +313,7 @@ async function reloadChats(): Promise<void> {
   const videoId = selectedVideo.value?.id
   chats.value = videoId ? await ChatStorage.get(videoId) : []
   timeline.value = videoId ? await TimelineStorage.get(videoId) : []
+  viewCounts.value = videoId ? await TimelineStorage.getViews(videoId) : []
   selectedChats.value = []
 }
 

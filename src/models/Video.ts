@@ -2,7 +2,7 @@ import { ellipsis } from '../lib/util/format'
 import { type Plain, toDate, toTime } from '../lib/util/serialize'
 
 /** 日時のフィールド (storage には epoch msec で保存する). */
-const DATE_KEYS = ['startDate', 'endDate', 'publishedAt', 'createdAt', 'updatedAt', 'viewersAt', 'maxViewersAt', 'maxViewCountAt'] as const
+const DATE_KEYS = ['startDate', 'endDate', 'publishedAt', 'createdAt', 'updatedAt', 'maxViewersAt', 'maxViewCountAt'] as const
 
 /** 動画の種類. video: 普通の動画, upcoming: 配信予定, live: 配信中, archive: 配信のアーカイブ. */
 export type VideoType = 'video' | 'upcoming' | 'live' | 'archive'
@@ -32,10 +32,6 @@ export default class Video {
   createdAt?: Date // 初めて見た日時
   updatedAt?: Date // 最後に見た日時 (一覧の並び順・古い動画の削除に使う)
 
-  // 最後に読んだ同時接続数 (配信中に読むたびに更新する)
-  viewers?: number
-  viewersAt?: Date // viewers を読んだ日時
-
   // 見ている間に記録した最大値 (見ていない時間の値は分からないので目安)
   maxViewers?: number // 最大同時接続数 (配信中の「〇人が視聴中」)
   maxViewersAt?: Date // maxViewers を記録した日時
@@ -62,11 +58,6 @@ export default class Video {
    * @param now 現在時刻 (テスト用)
    */
   public mergeMaxStats(prev: Video | undefined, now = new Date()): void {
-    // 最後に読んだ同時接続数は、今読めていなければ前回の値を残す
-    if (this.viewers === undefined) {
-      this.viewers = prev?.viewers
-      this.viewersAt = prev?.viewersAt
-    }
     // 同時接続数は開いた時点の値 (this.maxViewers) と前回までの最大の大きい方
     if ((prev?.maxViewers ?? 0) >= (this.maxViewers ?? 0)) {
       this.maxViewers = prev?.maxViewers
@@ -78,18 +69,6 @@ export default class Video {
       this.maxViewCount = this.viewCount
       this.maxViewCountAt = now
     }
-  }
-
-  /**
-   * 読んだ同時接続数を記録する (最大を超えていれば最大も更新する).
-   *
-   * @return 値が変わったら true
-   */
-  public updateViewers(viewers: number, now = new Date()): boolean {
-    const changed = this.viewers !== viewers
-    this.viewers = viewers
-    this.viewersAt = now
-    return this.updateMaxViewers(viewers, now) || changed
   }
 
   /**

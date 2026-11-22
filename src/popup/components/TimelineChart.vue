@@ -261,10 +261,10 @@ interface Panel {
 
 const panels = computed<Panel[]>(() => {
   const list: Panel[] = [
-    { key: 'viewers', title: '同時接続数 (1 分ごと)', height: plotBottom + 4, plotBottom, showXAxis: false, yTicks: yTicks(viewersMax.value, viewersY), bars: [], color: VIEWERS_COLOR },
+    { key: 'viewers', title: '同時接続数', height: plotBottom + 4, plotBottom, showXAxis: false, yTicks: yTicks(viewersMax.value, viewersY), bars: [], color: VIEWERS_COLOR },
     {
       key: 'comments',
-      title: 'コメント数 (1 分ごと)',
+      title: 'コメント数',
       height: plotBottom + 4,
       plotBottom,
       showXAxis: false,
@@ -277,7 +277,7 @@ const panels = computed<Panel[]>(() => {
   if (superValues.some(v => v.value > 0)) {
     list.push({
       key: 'super',
-      title: `スーパーチャット (1 分ごと, ${superUnit.value})`,
+      title: `スーパーチャット (${superUnit.value})`,
       height: plotBottom + 4,
       plotBottom,
       showXAxis: false,

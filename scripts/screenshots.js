@@ -73,6 +73,12 @@ const TIMELINE = Array.from({ length: 60 }, (_, i) => {
   return i === 22 ? { t, comments } : { t, viewers, comments } // 22 分目は同接が読めなかった
 })
 
+/** 再生数の記録 (配信中は 1 分ごと, その後は開き直した時). */
+const VIEW_COUNTS = [
+  ...TIMELINE.filter((_, i) => i % 3 === 0).map((p, i) => ({ t: p.t, views: 12000 + i * 1700 })),
+  { t: TIMELINE.at(-1).t + 3 * 3600 * 1000, views: 61200 },
+]
+
 const CHATS = [
   { authorName: '@〇〇ちゃんねる', altMessage: 'みなさんこんにちは～！', isOwner: true, isVerified: true, image: '#fda4af' },
   { authorName: '@moderator_san', altMessage: 'こんにちは！今日もよろしくお願いします', isModerator: true, image: '#93c5fd' },
@@ -119,7 +125,7 @@ async function main() {
   try {
     const worker = context.serviceWorkers()[0] ?? (await context.waitForEvent('serviceworker'))
     const extensionId = new URL(worker.url()).host
-    await worker.evaluate(data => chrome.storage.local.set(data), { '@videos': VIDEOS, 'sample00001': CHATS, '@timeline:sample00001': TIMELINE })
+    await worker.evaluate(data => chrome.storage.local.set(data), { '@videos': VIDEOS, 'sample00001': CHATS, '@timeline:sample00001': TIMELINE, '@views:sample00001': VIEW_COUNTS })
 
     const popup = await context.newPage()
     await popup.setViewportSize({ width: 600, height: 600 })
@@ -137,7 +143,12 @@ async function main() {
     const box = await chartSvg.boundingBox()
     if (box) await popup.mouse.move(box.x + box.width * 0.72, box.y + box.height / 2)
     await chart.screenshot({ path: path.join(RESULTS, 'screenshot-popup-timeline.png') })
+    const views = popup.locator('section.card').filter({ has: popup.locator('svg') }).nth(1)
+    const viewsBox = await views.locator('svg').boundingBox()
+    if (viewsBox) await popup.mouse.move(viewsBox.x + viewsBox.width * 0.4, viewsBox.y + viewsBox.height / 2)
+    await views.screenshot({ path: path.join(RESULTS, 'screenshot-popup-views.png') })
     await popup.mouse.move(0, 0)
+    await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-stats-full.png'), fullPage: true })
     await popup.click('[role="tab"]:has-text("チャット")')
     await popup.waitForTimeout(300)
 

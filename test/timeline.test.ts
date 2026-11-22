@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import TimelineRecorder from '../src/content-scripts/TimelineRecorder'
 import Chat from '../src/models/Chat'
-import { mergeTimeline, MINUTE, TimelineBuffer, toMinute } from '../src/models/Timeline'
+import { mergeTimeline, mergeViewCounts, MINUTE, TimelineBuffer, toMinute } from '../src/models/Timeline'
 
 const base = new Date(2026, 10, 22, 14, 0, 0).getTime()
 
@@ -35,6 +35,13 @@ describe('Timeline', () => {
       { t: base, comments: 1, viewers: 50 },
       { t: base + MINUTE, comments: 5, viewers: 100 },
     ])
+  })
+})
+
+describe('mergeViewCounts', () => {
+  it('同じ分は大きい方を残し、時刻の昇順にする', () => {
+    const merged = mergeViewCounts([{ t: 2 * MINUTE, views: 200 }, { t: MINUTE, views: 100 }], [{ t: MINUTE, views: 150 }])
+    expect(merged).toEqual([{ t: MINUTE, views: 150 }, { t: 2 * MINUTE, views: 200 }])
   })
 })
 

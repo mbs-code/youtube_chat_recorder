@@ -1,6 +1,7 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
+import TimelineStorage from '../lib/chrome/storage/TimelineStorage'
 import Runtime from '../lib/chrome/Runtime'
 import VideoParser from '../lib/parser/VideoParser'
 import PageHelper from '../lib/util/PageHelper'
@@ -30,7 +31,7 @@ const CONCURRENT_LABEL_RE = /視聴中|watching/i
 const VIEWERS_WARN_AFTER = 3
 /** 同時接続数を読み直す間隔 (msec). 表示の変化を取りこぼした時の予備. */
 const VIEWERS_INTERVAL = 30 * 1000
-/** 推移・最新の同接として記録する間隔 (msec). (最大同接は表示が変わるたびに記録する) */
+/** 推移 (同時接続数・再生数) を記録する間隔 (msec). (最大同接は表示が変わるたびに記録する) */
 const VIEWERS_SAMPLE_INTERVAL = 60 * 1000
 /** 表示が変わってから読むまでの待ち (msec). 数字が回転している間に何度も読まないようにまとめる. */
 const VIEWERS_THROTTLE = 2 * 1000
@@ -135,7 +136,7 @@ export default class PageEventer {
         return
       }
 
-      if (video.isLiveNow) this.startWatchViewers(video, generation)
+      if (video.isLiveNow && this.recordStats) this.startWatchViewers(video, generation)
       await this.attachChatFrame(generation)
     } catch (err) {
       Logger.error(err)
@@ -172,8 +173,13 @@ export default class PageEventer {
     this.video = video
     await VideoStorage.save(video, this.config?.maxVideoLength ?? 20)
 
-    // 配信中なら推移の記録を始める (開いた時点の同時接続数も入れる)
-    if (video.isLiveNow && video.id && generation === this.generation) {
+    if (!this.recordStats || !video.id || generation !== this.generation) return video
+
+    // 開くたびに再生数を記録する
+    void TimelineStorage.addViews(video.id, video.viewCount).catch(err => Logger.error(err))
+
+    // 開いた時に配信中なら、1 分ごとの推移の記録を始める (開いた時点の同時接続数も入れる)
+    if (video.isLiveNow) {
       this.timeline.start(video.id)
       if (videoData.concurrentViewers) this.timeline.addViewers(videoData.concurrentViewers)
     }
@@ -262,11 +268,16 @@ export default class PageEventer {
     }
   }
 
+  /** 推移・最大同接を記録するか (設定). */
+  protected get recordStats(): boolean {
+    return this.config?.recordStats ?? true
+  }
+
   /**
    * 配信中の同時接続数を読み続ける.
    *
    * - 最大同接: 表示が変わるたびに読み、超えたらすぐ保存する.
-   * - 推移・最新の同接: 1 分ごとに、その時点の値を記録する.
+   * - 推移: 1 分ごとに、その時点の同時接続数と再生数を記録する.
    */
   protected startWatchViewers(video: Video, generation: number): void {
     const videoId = video.id
@@ -274,17 +285,20 @@ export default class PageEventer {
 
     let max = video.maxViewers ?? 0
     let current: number | undefined // 最後に読んだ値
-    let saved = video.viewers // 最後に保存した「最新の同接」
     let misses = 0
     let observed: Element[] = []
 
-    /** 今の値を推移と「最新の同接」に記録する (1 分ごと). */
-    const sample = async () => {
+    /** 今の同時接続数を推移に入れる (1 分ごと). */
+    const sample = () => {
       if (generation !== this.generation || current === undefined) return
       this.timeline.addViewers(current)
-      if (current === saved) return
-      saved = current
-      await VideoStorage.updateViewers(videoId, current)
+    }
+
+    /** 今の再生数を記録する (1 分ごと). */
+    const sampleViews = async () => {
+      const data = await PageHelper.requestVideoData(videoId)
+      if (generation !== this.generation || data?.videoId !== videoId) return
+      await TimelineStorage.addViews(videoId, data.viewCount ?? 0)
     }
 
     /** 読んだ値を覚え、最大を超えたらすぐ保存する. */
@@ -298,12 +312,11 @@ export default class PageEventer {
       }
       const first = current === undefined
       current = viewers
-      if (first) return sample() // 最初の値はすぐ記録する (以降は 1 分ごと)
+      if (first) sample() // 最初の値はすぐ推移に入れる (以降は 1 分ごと)
       if (viewers <= max) return
 
       max = viewers
-      saved = viewers
-      await VideoStorage.updateViewers(videoId, viewers)
+      await VideoStorage.updateMaxViewers(videoId, viewers)
     }
 
     /** ページ全体から読む (定期的な確認と、回転する数字が止まった後). */
@@ -354,7 +367,10 @@ export default class PageEventer {
     }
 
     this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
-    this.viewersSampleTimer = setInterval(() => void sample().catch(err => Logger.error(err)), VIEWERS_SAMPLE_INTERVAL)
+    this.viewersSampleTimer = setInterval(() => {
+      sample()
+      void sampleViews().catch(err => Logger.error(err))
+    }, VIEWERS_SAMPLE_INTERVAL)
     // 表示を待ってから 1 回目 (遷移したら stopWatchViewers で取り消す)
     this.viewersPending = setTimeout(() => {
       this.viewersPending = undefined

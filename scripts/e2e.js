@@ -174,6 +174,9 @@ async function main() {
     console.log('\n=== timeline ===')
     console.log(timeline.map(p => `${new Date(p.t).toLocaleTimeString()} viewers=${p.viewers ?? '-'} comments=${p.comments}`).join('\n') || '(none)')
 
+    const views = storage[`@views:${videoId}`] ?? []
+    console.log(`views: ${views.map(p => `${new Date(p.t).toLocaleTimeString()}=${p.views}`).join(', ') || '(none)'}`)
+
     console.log('\n=== logs (last 15) ===')
     console.log(logs.slice(-15).join('\n'))
 

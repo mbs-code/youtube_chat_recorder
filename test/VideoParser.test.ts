@@ -164,20 +164,6 @@ describe('Video の最大値 (同接・再生数)', () => {
     expect(video.toPlain().maxViewersAt).toBe(t1.getTime())
     expect(Video.fromPlain(video.toPlain()).maxViewersAt).toEqual(t1)
   })
-
-  it('最新の同接は下がっても毎回記録し、最大は超えた時だけ更新する', () => {
-    const video = new Video()
-    expect(video.updateViewers(300, t1)).toBe(true)
-    expect(video.updateViewers(200, t2)).toBe(true)
-    expect(video).toMatchObject({ viewers: 200, viewersAt: t2, maxViewers: 300, maxViewersAt: t1 })
-    expect(video.updateViewers(200, t2)).toBe(false)
-
-    // 開き直して読めなかった時は前回の値を残す
-    const reopened = new Video()
-    reopened.mergeMaxStats(video, t2)
-    expect(reopened).toMatchObject({ viewers: 200, maxViewers: 300 })
-    expect(Video.fromPlain(video.toPlain()).viewersAt).toEqual(t2)
-  })
 })
 
 describe('PageHelper.getPageVideoId', () => {

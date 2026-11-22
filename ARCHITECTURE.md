@@ -99,7 +99,7 @@ sequenceDiagram
   PE->>VS: save(video, config.maxVideoLength)
   PE->>BM: waitingIcon() (青)
   opt video.isLiveNow
-    PE->>PE: startWatchViewers(video, generation)<br/>全ての #view-count を MutationObserver で監視<br/>aria-label が変わったら即読む / 回転する数字は 2 秒後 (+ 30 秒ごと)<br/>最大を超えたらすぐ VideoStorage.updateViewers<br/>推移・最新の同接は 1 分ごとに記録
+    PE->>PE: startWatchViewers(video, generation)<br/>全ての #view-count を MutationObserver で監視<br/>aria-label が変わったら即読む / 回転する数字は 2 秒後 (+ 30 秒ごと)<br/>最大を超えたらすぐ VideoStorage.updateMaxViewers<br/>推移 (同接・再生数) は 1 分ごとに記録
   end
   PE->>PE: attachChatFrame(generation)<br/>iframe#chatframe を探す / load と削除の監視を付ける
   alt iframe が読み込み済み
@@ -428,7 +428,7 @@ flowchart LR
   POPS["popup.handleSaveToMerge"] -- "読む" --> K1
 
   LV["PageEventer.loadVideo<br/>→ VideoStorage.save<br/>(最大同接・再生数は前回から引き継ぐ)"] -- "書く" --> K2
-  WV["PageEventer.startWatchViewers<br/>→ VideoStorage.updateViewers"] -- "書く" --> K2
+  WV["PageEventer.startWatchViewers<br/>→ VideoStorage.updateMaxViewers"] -- "書く" --> K2
   VSS["VideoStorage.save"] -- "溢れた動画のチャットを消す<br/>ChatStorage.clear" --> K3
   POP["popup"] -- "読む" --> K2
 
@@ -462,7 +462,7 @@ flowchart LR
 | `PageEventer.onPageUpdated` | `init`, `yt-page-data-updated` イベント | — → `loadVideo`, `attachChatFrame` |
 | `PageEventer.loadVideo` | `onPageUpdated` | URL → `VideoData` (開いた時点の同接 `concurrentViewers` を含む. page-bridge が `ytd-watch-flexy.data` から `parseConcurrentViewers` で取る) → `Video` → `VideoStorage.save` |
 | `TimelineRecorder.start / addChat / addViewers / flush / stop` | `PageEventer` (配信中のみ), `ChatHandler.onChat` | 1 分ごとのコメント数 (開く前のチャット・同じ ID は数えない) と同接の最大をメモリに貯め、3 秒後・以降 10 秒ごと・遷移時・`pagehide` で `TimelineStorage.add` (書き込みは 1 つずつ順番に) |
-| `PageEventer.startWatchViewers` | `onPageUpdated` (配信中のみ) | `#view-count` の aria-label → `VideoParser.parseConcurrentViewers` → 最大を超えたらすぐ `VideoStorage.updateViewers`. 推移 (`TimelineRecorder`) と最新の同接は 1 分ごとに記録. 遷移時に `stopWatchViewers` |
+| `PageEventer.startWatchViewers` | `onPageUpdated` (配信中のみ) | `#view-count` の aria-label → `VideoParser.parseConcurrentViewers` → 最大を超えたらすぐ `VideoStorage.updateMaxViewers`. 推移 (`TimelineRecorder`) と再生数 (`TimelineStorage.addViews`) は 1 分ごとに記録. 設定 `recordStats` がオフなら動かさない. 遷移時に `stopWatchViewers` |
 | `PageEventer.attachChatFrame` | `onPageUpdated`, `removalObserver` | `document` → `iframe` → `connectChat` |
 | `PageEventer.onIframeLoad` | iframe の `load` イベント | `iframe` → `connectChat` |
 | `PageEventer.connectChat` | `attachChatFrame`, `onIframeLoad` | `iframe` → `#item-scroller` → `handler.setVideo`, `chatObserver.observe`, `handler.findInvoke` |
