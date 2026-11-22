@@ -38,14 +38,32 @@
         </button>
       </div>
 
-      <!-- 選んだ動画の記録 (最大同接・最大再生数・スーパーチャット合計) -->
-      <VideoStats v-if="selectedVideo" :video="selectedVideo" :chats="chats" />
+      <!-- タブ: チャット / 記録・グラフ (チャットの一覧がすぐ見えるように、記録は別のタブにする) -->
+      <nav v-if="selectedVideo" class="-mx-4 flex gap-1 border-b border-zinc-200 px-4" role="tablist">
+        <button
+          v-for="item in TABS"
+          :key="item.key"
+          role="tab"
+          :aria-selected="tab === item.key"
+          class="-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm"
+          :class="tab === item.key ? 'border-zinc-900 font-bold text-zinc-950' : 'border-transparent text-zinc-500 hover:text-zinc-800'"
+          @click="setTab(item.key)"
+        >
+          <i class="mdi" :class="item.icon" />
+          {{ item.label }}
+          <span v-if="item.key === 'chats'" class="badge">{{ chats.length }}</span>
+        </button>
+      </nav>
 
-      <!-- 配信の推移 (同時接続数・コメント数のグラフ) -->
-      <TimelineChart v-if="selectedVideo" :points="timeline" :start-date="selectedVideo.startDate" />
+      <!-- 記録・グラフのタブ: 最大同接・最大再生数・スーパーチャット合計と、推移のグラフ -->
+      <section v-if="selectedVideo && tab === 'stats'" class="flex flex-col gap-3">
+        <VideoStats :video="selectedVideo" :chats="chats" />
+        <TimelineChart :points="timeline" :start-date="selectedVideo.startDate" />
+        <p v-if="timeline.length === 0" class="py-6 text-center text-xs text-zinc-500">推移の記録はありません</p>
+      </section>
 
-      <!-- 選んだ動画のチャット -->
-      <section v-if="selectedVideo" class="flex flex-col gap-2.5">
+      <!-- チャットのタブ -->
+      <section v-else-if="selectedVideo" class="flex flex-col gap-2.5">
         <!-- ツールバー: 絞り込み・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
         <div class="sticky top-12.25 z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
           <select v-model="selectedFilterKey" class="select h-7 w-47.5 text-xs" aria-label="表示するチャット">
@@ -82,7 +100,7 @@
       </section>
 
       <!-- 動画がまだ 1 本も無い時の案内 -->
-      <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
+      <div v-if="!selectedVideo" class="flex flex-col items-center gap-1 px-4 py-12 text-center">
         <i class="mdi mdi-youtube mb-1 text-4xl text-zinc-400" />
         <p>まだ記録した動画がありません</p>
         <p class="text-xs text-zinc-500">YouTube でライブ配信やアーカイブを開くと、自動でチャットを記録します。</p>
@@ -90,7 +108,10 @@
     </main>
 
     <!-- フッター: 選択中のチャットへの操作 (常に下に残る) -->
-    <footer v-if="selectedVideo" class="sticky bottom-0 z-30 flex items-center gap-2 border-t border-zinc-200 bg-white px-4 py-2.5">
+    <footer
+      v-if="selectedVideo && tab === 'chats'"
+      class="sticky bottom-0 z-30 flex items-center gap-2 border-t border-zinc-200 bg-white px-4 py-2.5"
+    >
       <span class="flex-1">
         <template v-if="selectedChats.length">
           <strong class="text-[15px] text-zinc-950">{{ selectedChats.length }}</strong>
@@ -169,6 +190,36 @@ function loadSortOrder(): SortOrder {
     return localStorage.getItem(SORT_ORDER_KEY) === 'desc' ? 'desc' : 'asc'
   } catch {
     return 'asc'
+  }
+}
+
+type Tab = 'chats' | 'stats'
+/** タブ. */
+const TABS: { key: Tab, label: string, icon: string }[] = [
+  { key: 'chats', label: 'チャット', icon: 'mdi-message-text-outline' },
+  { key: 'stats', label: '記録・グラフ', icon: 'mdi-chart-line' },
+]
+/** 開いているタブを覚えておく localStorage の key. */
+const TAB_KEY = 'ycr:popup:tab'
+
+/** 前回のタブを読み込む (読めなければチャット). */
+function loadTab(): Tab {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'stats' ? 'stats' : 'chats'
+  } catch {
+    return 'chats'
+  }
+}
+
+/** 開いているタブ. 次に開いたときも同じタブにする. */
+const tab = ref<Tab>(loadTab())
+
+function setTab(value: Tab): void {
+  tab.value = value
+  try {
+    localStorage.setItem(TAB_KEY, value)
+  } catch {
+    // 覚えられなくても切り替え自体はできる
   }
 }
 
