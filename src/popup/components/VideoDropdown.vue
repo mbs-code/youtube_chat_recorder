@@ -1,34 +1,42 @@
 <template>
-  <div ref="root" class="dropdown">
+  <div ref="root" class="relative">
+    <!-- .trigger は scripts/screenshots.js から参照している -->
     <button
-      class="trigger card"
-      :class="{ 'is-open': isOpen }"
+      class="trigger card flex w-full cursor-pointer items-center gap-2 p-2.5 transition-colors hover:border-zinc-300"
+      :class="{ 'border-zinc-300': isOpen }"
       aria-haspopup="listbox"
       :aria-expanded="isOpen"
       @click.stop="isOpen = !isOpen"
     >
-      <VideoPanel v-if="selected" :video="selected" />
-      <span v-else class="placeholder">
+      <VideoPanel v-if="selected" class="flex-1" :video="selected" />
+      <span v-else class="flex h-18 flex-1 items-center gap-2 pl-1.5 text-zinc-500">
         <i class="mdi mdi-playlist-play" />
         {{ videos.length ? '動画を選択してください' : 'まだ動画がありません' }}
       </span>
-      <i class="mdi mdi-chevron-down chevron" />
+      <i class="mdi mdi-chevron-down text-xl text-zinc-400 transition-transform" :class="{ 'rotate-180': isOpen }" />
     </button>
 
-    <Transition name="menu">
-      <ul v-if="isOpen" class="menu card" role="listbox">
+    <Transition
+      enter-from-class="-translate-y-1 opacity-0"
+      leave-to-class="-translate-y-1 opacity-0"
+      enter-active-class="transition duration-100"
+      leave-active-class="transition duration-100"
+    >
+      <ul v-if="isOpen" class="card absolute inset-x-0 top-[calc(100%+6px)] z-20 max-h-120 overflow-y-auto p-1.5 shadow-xl" role="listbox">
         <li
           v-for="video in videos"
           :key="video.id"
-          class="item"
-          :class="{ 'is-selected': video.id === selected?.id }"
+          class="cursor-pointer rounded-lg p-2 hover:bg-zinc-100"
+          :class="{ 'bg-primary-soft shadow-[inset_3px_0_0_var(--color-primary)]': video.id === selected?.id }"
           role="option"
           :aria-selected="video.id === selected?.id"
           @click="handleSelected(video)"
         >
           <VideoPanel :video="video" />
         </li>
-        <li v-if="videos.length === 0" class="empty muted">YouTube でライブ配信やアーカイブを開くと、ここに表示されます。</li>
+        <li v-if="videos.length === 0" class="p-4 text-center text-zinc-500">
+          YouTube でライブ配信やアーカイブを開くと、ここに表示されます。
+        </li>
       </ul>
     </Transition>
   </div>
@@ -82,96 +90,3 @@ onBeforeUnmount(() => {
   document.removeEventListener('keydown', onKeydown)
 })
 </script>
-
-<style scoped>
-.dropdown {
-  position: relative;
-}
-
-.trigger {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 10px;
-  font: inherit;
-  cursor: pointer;
-  transition: border-color 0.15s;
-
-  &:hover,
-  &.is-open {
-    border-color: var(--border-strong);
-  }
-
-  & > .video {
-    flex: 1;
-  }
-}
-
-.placeholder {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 8px;
-  height: 72px;
-  padding-left: 6px;
-  color: var(--text-muted);
-}
-
-.chevron {
-  color: var(--text-subtle);
-  font-size: 20px;
-  transition: transform 0.15s;
-
-  .is-open & {
-    transform: rotate(180deg);
-  }
-}
-
-.menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  left: 0;
-  z-index: 20;
-  max-height: 480px;
-  margin: 0;
-  padding: 6px;
-  overflow-y: auto;
-  box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
-  list-style: none;
-}
-
-.item {
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-
-  &:hover {
-    background: var(--hover);
-  }
-
-  &.is-selected {
-    background: var(--primary-soft);
-    box-shadow: inset 3px 0 0 var(--primary);
-  }
-}
-
-.empty {
-  padding: 16px;
-  text-align: center;
-}
-
-.menu-enter-active,
-.menu-leave-active {
-  transition:
-    opacity 0.12s,
-    transform 0.12s;
-}
-
-.menu-enter-from,
-.menu-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-</style>

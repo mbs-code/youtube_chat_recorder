@@ -1,5 +1,5 @@
 <template>
-  <div class="list">
+  <div class="flex flex-col gap-2">
     <ChatPanel v-for="chat in chats" :key="chat.id" :chat="chat" :is-selected="selectedIds.has(chat.id)" @click="toggle(chat)" />
   </div>
 </template>
@@ -20,11 +20,3 @@ function toggle(chat: Chat): void {
   selected.value = selectedIds.value.has(chat.id) ? selected.value.filter(c => c.id !== chat.id) : [...selected.value, chat]
 }
 </script>
-
-<style scoped>
-.list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-</style>

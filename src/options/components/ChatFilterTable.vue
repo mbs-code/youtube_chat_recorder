@@ -1,37 +1,44 @@
 <template>
-  <div class="filters">
-    <table class="table">
+  <div class="flex flex-col gap-5">
+    <table class="w-full border-collapse">
       <thead>
-        <tr>
+        <tr class="border-b border-zinc-200 text-left text-xs text-zinc-500 [&>th]:p-2 [&>th]:font-medium">
           <th>チャットの種類</th>
-          <th class="col-check">保存する</th>
-          <th class="col-check">画像化する</th>
-          <th class="col-actions"><span class="sr-only">操作</span></th>
+          <th class="w-19 text-center!">保存する</th>
+          <th class="w-19 text-center!">画像化する</th>
+          <th class="w-17"><span class="sr-only">操作</span></th>
         </tr>
       </thead>
-      <tbody>
+      <tbody class="divide-y divide-zinc-200">
         <tr
           v-for="chatFilter in chatFilters"
           :key="chatFilter.key"
-          :class="{
-            'is-editing': chatFilter.key === editFilterKey,
-            'is-matched': chatFilter.key === testMatchFilterKey,
-          }"
+          class="[&>td]:h-10 [&>td]:px-2 [&>td]:py-1"
+          :class="
+            chatFilter.key === editFilterKey
+              ? 'bg-primary-soft'
+              : chatFilter.key === testMatchFilterKey
+                ? 'bg-success-soft'
+                : 'hover:bg-zinc-50'
+          "
         >
           <td>
-            <div class="name">
+            <div class="flex flex-wrap items-center gap-1.5 text-zinc-950">
               <template v-if="chatFilter.textMode">
-                <i class="mdi" :class="chatFilter.textMode === 'author' ? 'mdi-account-outline' : 'mdi-message-text-outline'" />
-                <span class="match">{{ chatFilter.title }}</span>
+                <i
+                  class="mdi text-zinc-500"
+                  :class="chatFilter.textMode === 'author' ? 'mdi-account-outline' : 'mdi-message-text-outline'"
+                />
+                <span class="font-medium break-all">{{ chatFilter.title }}</span>
                 <span class="badge">{{ chatFilter.textMode === 'author' ? '投稿者名' : '本文' }}</span>
-                <span v-if="chatFilter.isExact" class="badge is-info">完全一致</span>
-                <span v-if="chatFilter.isRegex" class="badge is-warning">正規表現</span>
+                <span v-if="chatFilter.isExact" class="badge badge-info">完全一致</span>
+                <span v-if="chatFilter.isRegex" class="badge badge-warning">正規表現</span>
               </template>
               <template v-else>
                 <span>{{ chatFilter.title }}</span>
                 <span
                   v-if="warnFilterKeys.includes(chatFilter.key)"
-                  class="badge is-warning"
+                  class="badge badge-warning"
                   title="数が多いため、オンにすると重くなります"
                 >
                   負荷注意
@@ -39,33 +46,33 @@
               </template>
             </div>
           </td>
-          <td class="col-check">
+          <td class="text-center">
             <input
               v-model="chatFilter.doSave"
               type="checkbox"
-              class="checkbox"
+              class="checkbox align-middle"
               :aria-label="`${chatFilter.title} を保存する`"
               :disabled="isEditing"
               @change="!chatFilter.doSave && (chatFilter.doImage = false)"
             />
           </td>
-          <td class="col-check">
+          <td class="text-center">
             <input
               v-model="chatFilter.doImage"
               type="checkbox"
-              class="checkbox"
+              class="checkbox align-middle"
               :aria-label="`${chatFilter.title} を画像化する`"
               :disabled="isEditing"
               @change="chatFilter.doImage && (chatFilter.doSave = true)"
             />
           </td>
-          <td class="col-actions">
+          <td class="text-right whitespace-nowrap">
             <template v-if="chatFilter.textMode">
-              <button class="btn btn-ghost is-icon is-small" title="編集" :disabled="isEditing" @click="handleFilterEdit(chatFilter)">
+              <button class="btn btn-ghost btn-icon btn-sm" title="編集" :disabled="isEditing" @click="handleFilterEdit(chatFilter)">
                 <i class="mdi mdi-pencil-outline" />
               </button>
               <button
-                class="btn btn-ghost is-icon is-small delete"
+                class="btn btn-ghost btn-icon btn-sm enabled:hover:bg-danger-soft enabled:hover:text-danger"
                 title="削除"
                 :disabled="isEditing"
                 @click="handleFilterDelete(chatFilter)"
@@ -79,15 +86,15 @@
     </table>
 
     <!-- テキストのマッチングを追加 -->
-    <div class="block" :class="{ 'is-editing': isEditing }">
-      <h3 class="block-title">
+    <div class="rounded-[10px] border p-3.5" :class="isEditing ? 'border-primary-ring bg-primary-soft' : 'border-zinc-200 bg-zinc-50'">
+      <h3 class="flex items-center gap-1.5 text-[13px] font-semibold text-zinc-950">
         <i class="mdi" :class="isEditing ? 'mdi-pencil-outline' : 'mdi-plus'" />
         {{ isEditing ? 'テキストのマッチングを編集' : 'テキストのマッチングを追加' }}
       </h3>
-      <p class="help block-help">特定の人や、特定の言葉を含むチャットを記録できます。</p>
+      <p class="help mt-0.5 mb-2.5">特定の人や、特定の言葉を含むチャットを記録できます。</p>
 
-      <div class="row">
-        <select v-model="editFilterMode" class="select mode" aria-label="対象">
+      <div class="flex items-center gap-2">
+        <select v-model="editFilterMode" class="select w-27.5 shrink-0" aria-label="対象">
           <option value="author">投稿者名</option>
           <option value="message">本文</option>
         </select>
@@ -102,12 +109,12 @@
         <button class="btn btn-primary" @click="handleFilterAdd">{{ isEditing ? '更新' : '追加' }}</button>
         <button v-if="isEditing" class="btn btn-secondary" @click="handleFilterReset">やめる</button>
       </div>
-      <div class="row options">
-        <label class="check">
+      <div class="mt-2 flex items-center gap-4 text-[13px]">
+        <label class="inline-flex cursor-pointer items-center gap-1.5">
           <input v-model="editFilterIsExact" type="checkbox" class="checkbox" @change="editFilterIsExact && (editFilterIsRegex = false)" />
           完全一致
         </label>
-        <label class="check">
+        <label class="inline-flex cursor-pointer items-center gap-1.5">
           <input v-model="editFilterIsRegex" type="checkbox" class="checkbox" @change="editFilterIsRegex && (editFilterIsExact = false)" />
           正規表現
         </label>
@@ -115,13 +122,13 @@
     </div>
 
     <!-- マッチングテスト -->
-    <div class="block">
-      <h3 class="block-title">
+    <div class="rounded-[10px] border border-zinc-200 bg-zinc-50 p-3.5">
+      <h3 class="flex items-center gap-1.5 text-[13px] font-semibold text-zinc-950">
         <i class="mdi mdi-flask-outline" />
         マッチングテスト
       </h3>
-      <p class="help block-help">文字を入れて Enter を押すと、どの種類に当てはまるかを試せます。</p>
-      <div class="row">
+      <p class="help mt-0.5 mb-2.5">文字を入れて Enter を押すと、どの種類に当てはまるかを試せます。</p>
+      <div class="flex items-center gap-2">
         <input
           v-model="testMatchText"
           class="input"
@@ -257,133 +264,3 @@ function handleFilterTest(): void {
   }
 }
 </script>
-
-<style scoped>
-.filters {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-
-  & th {
-    padding: 8px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 12px;
-    font-weight: 500;
-    text-align: left;
-  }
-
-  & td {
-    height: 40px;
-    padding: 4px 8px;
-    border-bottom: 1px solid var(--border);
-  }
-
-  & tbody tr:last-child td {
-    border-bottom: none;
-  }
-
-  & tbody tr:hover td {
-    background: var(--surface-muted);
-  }
-
-  & tr.is-editing td {
-    background: var(--primary-soft);
-  }
-
-  & tr.is-matched td {
-    background: var(--success-soft);
-  }
-}
-
-.col-check {
-  width: 76px;
-  text-align: center !important;
-
-  & .checkbox {
-    vertical-align: middle;
-  }
-}
-
-.col-actions {
-  width: 68px;
-  white-space: nowrap;
-  text-align: right;
-}
-
-.name {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-strong);
-
-  & > .mdi {
-    color: var(--text-muted);
-  }
-}
-
-.match {
-  font-weight: 500;
-  word-break: break-all;
-}
-
-.delete:hover:enabled {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
-.block {
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--surface-muted);
-
-  &.is-editing {
-    border-color: var(--primary-ring);
-    background: var(--primary-soft);
-  }
-}
-
-.block-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-strong);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.block-help {
-  margin: 2px 0 10px;
-}
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.mode {
-  width: 110px;
-  flex-shrink: 0;
-}
-
-.options {
-  gap: 16px;
-  margin-top: 8px;
-}
-
-.check {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  cursor: pointer;
-}
-</style>

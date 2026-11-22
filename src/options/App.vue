@@ -1,13 +1,13 @@
 <template>
-  <div class="page">
-    <header class="header">
-      <img class="logo" src="/icons/icon-48x48.png" alt="" />
-      <div class="heading">
-        <h1 class="app-name">
+  <div class="mx-auto max-w-300 px-6 pt-8">
+    <header class="mb-5 flex items-center gap-2">
+      <img class="mr-1.5 size-10" src="/icons/icon-48x48.png" alt="" />
+      <div class="flex-1">
+        <h1 class="flex items-center gap-2 text-xl/tight font-bold text-zinc-950">
           Youtube Chat Recorder
           <span class="badge">v{{ version }}</span>
         </h1>
-        <p class="muted">設定</p>
+        <p class="text-zinc-500">設定</p>
       </div>
       <button class="btn btn-secondary" @click="Runtime.openReadmePage()">
         <i class="mdi mdi-help-circle-outline" />
@@ -19,7 +19,7 @@
       </a>
     </header>
 
-    <p class="notice">
+    <p class="notice mb-5">
       <i class="mdi mdi-information-outline" />
       <span>
         設定を変えたら、開いている YouTube のページを
@@ -28,15 +28,15 @@
       </span>
     </p>
 
-    <main v-if="form" class="grid">
+    <main v-if="form" class="grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[7fr_5fr]">
       <!-- 左: 記録するチャット -->
-      <section class="card section">
-        <header class="section-header">
-          <h2>
-            <i class="mdi mdi-message-text-outline" />
+      <section class="card p-5">
+        <header class="mb-4">
+          <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-message-text-outline text-zinc-500" />
             記録するチャット
           </h2>
-          <p class="muted">
+          <p class="text-[13px] text-zinc-500">
             チャットの種類ごとに記録の仕方を選びます。
             <strong>保存する</strong>
             は文字だけ、
@@ -48,18 +48,16 @@
       </section>
 
       <!-- 右 -->
-      <div class="column">
-        <section class="card section">
-          <header class="section-header">
-            <h2>
-              <i class="mdi mdi-playlist-play" />
-              動画の保存
-            </h2>
-          </header>
-          <div class="field">
+      <div class="flex flex-col gap-5">
+        <section class="card p-5">
+          <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-playlist-play text-zinc-500" />
+            動画の保存
+          </h2>
+          <div class="mb-3">
             <label class="label" for="maxVideoLength">動画の最大保存数</label>
-            <div class="number">
-              <input id="maxVideoLength" v-model.number="form.maxVideoLength" class="input" type="number" :min="MIN_VIDEO_LENGTH" />
+            <div class="flex items-center gap-2">
+              <input id="maxVideoLength" v-model.number="form.maxVideoLength" class="input w-25" type="number" :min="MIN_VIDEO_LENGTH" />
               <span>本</span>
             </div>
             <p class="help">
@@ -72,14 +70,12 @@
           </ToggleSwitch>
         </section>
 
-        <section class="card section">
-          <header class="section-header">
-            <h2>
-              <i class="mdi mdi-image-multiple-outline" />
-              チャットの保存
-            </h2>
-          </header>
-          <div class="toggles">
+        <section class="card p-5">
+          <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-image-multiple-outline text-zinc-500" />
+            チャットの保存
+          </h2>
+          <div class="flex flex-col divide-y divide-zinc-200">
             <ToggleSwitch v-model="form.chatDrawOnce">
               一度取得した画像は再取得しない
               <template #description>同じチャットが再び表示されても画像を撮り直しません。動作が軽くなります。</template>
@@ -98,19 +94,23 @@
             </ToggleSwitch>
           </div>
 
-          <div class="field">
+          <div class="mt-3">
             <label class="label" for="mergeImageFileName">つなげた画像のファイル名</label>
-            <div class="filename">
+            <div class="flex">
               <input
                 id="mergeImageFileName"
                 v-model="form.mergeImageFileName"
-                class="input"
+                class="input rounded-r-none"
                 type="text"
                 :placeholder="DEFAULTS.mergeImageFileName"
               />
-              <span class="ext">.png</span>
+              <span
+                class="grid place-items-center rounded-r-lg border border-l-0 border-zinc-300 bg-zinc-50 px-2.5 text-[13px] text-zinc-500"
+              >
+                .png
+              </span>
             </div>
-            <p class="help">
+            <p class="help [&_code]:text-[11px]">
               <code>%title%</code>
               タイトル ・
               <code>%id%</code>
@@ -125,29 +125,27 @@
               日時の形式は
               <code>%now(yyyy年MM月dd日)%</code>
               のように指定できます (
-              <a href="https://date-fns.org/docs/format" target="_blank" rel="noopener">書き方</a>
+              <a class="underline" href="https://date-fns.org/docs/format" target="_blank" rel="noopener">書き方</a>
               )。使えない文字は自動で置き換えます。
             </p>
           </div>
         </section>
 
-        <section class="card section">
-          <header class="section-header">
-            <h2>
-              <i class="mdi mdi-tune-variant" />
-              詳細設定
-            </h2>
-          </header>
+        <section class="card p-5">
+          <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+            <i class="mdi mdi-tune-variant text-zinc-500" />
+            詳細設定
+          </h2>
           <ToggleSwitch v-model="form.runScript">
             スクリプトを実行する
             <template #description>オフにすると、この拡張機能はチャットを記録しなくなります。</template>
           </ToggleSwitch>
-          <div class="inline-field">
+          <div class="flex items-start gap-4 border-t border-zinc-200 pt-3">
             <div>
-              <label class="label" for="showLogLevel">出力するログレベル</label>
-              <p class="help">不具合を調べるときの記録の詳しさです。ふだんは変えなくて大丈夫です。</p>
+              <label class="label m-0 font-medium" for="showLogLevel">出力するログレベル</label>
+              <p class="help mt-0.5">不具合を調べるときの記録の詳しさです。ふだんは変えなくて大丈夫です。</p>
             </div>
-            <select id="showLogLevel" v-model="form.showLogLevel" class="select log-level">
+            <select id="showLogLevel" v-model="form.showLogLevel" class="select w-27.5 shrink-0">
               <option v-for="level of LEVELS" :key="level.name" :value="level.name">
                 {{ level.name.toUpperCase() }}
               </option>
@@ -155,39 +153,39 @@
           </div>
         </section>
 
-        <section class="card section">
-          <header class="section-header">
-            <h2>
-              <i class="mdi mdi-database-outline" />
+        <section class="card p-5">
+          <header class="mb-4">
+            <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+              <i class="mdi mdi-database-outline text-zinc-500" />
               データの管理
             </h2>
-            <p class="muted">
+            <p class="text-[13px] text-zinc-500">
               使用量:
               <strong>{{ formatByte(byteInUse) }}</strong>
               <span v-if="loadDate">({{ datetimeString(loadDate) }} 時点)</span>
             </p>
           </header>
 
-          <div class="data-rows">
-            <div class="data-row">
-              <span>設定</span>
-              <button class="btn btn-secondary is-small" @click="handleExportConfig">
+          <div class="flex flex-col gap-2">
+            <div class="flex items-center gap-2">
+              <span class="flex-1 font-medium">設定</span>
+              <button class="btn btn-secondary btn-sm" @click="handleExportConfig">
                 <i class="mdi mdi-download" />
                 エクスポート
               </button>
-              <label class="btn btn-secondary is-small">
+              <label class="btn btn-secondary btn-sm">
                 <i class="mdi mdi-upload" />
                 インポート
                 <input type="file" class="sr-only" accept=".json" @change="handleImportConfig" />
               </label>
             </div>
-            <div class="data-row">
-              <span>全てのデータ</span>
-              <button class="btn btn-secondary is-small" @click="handleExportData">
+            <div class="flex items-center gap-2">
+              <span class="flex-1 font-medium">全てのデータ</span>
+              <button class="btn btn-secondary btn-sm" @click="handleExportData">
                 <i class="mdi mdi-download" />
                 バックアップ
               </button>
-              <label class="btn btn-secondary is-small">
+              <label class="btn btn-secondary btn-sm">
                 <i class="mdi mdi-upload" />
                 復元
                 <input type="file" class="sr-only" accept=".json" @change="handleImportData" />
@@ -195,27 +193,27 @@
             </div>
           </div>
 
-          <div class="danger-zone">
-            <p class="danger-title">
+          <div class="mt-4 rounded-[10px] border border-danger-border bg-danger-soft p-3">
+            <p class="mb-2 flex items-center gap-1.5 text-[13px] font-semibold text-danger">
               <i class="mdi mdi-alert-outline" />
               元に戻せない操作
             </p>
-            <div class="danger-actions">
-              <button class="btn btn-danger is-small" @click="handleDeleteVideos">動画とチャットを全て削除</button>
-              <button class="btn btn-danger-solid is-small" @click="handleAllDelete">全てを初期化</button>
+            <div class="flex flex-wrap gap-2">
+              <button class="btn btn-danger btn-sm" @click="handleDeleteVideos">動画とチャットを全て削除</button>
+              <button class="btn btn-danger-solid btn-sm" @click="handleAllDelete">全てを初期化</button>
             </div>
           </div>
         </section>
       </div>
     </main>
 
-    <footer class="savebar" :class="{ 'is-dirty': isDirty }">
-      <span class="status">
+    <footer class="sticky bottom-0 z-40 -mx-6 mt-6 flex items-center gap-2 border-t border-zinc-200 bg-white/90 px-6 py-3 backdrop-blur">
+      <span class="flex flex-1 items-center text-[13px]" :class="isDirty ? 'font-semibold text-warning' : 'text-zinc-500'">
         <template v-if="isDirty">
-          <i class="mdi mdi-circle-medium" />
+          <i class="mdi mdi-circle-medium text-[22px]" />
           保存されていない変更があります
         </template>
-        <span v-else class="muted">変更はありません</span>
+        <template v-else>変更はありません</template>
       </span>
       <button class="btn btn-ghost" @click="handleReset">初期設定に戻す</button>
       <button class="btn btn-secondary" :disabled="!isDirty" @click="loadConfig">変更を取り消す</button>
@@ -381,227 +379,3 @@ const handleImportData = (event: Event) => {
   }
 }
 </script>
-
-<style scoped>
-.page {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px 24px 0;
-}
-
-.header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-
-.logo {
-  width: 40px;
-  height: 40px;
-  margin-right: 6px;
-}
-
-.heading {
-  flex: 1;
-}
-
-.app-name {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-strong);
-  font-size: 20px;
-  font-weight: 700;
-  line-height: 1.3;
-}
-
-.notice {
-  margin-bottom: 20px;
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 20px;
-
-  @media (min-width: 1000px) {
-    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
-  }
-}
-
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.section {
-  padding: 20px;
-}
-
-.section-header {
-  margin-bottom: 16px;
-
-  & h2 {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-    color: var(--text-strong);
-    font-size: 15px;
-    font-weight: 700;
-
-    & .mdi {
-      color: var(--text-muted);
-    }
-  }
-
-  & p {
-    font-size: 13px;
-  }
-}
-
-.field + .toggle,
-.toggles + .field {
-  margin-top: 12px;
-}
-
-.toggles {
-  display: flex;
-  flex-direction: column;
-
-  & > * + * {
-    border-top: 1px solid var(--border);
-  }
-}
-
-.number {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  & .input {
-    width: 100px;
-  }
-}
-
-.filename {
-  display: flex;
-
-  & .input {
-    border-top-right-radius: 0;
-    border-bottom-right-radius: 0;
-  }
-
-  & .ext {
-    display: grid;
-    place-items: center;
-    padding: 0 10px;
-    border: 1px solid var(--border-strong);
-    border-left: none;
-    border-radius: 0 8px 8px 0;
-    background: var(--surface-muted);
-    color: var(--text-muted);
-    font-size: 13px;
-  }
-}
-
-.help code {
-  font-size: 11px;
-}
-
-.inline-field {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-
-  & .label {
-    margin: 0;
-    font-weight: 500;
-  }
-
-  & .help {
-    margin-top: 2px;
-  }
-}
-
-.log-level {
-  width: 110px;
-  flex-shrink: 0;
-}
-
-.data-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.data-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-
-  & > span {
-    flex: 1;
-    font-weight: 500;
-  }
-}
-
-.danger-zone {
-  margin-top: 16px;
-  padding: 12px;
-  border: 1px solid var(--danger-border);
-  border-radius: 10px;
-  background: var(--danger-soft);
-}
-
-.danger-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 8px;
-  color: var(--danger);
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.danger-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.savebar {
-  position: sticky;
-  bottom: 0;
-  z-index: 40;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 24px -24px 0;
-  padding: 12px 24px;
-  border-top: 1px solid var(--border);
-  background: color-mix(in oklab, var(--surface) 92%, transparent);
-  backdrop-filter: blur(8px);
-}
-
-.status {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  font-size: 13px;
-
-  .is-dirty & {
-    color: var(--warning);
-    font-weight: 600;
-
-    & .mdi {
-      font-size: 22px;
-    }
-  }
-}
-</style>

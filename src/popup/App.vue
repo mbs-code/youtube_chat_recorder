@@ -1,83 +1,86 @@
 <template>
-  <div class="popup">
-    <header class="header">
-      <img class="logo" src="/icons/icon-32x32.png" alt="" />
-      <h1 class="app-name">Youtube Chat Recorder</h1>
-      <button class="btn btn-ghost is-small" title="使い方" @click="Runtime.openReadmePage()">
+  <div class="flex min-h-150 flex-col">
+    <header class="sticky top-0 z-30 flex h-[49px] items-center gap-1 border-b border-zinc-200 bg-white pr-3 pl-4">
+      <img class="mr-1.5 size-5" src="/icons/icon-32x32.png" alt="" />
+      <h1 class="flex-1 font-bold text-zinc-950">Youtube Chat Recorder</h1>
+      <button class="btn btn-ghost btn-sm" title="使い方" @click="Runtime.openReadmePage()">
         <i class="mdi mdi-help-circle-outline" />
         使い方
       </button>
-      <button class="btn btn-ghost is-small" title="設定" @click="Runtime.openOptionPage()">
+      <button class="btn btn-ghost btn-sm" title="設定" @click="Runtime.openOptionPage()">
         <i class="mdi mdi-cog-outline" />
         設定
       </button>
     </header>
 
-    <main class="main">
+    <main class="flex flex-1 flex-col gap-3 p-4">
       <VideoDropdown :videos="videos" @change="handleVideoChange" />
 
-      <div v-if="selectedVideo" class="video-actions">
-        <button class="btn btn-ghost is-small" :disabled="!selectedVideo.url" @click="handleOpenUrl(selectedVideo.url)">
+      <div v-if="selectedVideo" class="-mt-1.5 flex items-center gap-0.5">
+        <button class="btn btn-ghost btn-sm" :disabled="!selectedVideo.url" @click="handleOpenUrl(selectedVideo.url)">
           <i class="mdi mdi-open-in-new" />
           動画を開く
         </button>
-        <button class="btn btn-ghost is-small" :disabled="!selectedVideo.thumbnailUrl" @click="handleOpenUrl(selectedVideo.thumbnailUrl)">
+        <button class="btn btn-ghost btn-sm" :disabled="!selectedVideo.thumbnailUrl" @click="handleOpenUrl(selectedVideo.thumbnailUrl)">
           <i class="mdi mdi-image-outline" />
           サムネイル
         </button>
-        <span class="spacer" />
-        <button class="btn btn-ghost is-small delete-all" :disabled="chats.length === 0" @click="handleDeleteChats(selectedVideo)">
+        <button
+          class="btn btn-ghost btn-sm ml-auto enabled:hover:bg-danger-soft enabled:hover:text-danger"
+          :disabled="chats.length === 0"
+          @click="handleDeleteChats(selectedVideo)"
+        >
           <i class="mdi mdi-delete-outline" />
           この動画のチャットを全て削除
         </button>
       </div>
 
-      <section v-if="selectedVideo" class="chats">
-        <div class="toolbar">
-          <select v-model="selectedFilterKey" class="select filter" aria-label="表示するチャット">
+      <section v-if="selectedVideo" class="flex flex-col gap-2.5">
+        <!-- 49px = header の高さ -->
+        <div class="sticky top-[49px] z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
+          <select v-model="selectedFilterKey" class="select h-7 w-47.5 text-xs" aria-label="表示するチャット">
             <option v-for="filter in chatFilters" :key="filter.key" :value="filter.key">
               {{ filter.title }}
             </option>
           </select>
-          <span class="count">
-            <strong>{{ sortedChats.length }}</strong>
+          <span class="flex-1 text-xs">
+            <strong class="text-sm text-zinc-950">{{ sortedChats.length }}</strong>
             件
-            <span v-if="sortedChats.length !== chats.length" class="muted">/ 全 {{ chats.length }} 件</span>
+            <span v-if="sortedChats.length !== chats.length" class="text-zinc-500">/ 全 {{ chats.length }} 件</span>
           </span>
-          <span class="spacer" />
-          <button class="btn btn-secondary is-small" :disabled="filteredChats.length === 0" @click="selectedChats = [...filteredChats]">
+          <button class="btn btn-secondary btn-sm" :disabled="filteredChats.length === 0" @click="selectedChats = [...filteredChats]">
             すべて選択
           </button>
-          <button class="btn btn-secondary is-small" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
+          <button class="btn btn-secondary btn-sm" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
         </div>
 
-        <p v-if="isOver" class="notice is-warning">
+        <p v-if="isOver" class="notice notice-warning">
           <i class="mdi mdi-alert-outline" />
           表示できるのは {{ MAX_CHAT_LENGTH }} 件までです。上の選択欄で絞り込んでください。
         </p>
 
         <ChatList v-if="filteredChats.length" v-model:selected="selectedChats" :chats="filteredChats" />
-        <div v-else class="empty">
-          <i class="mdi mdi-message-text-outline" />
+        <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
+          <i class="mdi mdi-message-text-outline mb-1 text-4xl text-zinc-400" />
           <p>記録したチャットはありません</p>
-          <p class="muted">記録するチャットの種類は「設定」で変えられます。</p>
+          <p class="text-xs text-zinc-500">記録するチャットの種類は「設定」で変えられます。</p>
         </div>
       </section>
 
-      <div v-else class="empty">
-        <i class="mdi mdi-youtube" />
+      <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
+        <i class="mdi mdi-youtube mb-1 text-4xl text-zinc-400" />
         <p>まだ記録した動画がありません</p>
-        <p class="muted">YouTube でライブ配信やアーカイブを開くと、自動でチャットを記録します。</p>
+        <p class="text-xs text-zinc-500">YouTube でライブ配信やアーカイブを開くと、自動でチャットを記録します。</p>
       </div>
     </main>
 
-    <footer v-if="selectedVideo" class="footer">
-      <span class="selection">
+    <footer v-if="selectedVideo" class="sticky bottom-0 z-30 flex items-center gap-2 border-t border-zinc-200 bg-white px-4 py-2.5">
+      <span class="flex-1">
         <template v-if="selectedChats.length">
-          <strong>{{ selectedChats.length }}</strong>
+          <strong class="text-[15px] text-zinc-950">{{ selectedChats.length }}</strong>
           件を選択中
         </template>
-        <span v-else class="muted">チャットをクリックして選択</span>
+        <span v-else class="text-zinc-500">チャットをクリックして選択</span>
       </span>
       <button class="btn btn-danger" :disabled="selectedChats.length === 0" @click="handleDeleteSelectedChats">
         <i class="mdi mdi-delete-outline" />
@@ -245,136 +248,5 @@ async function handleSaveToMerge(): Promise<void> {
 html {
   width: 600px;
   height: 600px;
-}
-</style>
-
-<style scoped>
-.popup {
-  display: flex;
-  flex-direction: column;
-  min-height: 600px;
-}
-
-.header {
-  position: sticky;
-  top: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 10px 12px 10px 16px;
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.logo {
-  width: 20px;
-  height: 20px;
-  margin-right: 6px;
-}
-
-.app-name {
-  flex: 1;
-  color: var(--text-strong);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.main {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px;
-}
-
-.video-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  margin-top: -6px;
-}
-
-.delete-all:hover:enabled {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
-.spacer {
-  flex: 1;
-}
-
-.chats {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.toolbar {
-  position: sticky;
-  top: 49px; /* header の高さ */
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 -16px;
-  padding: 8px 16px;
-  background: var(--bg);
-}
-
-.filter {
-  width: 190px;
-  height: 28px;
-  font-size: 12px;
-}
-
-.count {
-  font-size: 12px;
-
-  & strong {
-    color: var(--text-strong);
-    font-size: 14px;
-  }
-}
-
-.empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 48px 16px;
-  color: var(--text);
-  text-align: center;
-
-  & > .mdi {
-    margin-bottom: 4px;
-    color: var(--text-subtle);
-    font-size: 40px;
-  }
-
-  & .muted {
-    font-size: 12px;
-  }
-}
-
-.footer {
-  position: sticky;
-  bottom: 0;
-  z-index: 30;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-top: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.selection {
-  flex: 1;
-
-  & strong {
-    color: var(--text-strong);
-    font-size: 15px;
-  }
 }
 </style>

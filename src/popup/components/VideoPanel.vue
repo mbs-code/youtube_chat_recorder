@@ -1,24 +1,24 @@
 <template>
-  <div class="video">
-    <div class="thumbnail">
-      <img v-if="video.thumbnailUrl" :src="video.thumbnailUrl" alt="" />
+  <div class="flex min-w-0 gap-3 text-left">
+    <div class="grid aspect-video w-32 shrink-0 place-items-center overflow-hidden rounded-lg bg-zinc-100 text-[28px] text-zinc-400">
+      <img v-if="video.thumbnailUrl" class="size-full object-cover" :src="video.thumbnailUrl" alt="" />
       <i v-else class="mdi mdi-youtube" />
     </div>
-    <div class="body">
-      <p class="title">{{ video.title || '(タイトルなし)' }}</p>
-      <div class="meta">
-        <span v-if="TYPE_LABELS[video.type]" class="badge" :class="video.type === 'live' ? 'is-accent' : ''">
+    <div class="flex min-w-0 flex-1 flex-col gap-1">
+      <p class="line-clamp-2 leading-snug font-semibold text-zinc-950">{{ video.title || '(タイトルなし)' }}</p>
+      <div class="flex min-w-0 items-center gap-x-2.5 text-xs">
+        <span v-if="TYPE_LABELS[video.type]" class="badge" :class="{ 'badge-accent': video.type === 'live' }">
           {{ TYPE_LABELS[video.type] }}
         </span>
-        <span v-if="video.channelName" class="channel">{{ video.channelName }}</span>
+        <span v-if="video.channelName" class="truncate text-zinc-500">{{ video.channelName }}</span>
       </div>
-      <div class="meta muted">
+      <div class="flex items-center gap-x-2.5 text-xs text-zinc-500">
         <span>
-          <i class="mdi mdi-calendar-blank-outline" />
+          <i class="mdi mdi-calendar-blank-outline mr-0.5" />
           {{ datetimeString(video.startDate || video.publishedAt) }}
         </span>
         <span>
-          <i class="mdi mdi-eye-outline" />
+          <i class="mdi mdi-eye-outline mr-0.5" />
           {{ distanceHumanized(video.updatedAt) }}
         </span>
       </div>
@@ -40,68 +40,3 @@ const TYPE_LABELS: Record<VideoType, string> = {
   video: '',
 }
 </script>
-
-<style scoped>
-.video {
-  display: flex;
-  gap: 12px;
-  min-width: 0;
-  text-align: left;
-}
-
-.thumbnail {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 128px;
-  aspect-ratio: 16 / 9;
-  overflow: hidden;
-  border-radius: 8px;
-  background: var(--hover);
-  color: var(--text-subtle);
-  font-size: 28px;
-
-  & img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-}
-
-.body {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-
-.title {
-  display: -webkit-box;
-  overflow: hidden;
-  color: var(--text-strong);
-  font-weight: 600;
-  line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.meta {
-  display: flex;
-  align-items: center;
-  gap: 4px 10px;
-  min-width: 0;
-  font-size: 12px;
-
-  & .mdi {
-    margin-right: 2px;
-  }
-}
-
-.channel {
-  overflow: hidden;
-  color: var(--text-muted);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-</style>

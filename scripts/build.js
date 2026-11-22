@@ -15,6 +15,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
+import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { marked } from 'marked'
 import { build } from 'vite'
@@ -123,7 +124,7 @@ function pagesConfig() {
     ...base,
     base: './',
     publicDir: path.join(ROOT, 'public'),
-    plugins: [vue(), extensionAssetsPlugin()],
+    plugins: [vue(), tailwindcss(), extensionAssetsPlugin()],
     build: {
       ...base.build,
       rollupOptions: {

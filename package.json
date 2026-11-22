@@ -32,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@tailwindcss/vite": "^4.3.5",
     "@types/chrome": "^0.3.7",
     "@types/node": "^24.0.0",
     "@vitejs/plugin-vue": "^6.0.11",
@@ -44,6 +45,7 @@
     "marked": "^18.2.1",
     "playwright": "^1.65.1",
     "prettier": "^3.10.1",
+    "tailwindcss": "^4.3.5",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.73.0",
     "vite": "^8.3.8",

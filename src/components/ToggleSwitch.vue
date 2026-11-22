@@ -1,11 +1,19 @@
 <template>
-  <label class="toggle" :class="{ 'is-disabled': disabled }">
-    <span class="text">
-      <span class="title"><slot /></span>
-      <span v-if="$slots.description" class="description"><slot name="description" /></span>
+  <label class="flex cursor-pointer items-start gap-4 py-2.5" :class="{ 'cursor-not-allowed opacity-50': disabled }">
+    <span class="flex-1">
+      <span class="block font-medium text-zinc-950"><slot /></span>
+      <span v-if="$slots.description" class="mt-0.5 block text-xs/normal text-zinc-500"><slot name="description" /></span>
     </span>
-    <input v-model="model" type="checkbox" role="switch" class="sr-only" :disabled="disabled" />
-    <span class="track" aria-hidden="true"><span class="thumb" /></span>
+    <input v-model="model" type="checkbox" role="switch" class="peer sr-only" :disabled="disabled" />
+    <span
+      class="relative mt-0.5 h-5 w-9 shrink-0 rounded-full bg-zinc-300 transition-colors peer-checked:bg-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-primary-ring"
+      aria-hidden="true"
+    >
+      <span
+        class="absolute top-0.5 left-0.5 size-4 rounded-full bg-white shadow-sm transition-transform"
+        :class="{ 'translate-x-4': model }"
+      />
+    </span>
   </label>
 </template>
 
@@ -13,72 +21,3 @@
 defineProps<{ disabled?: boolean }>()
 const model = defineModel<boolean>({ required: true })
 </script>
-
-<style scoped>
-.toggle {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 10px 0;
-  cursor: pointer;
-
-  &.is-disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-.text {
-  flex: 1;
-}
-
-.title {
-  display: block;
-  color: var(--text-strong);
-  font-weight: 500;
-}
-
-.description {
-  display: block;
-  margin-top: 2px;
-  color: var(--text-muted);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.track {
-  position: relative;
-  flex-shrink: 0;
-  width: 36px;
-  height: 20px;
-  margin-top: 2px;
-  border-radius: 999px;
-  background: var(--border-strong);
-  transition: background-color 0.15s;
-}
-
-.thumb {
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--white);
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
-  transition: transform 0.15s;
-}
-
-input:checked + .track {
-  background: var(--primary);
-
-  & .thumb {
-    transform: translateX(16px);
-  }
-}
-
-input:focus-visible + .track {
-  outline: 2px solid var(--primary-ring);
-  outline-offset: 2px;
-}
-</style>

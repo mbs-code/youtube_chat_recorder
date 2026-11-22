@@ -3,7 +3,7 @@
 App to operate streaming chat.
 YouTube のチャットがあるページ（ライブ、アーカイブ等）を開いた際に、チャットを監視し操作する Chrome 拡張機能 (Manifest V3)。
 
-TypeScript + Vue 3 + Vite
+TypeScript + Vue 3 + Vite + Tailwind CSS
 
 使い方はここ。
 [How to Usage](./docs/readme.md)

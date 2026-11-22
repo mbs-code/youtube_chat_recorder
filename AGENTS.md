@@ -7,7 +7,7 @@ AI エージェント (Claude Code など) と開発者向けのガイド。人�
 YouTube のライブ配信・アーカイブのチャット欄を監視し、設定したフィルターに一致するチャットを保存・画像化する Chrome 拡張機能 (Manifest V3)。
 データは全て `chrome.storage.local` に保存し、外部には送信しない。
 
-- TypeScript 5.9 / Vue 3 (`<script setup>`) / Vite 8 / CSS フレームワークなし (自前の CSS)
+- TypeScript 5.9 / Vue 3 (`<script setup>`) / Vite 8 / Tailwind CSS v4
 - テスト: Vitest (jsdom) / 実ブラウザ確認: Playwright (`npm run e2e`)
 - Node.js 20.19 以上
 
@@ -146,12 +146,16 @@ YouTube に依存している箇所:
 
 ## 画面のスタイル
 
-- CSS フレームワークは使わない (Bulma / Tailwind は入れない方針)。共通部品は `src/styles/main.css` (`.btn`, `.input`, `.select`, `.card`, `.badge`, `.notice` など)、画面固有のものは各 `.vue` の `<style scoped>` に書く。
-- 色は `src/styles/colors.css` の **用途ごとの色** (`--primary`, `--text`, `--border`, `--danger` など) だけを使い、パレット (`--zinc-500` など) や色コードを直接書かない。
-- パレットの値は Tailwind CSS v4 の標準パレットをコピーしたもの。配色を変えるときは用途ごとの色の参照先を差し替える。
+- Tailwind CSS v4 (`@tailwindcss/vite`)。設定ファイルは無く、`src/styles/main.css` に集約している。
+- 画面ごとのスタイルは `.vue` のテンプレートにユーティリティクラスで書く (`<style scoped>` は使わない)。
+- 何度も使う部品だけ `main.css` の `@layer components` にまとめている: `.btn` (+ `.btn-primary` / `.btn-secondary` / `.btn-ghost` / `.btn-danger` / `.btn-danger-solid`, 大きさ `.btn-sm` / `.btn-icon`), `.input`, `.select`, `.checkbox`, `.label`, `.help`, `.card`, `.badge` (+ `.badge-accent` など), `.notice` (+ `.notice-warning`)。
+- 色: 無彩色は Tailwind の `zinc` をそのまま使う。それ以外は `@theme inline` の用途ごとの色 (`primary`, `accent`, `success`, `warning`, `danger`, `info`) を使う (`bg-primary`, `text-danger` など)。配色を変えるときは `@theme inline` の参照先を差し替える。
+- 文字サイズは `body` に付けている。`html` に付けると rem 基準の `text-xs` などまで小さくなるので注意。
+- アイコン (@mdi/font) の CSS は `popup.ts` / `options.ts` で import する。`main.css` で `@import` するとフォントの URL が壊れる。
 - 共通コンポーネント: `components/ToggleSwitch.vue`, `components/ToastContainer.vue` (+ `plugins/Toast.ts`)。
-- CSV 出力は `lib/util/ChatCsv.ts`。列を変えたら `test/ChatCsv.test.ts` と使い方ページの項目一覧も更新する。Excel 向けに BOM + CRLF、数式として解釈される先頭文字には `'` を付けている。
 - popup の `.app-chat-main` は「独自のデザインで画像化」でそのまま画像になるので、見た目を変えるときは出力画像も確認する。
+- CSV 出力は `lib/util/ChatCsv.ts`。列を変えたら `test/ChatCsv.test.ts` と使い方ページの項目一覧も更新する。Excel 向けに BOM + CRLF、数式として解釈される先頭文字には `'` を付けている。
+- `.trigger` / `.chat` / ボタンの文言は `scripts/screenshots.js` から参照しているので、変えたらスクリプトも直す。
 
 ## コーディング規約
 
