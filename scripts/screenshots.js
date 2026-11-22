@@ -117,6 +117,11 @@ async function main() {
     await popup.click('.chat >> nth=2')
     await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-selected.png') })
 
+    // CSV のダウンロード (選択した 2 件)
+    const [download] = await Promise.all([popup.waitForEvent('download'), popup.click('button:has-text("CSV で保存")')])
+    await download.saveAs(path.join(RESULTS, 'sample.csv'))
+    console.log(`csv: ${download.suggestedFilename()}`)
+
     await popup.click('.trigger')
     await popup.waitForTimeout(300)
     await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-dropdown.png') })

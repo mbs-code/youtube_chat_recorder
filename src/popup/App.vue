@@ -79,6 +79,16 @@
         </template>
         <span v-else class="muted">チャットをクリックして選択</span>
       </span>
+      <button
+        class="btn btn-secondary"
+        :disabled="csvTargets.length === 0"
+        :title="selectedChats.length ? '選択したチャットを CSV で保存' : '絞り込みに当てはまる全てのチャットを CSV で保存'"
+        @click="handleSaveCsv"
+      >
+        <i class="mdi mdi-file-delimited-outline" />
+        CSV で保存
+        <span class="csv-count">{{ csvTargets.length }}</span>
+      </button>
       <button class="btn btn-danger" :disabled="selectedChats.length === 0" @click="handleDeleteSelectedChats">
         <i class="mdi mdi-delete-outline" />
         削除
@@ -100,6 +110,8 @@ import Runtime from '../lib/chrome/Runtime'
 import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
+import ChatCsv from '../lib/util/ChatCsv'
+import FilenameFormatter from '../lib/util/FilenameFormatter'
 import NodeToPng from '../lib/util/NodeToPng'
 import type Chat from '../models/Chat'
 import type Video from '../models/Video'
@@ -118,6 +130,8 @@ const chatFilters = ChatFilter.generatePopupChatFilters()
 const selectedFilterKey = ref(chatFilters[0].key)
 
 const isSaving = ref(false)
+
+const CSV_FILENAME = '%title%_チャット_%now%'
 
 /** フィルター & 時間順ソート済みのチャット. */
 const sortedChats = computed(() => {
@@ -181,6 +195,19 @@ async function handleDeleteSelectedChats(): Promise<void> {
 async function generateOriginalImage(chat: Chat): Promise<string | undefined> {
   const node = document.querySelector<HTMLElement>(`.app-chat[data-chatid="${CSS.escape(chat.id ?? '')}"] .app-chat-main`)
   return node ? await NodeToPng.generate(node) : undefined
+}
+
+/** CSV に出力するチャット: 選択中ならそれ、無ければ絞り込みに当てはまる全て (表示上限なし). */
+const csvTargets = computed(() => (selectedChats.value.length ? selectedChats.value : sortedChats.value))
+
+function handleSaveCsv(): void {
+  const video = selectedVideo.value
+  const targets = csvTargets.value
+  if (!video || targets.length === 0) return
+
+  const url = ChatCsv.createObjectURL(video, targets)
+  Filer.downloadFile(url, FilenameFormatter.format(CSV_FILENAME, video, targets) + '.csv')
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
 }
 
 async function handleSaveToMerge(): Promise<void> {
@@ -348,6 +375,16 @@ html {
   padding: 10px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
+}
+
+.csv-count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--hover);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 18px;
 }
 
 .selection {

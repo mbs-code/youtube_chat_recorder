@@ -21,7 +21,7 @@ YouTube のライブ配信・アーカイブのチャット欄を監視し、設
 | `npm run check` | 型チェック + lint + テスト + ビルド。**変更後は必ずこれを通す** |
 | `npm run test` | ユニットテスト (Vitest) |
 | `npm run e2e -- [url] [--wait 60] [--screenshot] [--headed]` | `dist/` を読み込んだ Chromium で実際の YouTube を開き、保存結果を表示する |
-| `npm run screenshots` | 架空のサンプルデータで popup / options のスクリーンショットを `test-results/` に撮る (UI 確認・使い方ページの画像用) |
+| `npm run screenshots` | 架空のサンプルデータで popup / options のスクリーンショットと CSV (`sample.csv`) を `test-results/` に出力する (UI 確認・使い方ページの画像用) |
 | `npm run build-zip` | Chrome Web Store 公開用の zip を `dist-zip/` に作る |
 | `npm run format` | Prettier |
 
@@ -149,6 +149,7 @@ YouTube に依存している箇所:
 - 色は `src/styles/colors.css` の **用途ごとの色** (`--primary`, `--text`, `--border`, `--danger` など) だけを使い、パレット (`--zinc-500` など) や色コードを直接書かない。
 - パレットの値は Tailwind CSS v4 の標準パレットをコピーしたもの。配色を変えるときは用途ごとの色の参照先を差し替える。
 - 共通コンポーネント: `components/ToggleSwitch.vue`, `components/ToastContainer.vue` (+ `plugins/Toast.ts`)。
+- CSV 出力は `lib/util/ChatCsv.ts`。列を変えたら `test/ChatCsv.test.ts` と使い方ページの項目一覧も更新する。Excel 向けに BOM + CRLF、数式として解釈される先頭文字には `'` を付けている。
 - popup の `.app-chat-main` は「独自のデザインで画像化」でそのまま画像になるので、見た目を変えるときは出力画像も確認する。
 
 ## コーディング規約
