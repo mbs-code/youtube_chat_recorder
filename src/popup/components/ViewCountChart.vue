@@ -118,7 +118,7 @@
  */
 import { format } from 'date-fns'
 import { computed, ref } from 'vue'
-import { hmsString } from '../../lib/util/format'
+import { hmsString, timeLabel } from '../../lib/util/format'
 import type { ViewCountPoint } from '../../models/Timeline'
 
 const props = defineProps<{
@@ -192,12 +192,13 @@ const linePath = computed(() => props.points.map((p, i) => `${i ? 'L' : 'M'}${x(
 const xTicks = computed(() => {
   const { start, end } = xRange.value
   const pattern = end - start < 24 * 60 * 60 * 1000 ? 'H:mm' : 'M/d H:mm'
-  if (end === start) return [{ t: start, x: x(start), label: format(start, pattern), anchor: 'middle' }]
-  const count = 4
+  const label = (t: number) => timeLabel(t, props.startDate, pattern)
+  if (end === start) return [{ t: start, x: x(start), label: label(start), anchor: 'middle' }]
+  const count = 3
   return Array.from({ length: count + 1 }, (_, i) => {
     const t = start + ((end - start) * i) / count
     const anchor = i === 0 ? 'start' : i === count ? 'end' : 'middle'
-    return { t, x: x(t), label: format(t, pattern), anchor }
+    return { t, x: x(t), label: label(t), anchor }
   })
 })
 

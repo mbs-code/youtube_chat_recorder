@@ -57,6 +57,10 @@
 
       <!-- 記録・グラフのタブ: 最大同接・最大再生数・スーパーチャット合計と、推移のグラフ -->
       <section v-if="selectedVideo && tab === 'stats'" class="flex flex-col gap-3">
+        <p class="help">
+          <i class="mdi mdi-information-outline" />
+          ページを開いている間に、画面に表示された数字・チャットをもとに数えています。開いていない間の分はありません。
+        </p>
         <VideoStats :video="selectedVideo" :chats="chats" />
         <template v-if="recordStats">
           <TimelineChart
@@ -67,10 +71,6 @@
           />
           <ViewCountChart :points="viewCounts" :start-date="selectedVideo.startDate" />
           <p v-if="timeline.length === 0 && viewCounts.length === 0" class="py-6 text-center text-xs text-zinc-500">推移の記録はありません</p>
-          <p v-else class="help">
-            <i class="mdi mdi-information-outline" />
-            ページを開いている間に、画面に表示された数字・チャットをもとに数えています。開いていない間の分はありません。
-          </p>
         </template>
       </section>
 
@@ -78,11 +78,7 @@
       <section v-else-if="selectedVideo" class="flex flex-col gap-2.5">
         <!-- ツールバー: 絞り込み・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
         <div class="sticky top-12.25 z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
-          <select v-model="selectedFilterKey" class="select h-7 w-47.5 text-xs" aria-label="表示するチャット">
-            <option v-for="filter in chatFilters" :key="filter.key" :value="filter.key">
-              {{ filter.title }}
-            </option>
-          </select>
+          <FilterDropdown v-model="selectedFilterKey" :options="filterOptions" />
           <span class="flex-1 text-xs">
             <strong class="text-sm text-zinc-950">{{ sortedChats.length }}</strong>
             件
@@ -174,6 +170,7 @@ import VideoDropdown from './components/VideoDropdown.vue'
 import VideoStats from './components/VideoStats.vue'
 import TimelineChart from './components/TimelineChart.vue'
 import ViewCountChart from './components/ViewCountChart.vue'
+import FilterDropdown from './components/FilterDropdown.vue'
 import type { TimelinePoint, ViewCountPoint } from '../models/Timeline'
 
 /** 最近見た動画. */
@@ -258,6 +255,13 @@ function toggleSortOrder(): void {
     // 保存できなくても並び替え自体はできる
   }
 }
+
+/** 絞り込みの選択肢 (それぞれに当てはまる件数付き). */
+const filterOptions = computed(() => chatFilters.map(filter => ({
+  key: filter.key,
+  title: filter.title,
+  count: filter.func ? chats.value.filter(filter.func).length : chats.value.length,
+})))
 
 /** フィルター & 並び替え済みのチャット. */
 const sortedChats = computed(() => {

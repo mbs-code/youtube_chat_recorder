@@ -133,6 +133,10 @@ async function main() {
     await popup.waitForTimeout(800)
     await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup.png') })
     await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-full.png'), fullPage: true })
+    // 絞り込みの一覧 (件数のバッジ付き)
+    await popup.click('[aria-label="表示するチャット"]')
+    await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-filter.png') })
+    await popup.keyboard.press('Escape')
 
     // 記録・グラフのタブ (グラフにマウスを乗せた状態)
     await popup.click('[role="tab"]:has-text("記録・グラフ")')

@@ -170,7 +170,7 @@
  */
 import { format } from 'date-fns'
 import { computed, ref } from 'vue'
-import { hmsString } from '../../lib/util/format'
+import { hmsString, timeLabel } from '../../lib/util/format'
 import Chat from '../../models/Chat'
 import { MINUTE, toMinute, type TimelinePoint } from '../../models/Timeline'
 
@@ -315,9 +315,9 @@ const panels = computed<Panel[]>(() => {
     {
       key: 'viewers',
       title: '同時接続数',
-      height: plotBottom + 4,
+      height: plotBottom + X_AXIS_HEIGHT,
       plotBottom,
-      showXAxis: false,
+      showXAxis: true,
       yTicks: yTicks(viewersMax.value, viewersY),
       bars: [],
       color: VIEWERS_COLOR,
@@ -326,9 +326,9 @@ const panels = computed<Panel[]>(() => {
     {
       key: 'comments',
       title: 'コメント数 (上位チャット)',
-      height: plotBottom + 4,
+      height: plotBottom + X_AXIS_HEIGHT,
       plotBottom,
-      showXAxis: false,
+      showXAxis: true,
       yTicks: yTicks(commentsMax.value, commentsY),
       bars: bars(shown.value.map(p => ({ t: p.t, value: p.comments })), commentsY),
       color: COMMENTS_COLOR,
@@ -340,19 +340,15 @@ const panels = computed<Panel[]>(() => {
     list.push({
       key: 'super',
       title: `スーパーチャット (${superUnit.value})`,
-      height: plotBottom + 4,
+      height: plotBottom + X_AXIS_HEIGHT,
       plotBottom,
-      showXAxis: false,
+      showXAxis: true,
       yTicks: yTicks(superMax.value, superY),
       bars: bars(superValues, superY),
       color: SUPER_COLOR,
       gaps: commentGaps.value,
     })
   }
-  // 時刻の目盛りは一番下のグラフだけ
-  const last = list.at(-1)!
-  last.showXAxis = true
-  last.height = plotBottom + X_AXIS_HEIGHT
   return list
 })
 
@@ -399,10 +395,10 @@ function bars(values: { t: number, value: number }[], toY: (v: number) => number
 const xTicks = computed(() => {
   const { start, end } = range.value
   const minutes = (end - start) / MINUTE
-  const step = [5, 10, 15, 30, 60, 120, 180, 360].find(s => minutes / s <= 6) ?? 720
+  const step = [5, 10, 15, 30, 60, 120, 180, 360].find(s => minutes / s <= 5) ?? 720
   const ticks = []
   for (let t = Math.ceil(start / (step * MINUTE)) * step * MINUTE; t <= end; t += step * MINUTE) {
-    ticks.push({ t, x: timeX(t), label: format(t, 'H:mm') })
+    ticks.push({ t, x: timeX(t), label: timeLabel(t, props.startDate) })
   }
   return ticks
 })
