@@ -27,6 +27,7 @@ export default class VideoStorage extends BaseStorage {
    *
    * - 閲覧日時の降順で保存する.
    * - maxLength を超えた古い動画は、そのチャットごと削除する.
+   *   自動で削除しない動画 (isProtected) は数えず、削除もしない.
    * @param video video object
    * @param maxLength 最大保存数
    */
@@ -37,7 +38,10 @@ export default class VideoStorage extends BaseStorage {
     // 既にあるなら作成日時と最大値 (同接・再生数) を引き継いで置き換える
     const index = dbs.findIndex(v => v.id === video.id)
     const prev = index >= 0 ? dbs.splice(index, 1)[0] : undefined
-    if (prev) video.createdAt = prev.createdAt
+    if (prev) {
+      video.createdAt = prev.createdAt
+      video.isProtected = prev.isProtected
+    }
     video.mergeMaxStats(prev)
 
     video.updatedAt = new Date()
@@ -46,8 +50,14 @@ export default class VideoStorage extends BaseStorage {
 
     // 更新日時の降順で個数制限する
     dbs.sort((a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0))
-    const limits = dbs.slice(0, Math.max(1, maxLength))
-    const overflows = dbs.slice(limits.length)
+    const limits: Video[] = []
+    const overflows: Video[] = []
+    let count = 0
+    for (const v of dbs) {
+      if (v.isProtected) limits.push(v)
+      else if (count++ < Math.max(1, maxLength)) limits.push(v)
+      else overflows.push(v)
+    }
 
     const stat = `db:${oldLength}, +add:1, -dup:${Number(index >= 0)}, -del:${overflows.length}`
     Logger.debug(`> 💾[save] videos: ${limits.length} (${stat})`)
@@ -72,6 +82,22 @@ export default class VideoStorage extends BaseStorage {
     if (!video?.updateMaxViewers(viewers)) return undefined
 
     Logger.debug(`> 💾[save] max viewers: ${viewers} (${videoId})`)
+    await this.replaceObject(this.STORAGE_KEY, dbs)
+    return video
+  }
+
+  /**
+   * 最大保存数を超えても自動で削除しないかを切り替える.
+   *
+   * @return 更新した video (動画が無いなら undefined)
+   */
+  public static async setProtected(videoId: string, isProtected: boolean): Promise<Video | undefined> {
+    const dbs = await this.getAll()
+    const video = dbs.find(v => v.id === videoId)
+    if (!video) return undefined
+
+    video.isProtected = isProtected
+    Logger.debug(`> 💾[save] protected: ${isProtected} (${videoId})`)
     await this.replaceObject(this.STORAGE_KEY, dbs)
     return video
   }

@@ -31,6 +31,7 @@ export default class Video {
 
   createdAt?: Date // 初めて見た日時
   updatedAt?: Date // 最後に見た日時 (一覧の並び順・古い動画の削除に使う)
+  isProtected = false // 最大保存数を超えても自動で削除しない (popup で切り替える)
 
   // 見ている間に記録した最大値 (見ていない時間の値は分からないので目安)
   maxViewers?: number // 最大同時接続数 (配信中の「〇人が視聴中」)

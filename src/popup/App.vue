@@ -29,6 +29,16 @@
           サムネイル
         </button>
         <button
+          class="btn btn-ghost btn-sm"
+          :class="{ 'text-primary': selectedVideo.isProtected }"
+          :aria-pressed="selectedVideo.isProtected"
+          title="オンにすると、動画の最大保存数を超えても自動で削除しません"
+          @click="handleToggleProtected(selectedVideo)"
+        >
+          <i class="mdi" :class="selectedVideo.isProtected ? 'mdi-pin' : 'mdi-pin-outline'" />
+          {{ selectedVideo.isProtected ? '自動で削除しない' : '自動削除から外す' }}
+        </button>
+        <button
           class="btn btn-ghost btn-sm ml-auto enabled:hover:bg-danger-soft enabled:hover:text-danger"
           :disabled="chats.length === 0"
           @click="handleDeleteChats(selectedVideo)"
@@ -294,7 +304,10 @@ async function onStorageChanged(changes: Record<string, chrome.storage.StorageCh
   if (area !== 'local' || !videoId) return
 
   if (changes[VideoStorage.STORAGE_KEY]) {
-    const updated = await VideoStorage.get(videoId)
+    // 選択欄は選んでいる動画を選んだまま一覧だけ差し替える
+    const latest = await VideoStorage.getAll()
+    videos.value = latest
+    const updated = latest.find(v => v.id === videoId)
     if (updated && selectedVideo.value?.id === videoId) selectedVideo.value = updated
   }
   if (changes[TimelineStorage.key(videoId)]) {
@@ -339,6 +352,11 @@ async function handleOpenUrl(url?: string): Promise<void> {
   if (url !== activeTab?.url) {
     await BrowserTabs.windowOpen(url, activeTab)
   }
+}
+
+/** 動画の最大保存数を超えても自動で削除しないかを切り替える. (画面は onStorageChanged で更新される) */
+async function handleToggleProtected(video: Video): Promise<void> {
+  if (video.id) await VideoStorage.setProtected(video.id, !video.isProtected)
 }
 
 /** 選んでいる動画のチャットを全て削除する. */
