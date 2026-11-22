@@ -57,11 +57,18 @@ const rows = computed<Row[]>(() => {
   const video = props.video
   const list: Row[] = []
 
+  // 同時接続数は配信中にページを開いている間しか取れない (この機能より前に記録した動画にも無い)
   if (video.maxViewers) {
     list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: `${video.maxViewers.toLocaleString()} 人`, note: formatAt(video.maxViewersAt) })
+  } else if (video.isBroadcast) {
+    list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: '-', note: '記録なし (配信中に動画のページを開いている間に記録します)' })
   }
-  if (video.maxViewCount) {
-    list.push({ label: '最大再生数', icon: 'mdi-play-circle-outline', value: `${video.maxViewCount.toLocaleString()} 回`, note: formatAt(video.maxViewCountAt) })
+
+  // 最大再生数が無い古い記録は、最後に開いた時の再生数を出す
+  const viewCount = video.maxViewCount || video.viewCount
+  if (viewCount) {
+    const at = video.maxViewCount ? video.maxViewCountAt : video.updatedAt
+    list.push({ label: '最大再生数', icon: 'mdi-play-circle-outline', value: `${viewCount.toLocaleString()} 回`, note: formatAt(at) })
   }
 
   const [main, ...others] = Chat.sumMoney(props.chats)
