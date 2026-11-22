@@ -1,5 +1,6 @@
-import domToImage from 'dom-to-image-more'
+import { domToCanvas } from 'modern-screenshot'
 import Logger from '../../loggers/Logger'
+import { getEmbeddedFontCss } from './WebFontEmbedder'
 
 /** 要素の inline style を一時的に書き換え、元に戻すための記録. */
 type StyleBackup = { element: HTMLElement, property: string, value: string }
@@ -45,7 +46,10 @@ export default class NodeToPng {
         overrideStyle(backups, node, 'background-color', view.getComputedStyle(chatRenderer).backgroundColor)
       }
 
-      return await this.generate(node, true)
+      // ■ YouTube の Web フォント (Roboto など) を埋め込む (埋め込まないと端末のフォントで描かれる)
+      const fontCss = await getEmbeddedFontCss(node.ownerDocument)
+
+      return await this.generate(node, { strict: true, fontCss })
     } finally {
       restoreStyles(backups)
     }
@@ -55,15 +59,17 @@ export default class NodeToPng {
    * HTMLElement を png data url に変換する.
    *
    * @param node 対象 node
-   * @param strict 描画失敗 (背景が真っ黒) を検出してエラーにする
+   * @param options.strict 描画失敗 (背景が真っ黒) を検出してエラーにする
+   * @param options.fontCss 埋め込む Web フォントの CSS (url は data url にしておく). 無ければフォントは埋め込まない
    */
-  public static async generate(node: HTMLElement, strict = false): Promise<string> {
+  public static async generate(node: HTMLElement, options: { strict?: boolean, fontCss?: string } = {}): Promise<string> {
+    const { strict = false, fontCss } = options
     const displays = this.calcNodeDisplaySize(node)
     Logger.trace(`> 🎨 [start] dom size: ${displays.width}x${displays.height}`)
 
-    const canvas = await domToImage.toCanvas(node, {
+    const canvas = await domToCanvas(node, {
       width: displays.width, // 指定しないと横幅を揃えられない
-      height: displays.height, // dom-to-image-more v3 は指定しないと padding 分が切れる
+      height: displays.height, // margin・border を含めた高さ
       // - スパチャの menu が展開されるため描画しない
       // - ギフトの右の飾り画像 (.rhs-image) は www.gstatic.com にあり CORS で読めず空白になるので描画しない
       // (iframe 内のノードは realm が違うので instanceof は使わない)
@@ -71,9 +77,8 @@ export default class NodeToPng {
         const element = child as Element
         return element.id !== 'menu' && !element.classList?.contains('rhs-image')
       },
-      // YouTube が読み込む Google Fonts の CSS は別ドメインで中身を読めず、毎回 console.error が出る.
-      // 読めない CSS は飛ばして描画は続くので、ログだけ止める.
-      ignoreCSSRuleErrors: true,
+      // 指定した CSS だけを埋め込む. (ページの CSS からは探さない: Google Fonts の CSS は別ドメインで読めないため)
+      font: fontCss ? { cssText: fontCss } : false,
     })
 
     const ctx = canvas.getContext('2d')

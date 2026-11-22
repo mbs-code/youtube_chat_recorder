@@ -122,6 +122,19 @@ async function main() {
     await download.saveAs(path.join(RESULTS, 'sample.csv'))
     console.log(`csv: ${download.suggestedFilename()}`)
 
+    // 画像をつなげて保存 (選択した 2 件). 2 回目は「独自のデザインで画像化」(popup の要素を画像化する) で確認する
+    const [merged] = await Promise.all([popup.waitForEvent('download'), popup.click('button:has-text("画像をつなげて保存")')])
+    await merged.saveAs(path.join(RESULTS, 'sample-merged.png'))
+    await worker.evaluate(() => chrome.storage.local.set({ '@config': { generateOriginalImage: true } }))
+    await popup.reload()
+    await popup.waitForTimeout(800)
+    await popup.click('.chat >> nth=0')
+    await popup.click('.chat >> nth=2')
+    const [original] = await Promise.all([popup.waitForEvent('download'), popup.click('button:has-text("画像をつなげて保存")')])
+    await original.saveAs(path.join(RESULTS, 'sample-merged-original.png'))
+    await worker.evaluate(() => chrome.storage.local.remove('@config'))
+    console.log('merged images: sample-merged.png, sample-merged-original.png')
+
     // 並び順の切り替え (新しい順)
     await popup.click('button:has-text("古い順")')
     await popup.evaluate(() => window.scrollTo(0, 0))

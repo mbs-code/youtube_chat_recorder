@@ -459,7 +459,9 @@ flowchart LR
 | `ChatFilter.checkChatTaskType` | `ChatHandler.invoke` | `Chat` → `'image' \| 'save' \| false` |
 | `DrawDomQueue.invoke` | `BaseQueue.exec` | `{ node, chat }[]` → `NodeToPng.generateChatImageUrl` → `SaveChatQueue.push` |
 | `SaveChatQueue.invoke` | `BaseQueue.exec` | `Chat[]` → `ChatStorage.save`, `BadgeManager.addBadgeCounter` |
-| `NodeToPng.generateChatImageUrl` | `DrawDomQueue.invoke` | `HTMLElement` → style を一時変更 → `generate` → data url |
+| `NodeToPng.generateChatImageUrl` | `DrawDomQueue.invoke` | `HTMLElement` → style を一時変更 → `getEmbeddedFontCss` → `generate` → data url |
+| `getEmbeddedFontCss` (`WebFontEmbedder.ts`) | `NodeToPng.generateChatImageUrl` | iframe の `Document` → Google Fonts の CSS を fetch → latin のフォントを data url にした CSS (初回のみ作成, 以降は使い回し) |
+| `NodeToPng.generate` | `generateChatImageUrl`, popup `generateOriginalImage` | `(HTMLElement, { strict, fontCss })` → modern-screenshot `domToCanvas` → 透明部分を切り取り → png data url |
 | `PageHelper.getPageVideoId` | `loadVideo`, popup の `VideoDropdown` | URL → 動画 ID |
 | `PageHelper.requestVideoData` | `loadVideo` (retry) | 動画 ID → postMessage → `VideoData \| null` |
 | `BadgeManager.*` | `PageEventer`, `SaveChatQueue`, `content-script.ts` | → `Runtime.sendBadgeText` / `sendIconState` |

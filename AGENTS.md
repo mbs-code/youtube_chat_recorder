@@ -46,7 +46,7 @@ src/
     chrome/                  chrome.* API のラッパー (storage, messages, tabs)
     queue/                   画像化・保存を順番に処理するキュー
     chatFilter/              チャットフィルター (保存する/画像化する の判定)
-    util/                    日付整形, dom-to-image, ファイル名整形 など
+    util/                    日付整形, 画像化 (modern-screenshot), Web フォントの埋め込み, ファイル名整形 など
   models/                    Chat, Video, Config (fromPlain / toPlain で storage と相互変換)
   popup/, options/           Vue 3 の画面
 scripts/
@@ -74,7 +74,7 @@ YouTube ページ (www.youtube.com/watch?v=...)
  ├─ content-script (isolated)  yt-page-data-updated → PageEventer
  │     └─ iframe#chatframe (/live_chat or /live_chat_replay, same origin)
  │          └─ MutationObserver(#item-scroller) → ChatHandler → ChatParser
- │               → DrawDomQueue (dom-to-image-more) → SaveChatQueue → chrome.storage.local
+ │               → DrawDomQueue (modern-screenshot) → SaveChatQueue → chrome.storage.local
  └─ chrome.runtime.sendMessage → background → chrome.action (アイコン/バッジ)
 popup / options → chrome.storage.local を直接読み書き
 ```
@@ -134,7 +134,9 @@ YouTube に依存している箇所:
 - **Service Worker は状態を持てない**: いつでも停止・再起動される。グローバル変数に状態を置かない。
 - **onMessage は Promise を返せない**: `lib/chrome/messages.ts` の `listenMessages` を使う (`sendResponse` + `return true`)。
 - **拡張機能を再読み込みすると、開いているタブの古い content script は `chrome.runtime` が使えなくなる**: `Runtime.isContextValid()` で確認している。ページを再読み込みすれば直る。
-- **dom-to-image-more v3 は高さを指定しないと padding 分が切れる**: `NodeToPng.generate` で width / height を明示している。
+- **画像化 (modern-screenshot) ではページの Web フォントが使えない**: SVG を img として読み込んで描くため、フォントは data url で埋め込む必要がある。YouTube の Google Fonts の CSS は別ドメインで `cssRules` を読めないので、`lib/util/WebFontEmbedder.ts` が fetch し直して英数字 (latin) の範囲だけ埋め込んでいる (1 回だけ作って使い回す)。日本語は Roboto に無いので端末のフォントで描かれる (YouTube の画面と同じ)。
+- **画像化は width / height を明示している**: 指定しないと横幅が揃わず、margin 分が切れる (`NodeToPng.generate`)。
+- **画像化の確認は `npm run e2e -- --screenshot`**: `test-results/chat-image-N.png` (作った画像) と `chat-real-N.png` (ブラウザの実物) を見比べる。
 - **headless Chromium の UA (`HeadlessChrome`) だと YouTube のチャットが「ブラウザが古い」になる**: E2E では通常の UA を指定している。
 - **拡張機能は Playwright の headless shell では動かない**: `channel: 'chromium'` を指定している。
 - **Windows でカレントディレクトリが `c:\` (小文字) だと Vitest が壊れる**: `npm test` は `scripts/vitest.js` 経由で起動して回避している。`npx vitest` を直接使わない。

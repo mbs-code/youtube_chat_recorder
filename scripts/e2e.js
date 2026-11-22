@@ -110,8 +110,7 @@ async function main() {
     const logs = []
     page.on('console', (msg) => {
       const text = msg.text()
-      // 拡張機能のログと、画像化ライブラリ (dom-to-image-more) のエラー
-      if (text.includes('[YCR]') || text.includes('domtoimage')) logs.push(text.replace(/%c/g, '').replace(/ color: [^ ]+$/, ''))
+      if (text.includes('[YCR]')) logs.push(text.replace(/%c/g, '').replace(/ color: [^ ]+$/, ''))
     })
 
     const url = positionals[0] ?? (await findLiveUrl(page))
@@ -177,8 +176,15 @@ async function main() {
       fs.mkdirSync(RESULTS, { recursive: true })
       await page.screenshot({ path: path.join(RESULTS, 'youtube.png') })
 
-      const sample = chats.find(c => c.pngUrl)
-      if (sample) fs.writeFileSync(path.join(RESULTS, 'chat-image.png'), Buffer.from(sample.pngUrl.split(',')[1], 'base64'))
+      // 画像化したチャット (最新 6 件) と、チャット欄に残っていれば実際の見た目を並べて保存する (画像化の確認用)
+      // chat-image-N.png = 拡張機能が作った画像, chat-real-N.png = ブラウザが描いた実物
+      const frame = page.frames().find(f => /\/live_chat(_replay)?/.test(f.url()))
+      const samples = chats.filter(c => c.pngUrl).slice(-6)
+      for (const [i, chat] of samples.entries()) {
+        fs.writeFileSync(path.join(RESULTS, `chat-image-${i + 1}.png`), Buffer.from(chat.pngUrl.split(',')[1], 'base64'))
+        const node = chat.id ? await frame?.$(`[id="${chat.id}"]`) : null
+        await node?.screenshot({ path: path.join(RESULTS, `chat-real-${i + 1}.png`) }).catch(() => {})
+      }
 
       const popup = await context.newPage()
       await popup.setViewportSize({ width: 600, height: 600 })
