@@ -110,7 +110,8 @@ async function main() {
     const logs = []
     page.on('console', (msg) => {
       const text = msg.text()
-      if (text.includes('[YCR]')) logs.push(text.replace(/%c/g, '').replace(/ color: [^ ]+$/, ''))
+      // 拡張機能のログと、画像化ライブラリ (dom-to-image-more) のエラー
+      if (text.includes('[YCR]') || text.includes('domtoimage')) logs.push(text.replace(/%c/g, '').replace(/ color: [^ ]+$/, ''))
     })
 
     const url = positionals[0] ?? (await findLiveUrl(page))
