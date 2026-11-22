@@ -28,8 +28,10 @@ const ROLLING_NUMBER_SELECTOR = '.animatedRollingNumberDigits'
 const CONCURRENT_LABEL_RE = /視聴中|watching/i
 /** 何回読めなかったら警告を出すか (ページごとに 1 回だけ). */
 const VIEWERS_WARN_AFTER = 3
-/** 同時接続数を読む間隔 (msec). */
+/** 同時接続数を読み直す間隔 (msec). 表示の変化を取りこぼした時の予備. */
 const VIEWERS_INTERVAL = 30 * 1000
+/** 推移・最新の同接として記録する間隔 (msec). (最大同接は表示が変わるたびに記録する) */
+const VIEWERS_SAMPLE_INTERVAL = 60 * 1000
 /** 表示が変わってから読むまでの待ち (msec). 数字が回転している間に何度も読まないようにまとめる. */
 const VIEWERS_THROTTLE = 2 * 1000
 
@@ -58,6 +60,8 @@ export default class PageEventer {
 
   /** 同時接続数を定期的に読むタイマー. */
   protected viewersTimer?: ReturnType<typeof setInterval>
+  /** 同時接続数を 1 分ごとに記録するタイマー. */
+  protected viewersSampleTimer?: ReturnType<typeof setInterval>
   /** 同時接続数の表示の変化を監視する. (変わったらすぐ読む) */
   protected viewersObserver?: MutationObserver
   protected viewersPending?: ReturnType<typeof setTimeout>
@@ -258,17 +262,32 @@ export default class PageEventer {
     }
   }
 
-  /** 配信中の同時接続数を読み続け、変わったら保存する (最大も). */
+  /**
+   * 配信中の同時接続数を読み続ける.
+   *
+   * - 最大同接: 表示が変わるたびに読み、超えたらすぐ保存する.
+   * - 推移・最新の同接: 1 分ごとに、その時点の値を記録する.
+   */
   protected startWatchViewers(video: Video, generation: number): void {
     const videoId = video.id
     if (!videoId) return
 
     let max = video.maxViewers ?? 0
-    let last = video.viewers
+    let current: number | undefined // 最後に読んだ値
+    let saved = video.viewers // 最後に保存した「最新の同接」
     let misses = 0
     let observed: Element[] = []
 
-    /** 読んだ値を記録する (推移には毎回、動画の「最新の同接」は変わった時、最大同接は超えた時). */
+    /** 今の値を推移と「最新の同接」に記録する (1 分ごと). */
+    const sample = async () => {
+      if (generation !== this.generation || current === undefined) return
+      this.timeline.addViewers(current)
+      if (current === saved) return
+      saved = current
+      await VideoStorage.updateViewers(videoId, current)
+    }
+
+    /** 読んだ値を覚え、最大を超えたらすぐ保存する. */
     const record = async (viewers: number | undefined, from: string) => {
       if (generation !== this.generation) return
       Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max}, from: ${from})`)
@@ -277,11 +296,13 @@ export default class PageEventer {
         if (++misses === VIEWERS_WARN_AFTER) Logger.warn(`👀[viewers] concurrent viewers not found: ${this.describeViewCount()}`)
         return
       }
-      this.timeline.addViewers(viewers)
-      if (viewers === last) return
+      const first = current === undefined
+      current = viewers
+      if (first) return sample() // 最初の値はすぐ記録する (以降は 1 分ごと)
+      if (viewers <= max) return
 
-      last = viewers
-      max = Math.max(max, viewers)
+      max = viewers
+      saved = viewers
       await VideoStorage.updateViewers(videoId, viewers)
     }
 
@@ -333,6 +354,7 @@ export default class PageEventer {
     }
 
     this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
+    this.viewersSampleTimer = setInterval(() => void sample().catch(err => Logger.error(err)), VIEWERS_SAMPLE_INTERVAL)
     // 表示を待ってから 1 回目 (遷移したら stopWatchViewers で取り消す)
     this.viewersPending = setTimeout(() => {
       this.viewersPending = undefined
@@ -405,6 +427,8 @@ export default class PageEventer {
   protected stopWatchViewers(): void {
     clearInterval(this.viewersTimer)
     this.viewersTimer = undefined
+    clearInterval(this.viewersSampleTimer)
+    this.viewersSampleTimer = undefined
     clearTimeout(this.viewersPending)
     this.viewersPending = undefined
     this.viewersObserver?.disconnect()

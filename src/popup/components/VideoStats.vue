@@ -45,12 +45,12 @@ function formatMoney(unit: string, money: number): string {
   return `${unit}${money.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
 }
 
-/** "2026-11-22 14:30:12 時点 (配信開始から 1:53:00)". */
+/** "2026-11-22 14:30:12 (1:53:00)". カッコは配信開始からの経過時間. */
 function formatAt(at?: Date): string | undefined {
   if (!at) return undefined
   const start = props.video.startDate
-  const elapsed = start ? ` (配信開始から ${hmsString((at.getTime() - start.getTime()) / 1000)})` : ''
-  return `${format(at, 'yyyy-MM-dd HH:mm:ss')} 時点${elapsed}`
+  const elapsed = start ? ` (${hmsString((at.getTime() - start.getTime()) / 1000)})` : ''
+  return `${format(at, 'yyyy-MM-dd HH:mm:ss')}${elapsed}`
 }
 
 const rows = computed<Row[]>(() => {

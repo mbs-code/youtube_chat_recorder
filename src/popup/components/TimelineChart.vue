@@ -54,13 +54,13 @@
           />
         </template>
 
-        <!-- コメント数: 1 分ごとの棒 (上だけ角丸、棒の間は少し空ける) -->
+        <!-- コメント数・スパチャ: 1 分ごとの棒 (上だけ角丸、棒の間は少し空ける) -->
         <template v-else>
           <path
-            v-for="bar in commentBars"
+            v-for="bar in panel.bars"
             :key="bar.t"
             :d="bar.d"
-            :fill="COMMENTS_COLOR"
+            :fill="panel.color"
             :opacity="hoverPoint && hoverPoint.t !== bar.t ? 0.45 : 1"
           />
         </template>
@@ -108,6 +108,10 @@
         <span class="inline-block size-2 rounded-xs" :style="{ backgroundColor: COMMENTS_COLOR }" />
         コメント <strong class="ml-auto text-zinc-950">{{ hoverPoint.comments.toLocaleString() }} 件</strong>
       </p>
+      <p v-if="superUnit" class="flex items-center gap-1.5 text-zinc-700">
+        <span class="inline-block size-2 rounded-xs" :style="{ backgroundColor: SUPER_COLOR }" />
+        スパチャ <strong class="ml-auto text-zinc-950">{{ superLabel(hoverPoint.t) }}</strong>
+      </p>
     </div>
 
     <!-- 表で見る (色が見分けにくい場合・数字を確かめたい場合) -->
@@ -121,6 +125,7 @@
               <th class="font-normal">配信開始から</th>
               <th class="font-normal">同接</th>
               <th class="font-normal">コメント</th>
+              <th v-if="superUnit" class="font-normal">スパチャ</th>
             </tr>
           </thead>
           <tbody class="text-zinc-700">
@@ -129,6 +134,7 @@
               <td>{{ elapsed(point.t) ?? '-' }}</td>
               <td>{{ point.viewers?.toLocaleString() ?? '-' }}</td>
               <td>{{ point.comments.toLocaleString() }}</td>
+              <td v-if="superUnit">{{ superLabel(point.t) }}</td>
             </tr>
           </tbody>
         </table>
@@ -141,23 +147,27 @@
 /**
  * 配信の推移のグラフ (popup の動画の記録の下).
  *
- * - 上: 同時接続数 (1 分ごとの最大, 線). 下: コメント数 (1 分ごと, 棒). 時間の軸は共通.
+ * - 上から: 同時接続数 (線), コメント数 (棒), スーパーチャットの金額 (棒, 一番多い通貨だけ). 時間の軸は共通.
+ * - スーパーチャットは保存したチャットから数える (推移の記録がある時間の分だけ).
  * - 単位の違う 2 つを 1 つのグラフ (左右に目盛り) にすると読み違えるので、上下に分けている.
  * - マウスを乗せると、その分の縦線と値を出す. 「表で見る」で全ての値を表にできる.
  */
 import { format } from 'date-fns'
 import { computed, ref } from 'vue'
 import { hmsString } from '../../lib/util/format'
-import { MINUTE, type TimelinePoint } from '../../models/Timeline'
+import Chat from '../../models/Chat'
+import { MINUTE, toMinute, type TimelinePoint } from '../../models/Timeline'
 
 const props = defineProps<{
   points: TimelinePoint[]
+  chats?: Chat[] // スーパーチャットのグラフ用
   startDate?: Date // 配信開始 (経過時間の表示用)
 }>()
 
 // 色 (データ可視化の検証済みパレットの 1, 2 番目) と、控えめな線・文字の色 (zinc)
 const VIEWERS_COLOR = '#2a78d6'
 const COMMENTS_COLOR = '#eb6834'
+const SUPER_COLOR = '#1baf7a'
 const GRID_COLOR = '#f4f4f5' // zinc-100
 const AXIS_COLOR = '#d4d4d8' // zinc-300
 const MUTED_TEXT = '#71717a' // zinc-500
@@ -196,8 +206,32 @@ function centerX(t: number): number {
   return timeX(t + MINUTE / 2)
 }
 
+/// スーパーチャット (一番多い通貨の、1 分ごとの合計) ///
+
+const superUnit = computed(() => Chat.sumMoney(props.chats ?? [])[0]?.unit)
+const superByMinute = computed(() => {
+  const map = new Map<number, { money: number, count: number }>()
+  const unit = superUnit.value
+  if (unit === undefined) return map
+  for (const chat of props.chats ?? []) {
+    if (!chat.money || !chat.timestamp || !(chat.isSuperChat || chat.isSuperStickers) || (chat.moneyUnit ?? '') !== unit) continue
+    const t = toMinute(chat.timestamp)
+    const sum = map.get(t) ?? { money: 0, count: 0 }
+    sum.money += chat.money
+    sum.count++
+    map.set(t, sum)
+  }
+  return map
+})
+function superLabel(t: number): string {
+  const sum = superByMinute.value.get(t)
+  if (!sum) return '-'
+  return `${superUnit.value}${sum.money.toLocaleString(undefined, { maximumFractionDigits: 2 })} (${sum.count} 件)`
+}
+
 const viewersMax = computed(() => niceMax(Math.max(0, ...props.points.map(p => p.viewers ?? 0))))
 const commentsMax = computed(() => niceMax(Math.max(0, ...props.points.map(p => p.comments))))
+const superMax = computed(() => niceMax(Math.max(0, ...props.points.map(p => superByMinute.value.get(p.t)?.money ?? 0))))
 const plotBottom = PLOT_TOP + PLOT_HEIGHT
 
 function viewersY(value: number): number {
@@ -206,22 +240,58 @@ function viewersY(value: number): number {
 function commentsY(value: number): number {
   return plotBottom - (value / commentsMax.value) * PLOT_HEIGHT
 }
+function superY(value: number): number {
+  return plotBottom - (value / superMax.value) * PLOT_HEIGHT
+}
 
 function yTicks(max: number, toY: (v: number) => number) {
   return [0, max / 2, max].map(value => ({ value, y: toY(value), label: compact.format(value) }))
 }
 
-const panels = computed(() => [
-  { key: 'viewers', title: '同時接続数 (1 分ごとの最大)', height: plotBottom + 4, plotBottom, showXAxis: false, yTicks: yTicks(viewersMax.value, viewersY) },
-  {
-    key: 'comments',
-    title: 'コメント数 (1 分ごと)',
-    height: plotBottom + X_AXIS_HEIGHT,
-    plotBottom,
-    showXAxis: true,
-    yTicks: yTicks(commentsMax.value, commentsY),
-  },
-])
+interface Panel {
+  key: string
+  title: string
+  height: number
+  plotBottom: number
+  showXAxis: boolean
+  yTicks: ReturnType<typeof yTicks>
+  bars: { t: number, d: string }[]
+  color: string
+}
+
+const panels = computed<Panel[]>(() => {
+  const list: Panel[] = [
+    { key: 'viewers', title: '同時接続数 (1 分ごと)', height: plotBottom + 4, plotBottom, showXAxis: false, yTicks: yTicks(viewersMax.value, viewersY), bars: [], color: VIEWERS_COLOR },
+    {
+      key: 'comments',
+      title: 'コメント数 (1 分ごと)',
+      height: plotBottom + 4,
+      plotBottom,
+      showXAxis: false,
+      yTicks: yTicks(commentsMax.value, commentsY),
+      bars: bars(props.points.map(p => ({ t: p.t, value: p.comments })), commentsY),
+      color: COMMENTS_COLOR,
+    },
+  ]
+  const superValues = props.points.map(p => ({ t: p.t, value: superByMinute.value.get(p.t)?.money ?? 0 }))
+  if (superValues.some(v => v.value > 0)) {
+    list.push({
+      key: 'super',
+      title: `スーパーチャット (1 分ごと, ${superUnit.value})`,
+      height: plotBottom + 4,
+      plotBottom,
+      showXAxis: false,
+      yTicks: yTicks(superMax.value, superY),
+      bars: bars(superValues, superY),
+      color: SUPER_COLOR,
+    })
+  }
+  // 時刻の目盛りは一番下のグラフだけ
+  const last = list.at(-1)!
+  last.showXAxis = true
+  last.height = plotBottom + X_AXIS_HEIGHT
+  return list
+})
 
 /** 同時接続数の線. 値の無い分・記録していない時間で線を切る. */
 const viewerPaths = computed(() => {
@@ -245,22 +315,22 @@ const viewerPaths = computed(() => {
   return paths.map(d => (d.includes('L') ? d : d + `h0.1`))
 })
 
-/** コメント数の棒 (上の角だけ丸める). */
-const commentBars = computed(() => {
+/** 1 分ごとの棒 (上の角だけ丸める). */
+function bars(values: { t: number, value: number }[], toY: (v: number) => number): { t: number, d: string }[] {
   const slot = plotWidth / ((range.value.end - range.value.start) / MINUTE)
   const gap = slot > 4 ? 1 : 0
   const width = Math.max(1, slot - gap)
-  return props.points
-    .filter(p => p.comments > 0)
+  return values
+    .filter(p => p.value > 0)
     .map((p) => {
       const x = timeX(p.t) + gap / 2
-      const y = commentsY(p.comments)
+      const y = toY(p.value)
       const h = plotBottom - y
       const r = Math.min(2, width / 2, h)
       const d = `M${x},${plotBottom}V${y + r}Q${x},${y} ${x + r},${y}H${x + width - r}Q${x + width},${y} ${x + width},${y + r}V${plotBottom}Z`
       return { t: p.t, d }
     })
-})
+}
 
 /** 時刻の目盛り (5 個前後になる間隔で、切りのいい時刻に置く). */
 const xTicks = computed(() => {

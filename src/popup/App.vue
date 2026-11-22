@@ -58,7 +58,7 @@
       <!-- 記録・グラフのタブ: 最大同接・最大再生数・スーパーチャット合計と、推移のグラフ -->
       <section v-if="selectedVideo && tab === 'stats'" class="flex flex-col gap-3">
         <VideoStats :video="selectedVideo" :chats="chats" />
-        <TimelineChart :points="timeline" :start-date="selectedVideo.startDate" />
+        <TimelineChart :points="timeline" :chats="chats" :start-date="selectedVideo.startDate" />
         <p v-if="timeline.length === 0" class="py-6 text-center text-xs text-zinc-500">推移の記録はありません</p>
       </section>
 
