@@ -11,6 +11,7 @@ export const CHAT_NODE_NAMES = [
   'yt-live-chat-paid-message-renderer', // スーパーチャット
   'yt-live-chat-membership-item-renderer', // メンバー加入・マイルストーン
   'yt-live-chat-paid-sticker-renderer', // スーパーステッカー
+  'ytd-sponsorships-live-chat-gift-purchase-announcement-renderer', // メンバーシップギフト
   // 'yt-live-chat-banner-renderer', // 固定チャット
 ] as const
 
@@ -27,7 +28,11 @@ export default class ChatParser {
     chat.id = node.getAttribute('id') || undefined
 
     // 時刻 ///
-    const times = this.parseTimestamp(DomQueryHelper.getTextContent(node, '#timestamp'), video, now)
+    // (ギフトなど時刻表示の無いチャットは、配信中なら今の投稿とみなす)
+    const timestampText = DomQueryHelper.getTextContent(node, '#timestamp')
+    const times = timestampText
+      ? this.parseTimestamp(timestampText, video, now)
+      : this.liveNowTimes(video, now)
     chat.timestamp = times.datetime
     chat.seconds = times.seconds
 
@@ -88,7 +93,7 @@ export default class ChatParser {
     // メンバー加入・マイルストーン ///
     if (tagName === 'yt-live-chat-membership-item-renderer') {
       // マイルストーン: #header-primary-text = "メンバー歴 11 か月", #header-subtext = メンバーシップ名, #message = 本文 (省略可)
-      // 加入: #header-primary-text なし, #header-subtext = "〇〇 へようこそ！"
+      // 加入: #header-primary-text は空 (または無い), #header-subtext = "〇〇 へようこそ！"
       const headerPrimaryText = DomQueryHelper.getTextContent(node, '#header-primary-text')
       const headerSubtext = DomQueryHelper.getTextContent(node, '#header-subtext')
       if (headerPrimaryText) {
@@ -102,6 +107,16 @@ export default class ChatParser {
       const fallback = headerPrimaryText || headerSubtext || ''
       if (!chat.altMessage) chat.altMessage = fallback
       if (!chat.message) chat.message = fallback
+    }
+
+    // メンバーシップギフト ///
+    if (tagName === 'ytd-sponsorships-live-chat-gift-purchase-announcement-renderer') {
+      // #primary-text = "〇〇 のメンバーシップ ギフトを 10 個贈りました" (時刻表示・本文は無い)
+      const primaryText = DomQueryHelper.getTextContent(node, '#primary-text') ?? ''
+      chat.isGift = true
+      chat.giftCount = this.parseGiftCount(primaryText)
+      chat.message = primaryText
+      chat.altMessage = primaryText
     }
 
     return chat
@@ -186,6 +201,25 @@ export default class ChatParser {
     }
 
     return {}
+  }
+
+  /** 配信中なら現在時刻を投稿日時にする (時刻表示の無いチャット用). アーカイブでは分からないので空. */
+  protected static liveNowTimes(video: Video | undefined, now: Date): { datetime?: Date, seconds?: number } {
+    if (video?.type !== 'live') return {}
+    const startDate = video.startDate
+    return { datetime: new Date(now), seconds: startDate ? differenceInSeconds(now, startDate) : undefined }
+  }
+
+  /**
+   * メンバーシップギフトの文からギフトの数を取り出す.
+   *
+   * - "〇〇 のメンバーシップ ギフトを 10 個贈りました", "Sent 10 〇〇 gift memberships"
+   * - チャンネル名に数字が入ることがあるので、数の前後の語で探す.
+   */
+  public static parseGiftCount(text?: string): number | undefined {
+    if (!text) return undefined
+    const count = text.match(/ギフトを\s*([\d,]+)\s*個/)?.[1] ?? text.match(/sent\s+([\d,]+)/i)?.[1]
+    return count ? parseInt(count.replace(/,/g, ''), 10) : undefined
   }
 
   /**

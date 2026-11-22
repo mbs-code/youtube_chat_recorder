@@ -120,10 +120,12 @@ YouTube に依存している箇所:
 - `DOMNodeRemoved` (Mutation Events) は Chrome 127 で削除された → MutationObserver で iframe の切断を検知
 - 時刻表示は ja ロケールでも `9:50 AM` 形式で、間に `U+202F` (narrow no-break space) が入る
 - 投稿者名は `@handle` 形式
-- メンバー歴 (マイルストーン) チャットは加入と同じ `yt-live-chat-membership-item-renderer` で、`#header-primary-text` ("メンバー歴 11 か月") の有無で区別する。`#header-subtext` はメンバーシップ名、`#message` は本文 (省略可)
+- メンバー歴 (マイルストーン) チャットは加入と同じ `yt-live-chat-membership-item-renderer` で、`#header-primary-text` ("メンバー歴 11 か月") の中身の有無で区別する (加入でも空の `#header-primary-text` がある)。`#header-subtext` はメンバーシップ名、`#message` は本文 (省略可)
 - トップチャット (名前の後ろの 👑#1) は `#before-content-buttons` 内の `<button aria-label="#1">`。`ChatParser.parseTopChatRank` で順位を取る
 
-未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、メンバーシップギフト (`ytd-sponsorships-live-chat-*`, 未対応)。
+- メンバーシップギフト (贈った側) は `ytd-sponsorships-live-chat-gift-purchase-announcement-renderer`。文は `#primary-text` ("〇〇 のメンバーシップ ギフトを 10 個贈りました")、**`#timestamp` が無い**ので配信中は現在時刻にする (`ChatParser.liveNowTimes`)。右の飾り画像 `.rhs-image` は www.gstatic.com にあり CORS で読めないので画像化しない
+
+未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、ギフトを受け取った側のお知らせ (`ytd-sponsorships-live-chat-gift-redemption-announcement-renderer` と思われる, 未対応)、アーカイブでのギフトの表示。
 
 ## ハマりどころ
 

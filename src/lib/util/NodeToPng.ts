@@ -64,8 +64,13 @@ export default class NodeToPng {
     const canvas = await domToImage.toCanvas(node, {
       width: displays.width, // 指定しないと横幅を揃えられない
       height: displays.height, // dom-to-image-more v3 は指定しないと padding 分が切れる
-      // スパチャの menu が展開されるため描画しない (iframe 内のノードは realm が違うので instanceof は使わない)
-      filter: (child: Node) => (child as Element).id !== 'menu',
+      // - スパチャの menu が展開されるため描画しない
+      // - ギフトの右の飾り画像 (.rhs-image) は www.gstatic.com にあり CORS で読めず空白になるので描画しない
+      // (iframe 内のノードは realm が違うので instanceof は使わない)
+      filter: (child: Node) => {
+        const element = child as Element
+        return element.id !== 'menu' && !element.classList?.contains('rhs-image')
+      },
       // YouTube が読み込む Google Fonts の CSS は別ドメインで中身を読めず、毎回 console.error が出る.
       // 読めない CSS は飛ばして描画は続くので、ログだけ止める.
       ignoreCSSRuleErrors: true,

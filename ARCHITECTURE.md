@@ -213,6 +213,7 @@ flowchart TD
 | `member` | 🟩 メンバー | `isMember` |
 | `joinmember` | ➕ メンバー加入 | `isJoinMember` |
 | `milestone` | 🎉 メンバー歴 | `isMilestone` |
+| `gift` | 🎁 メンバーシップギフト | `isGift` |
 | `topchat` | 👑 トップチャット | `topChatRank !== undefined` |
 
 テキストマッチング (`generateChatFilterFunc`) は `textMode` で比べる対象 (`message` → `chat.message` / `author` → `chat.authorName`) を決め、`isRegex` → 正規表現、`isExact` → 完全一致、どちらでもなければ部分一致で判定する。不正な正規表現のフィルターは判定関数が作れないので無視される。
@@ -221,7 +222,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  N(["チャット要素 (CHAT_NODE_NAMES のどれか)"]) --> T["parseTimestamp(#timestamp)"]
+  N(["チャット要素 (CHAT_NODE_NAMES のどれか)"]) --> TS{"#timestamp がある?"}
+  TS -- "はい" --> T["parseTimestamp(#timestamp)"]
+  TS -- "いいえ (ギフト)" --> LN["liveNowTimes()<br/>配信中なら現在時刻 / それ以外は空"]
   N --> AU["#author-name / #author-photo img"]
   N --> MSG["#message → extractText()<br/>message (文字のみ) / altMessage (絵文字を :名前: で展開)"]
   N --> TYPE{"author-type 属性"}
@@ -237,9 +240,11 @@ flowchart TD
   N --> ST{"#purchase-amount-chip がある?"}
   ST -- "はい" --> ST1["isSuperStickers / money<br/>altMessage = ステッカーの alt"]
   N --> MB{"タグが membership-item-renderer?"}
-  MB -- "はい" --> MB1{"#header-primary-text がある?"}
+  MB -- "はい" --> MB1{"#header-primary-text に文字がある?"}
   MB1 -- "はい" --> MS["isMilestone (メンバー歴)<br/>memberMonths はヘッダーの値を優先"]
-  MB1 -- "いいえ" --> JN["isJoinMember (メンバー加入)"]
+  MB1 -- "いいえ (空)" --> JN["isJoinMember (メンバー加入)"]
+  N --> GF{"タグが gift-purchase-announcement-renderer?"}
+  GF -- "はい" --> GF1["isGift / giftCount = parseGiftCount(#primary-text)<br/>message = #primary-text"]
 ```
 
 時刻の解析 (`parseTimestamp`):
@@ -392,7 +397,7 @@ flowchart TD
   end
 ```
 
-後から追加された基本フィルターは、`Config.fromPlain()` の中で `complementChatFilterConfigs()` が補う。初期値は `INHERIT_FILTER_KEYS` の引き継ぎ元 (`milestone` ← `joinmember`, `topchat` ← `plain`) があればその設定、無ければ `defaultTrueKeys` に入っているかで決まる。
+後から追加された基本フィルターは、`Config.fromPlain()` の中で `complementChatFilterConfigs()` が補う。初期値は `INHERIT_FILTER_KEYS` の引き継ぎ元 (`milestone` ← `joinmember`, `topchat` ← `plain`, `gift` ← `joinmember`) があればその設定、無ければ `defaultTrueKeys` に入っているかで決まる。
 
 ---
 
@@ -492,9 +497,9 @@ flowchart LR
 | `PAGE_UPDATED_EVENT` | `PageEventer.ts` | `'yt-page-data-updated'` | YouTube の SPA 遷移を検知するイベント |
 | `CHAT_FRAME_SELECTOR` / `CHAT_IFRAME_SELECTOR` | `PageEventer.ts` | `ytd-live-chat-frame#chat` / `iframe#chatframe` | チャット欄の iframe を探す |
 | `CHAT_SCROLLER_SELECTOR` | `PageEventer.ts` | `yt-live-chat-item-list-renderer #item-scroller` | チャットの追加を監視する要素 |
-| `CHAT_NODE_NAMES` | `ChatParser.ts` | text / paid / membership / sticker の renderer | `ChatHandler.invoke` が処理するタグ名 |
+| `CHAT_NODE_NAMES` | `ChatParser.ts` | text / paid / membership / sticker / ギフト (gift-purchase-announcement) の renderer | `ChatHandler.invoke` が処理するタグ名 |
 | `BASE_FILTERS` | `ChatFilter.ts` | [4-2 の表](#4-2-chatfiltercheckstuckchatfilter-保存するか画像化するか) | チャットの種類の判定 |
-| `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain` | 後から追加したフィルターの初期値の引き継ぎ元 |
+| `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain`, `gift ← joinmember` | 後から追加したフィルターの初期値の引き継ぎ元 |
 | `defaultTrueKeys` | `ChatFilter.ts` | `owner`, `verified`, `moderator` | 初期設定で「保存する」「画像化する」をオンにするもの |
 | `warnFilterKeys` | `ChatFilter.ts` | `plain`, `member` | 設定画面で「負荷注意」を出すもの |
 | `COUNT_TO_PROCESS_AT_ONE` | `BaseQueue.ts` | `10` | キューが一度に処理する件数 |

@@ -69,6 +69,7 @@ const tags = computed(() => {
   if (chat.isVerified) list.push({ label: '確認済み' })
   if (chat.money) list.push({ label: `${chat.moneyUnit ?? ''}${chat.money.toLocaleString()}`, class: 'badge-accent' })
   if (chat.topChatRank) list.push({ label: `👑 #${chat.topChatRank}`, class: 'badge-accent' })
+  if (chat.isGift) list.push({ label: `🎁 ギフト${chat.giftCount ? ` ×${chat.giftCount}` : ''}`, class: 'badge-success' })
   if (chat.isMilestone) list.push({ label: `🎉 ${chat.milestoneText ?? 'メンバー歴'}`, class: 'badge-success' })
   else if (chat.isJoinMember) list.push({ label: 'メンバー加入', class: 'badge-success' })
   else if (chat.isMember) list.push({ label: 'メンバー', class: 'badge-success' })

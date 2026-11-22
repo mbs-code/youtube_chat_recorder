@@ -3,7 +3,9 @@ import ChatParser from '../src/lib/parser/ChatParser'
 import Video from '../src/models/Video'
 import {
   createElement,
+  GIFT_PURCHASE,
   MEMBERSHIP_ITEM,
+  MEMBERSHIP_JOIN,
   MEMBERSHIP_MILESTONE,
   PAID_MESSAGE,
   TEXT_MESSAGE_MEMBER,
@@ -111,6 +113,42 @@ describe('ChatParser.parse', () => {
     expect(chat.topChatRank).toBeUndefined()
   })
 
+  it('メンバー加入 (実 DOM, #header-primary-text が空) はマイルストーンにしない', async () => {
+    const now = new Date(2026, 10, 22, 14, 14, 30)
+    const chat = await ChatParser.parse(liveVideo(), createElement(MEMBERSHIP_JOIN), now)
+
+    expect(chat.authorName).toBe('@藍染Aizen')
+    expect(chat.isJoinMember).toBe(true)
+    expect(chat.isMilestone).toBe(false)
+    expect(chat.milestoneText).toBeUndefined()
+    expect(chat.memberMonths).toBe(0)
+    expect(chat.altMessage).toBe('ろありー へようこそ！')
+    expect(chat.timestamp).toEqual(now)
+  })
+
+  it('メンバーシップギフトを解析できる (時刻表示が無いので配信中は現在時刻)', async () => {
+    const now = new Date(2026, 10, 22, 14, 20, 0)
+    const chat = await ChatParser.parse(liveVideo(), createElement(GIFT_PURCHASE), now)
+
+    expect(chat.id).toBe('ChwKGkNOeU5rLVRvbXBnREZTVVRyUVlkek5vN1l3')
+    expect(chat.authorName).toBe('@SUGI3_san')
+    expect(chat.authorPhoto).toContain('yt4.ggpht.com/gift')
+    expect(chat.isGift).toBe(true)
+    expect(chat.giftCount).toBe(10)
+    expect(chat.isJoinMember).toBe(false)
+    expect(chat.isMember).toBe(true)
+    expect(chat.memberMonths).toBe(12)
+    expect(chat.message).toBe('Roa Ch. 海月雲ろあ のメンバーシップ ギフトを 10 個贈りました')
+    expect(chat.timestamp).toEqual(now)
+    expect(chat.seconds).toBe((14 - 8) * 3600 + 20 * 60)
+  })
+
+  it('時刻表示の無いチャットはアーカイブでは時刻なし', async () => {
+    const chat = await ChatParser.parse(archiveVideo(), createElement(GIFT_PURCHASE))
+    expect(chat.timestamp).toBeUndefined()
+    expect(chat.seconds).toBeUndefined()
+  })
+
   it('メンバー歴 (本文なし) はヘッダーを本文にする', async () => {
     const node = createElement(MEMBERSHIP_MILESTONE)
     node.querySelector('#message')!.textContent = ''
@@ -118,6 +156,15 @@ describe('ChatParser.parse', () => {
 
     expect(chat.isMilestone).toBe(true)
     expect(chat.altMessage).toBe('メンバー歴 11 か月')
+  })
+})
+
+describe('ChatParser.parseGiftCount', () => {
+  it('ギフトの数を取り出す (チャンネル名の数字は無視する)', () => {
+    expect(ChatParser.parseGiftCount('Roa Ch. 海月雲ろあ のメンバーシップ ギフトを 10 個贈りました')).toBe(10)
+    expect(ChatParser.parseGiftCount('ch2 のメンバーシップ ギフトを 1,000 個贈りました')).toBe(1000)
+    expect(ChatParser.parseGiftCount('Sent 5 Channel 3 gift memberships')).toBe(5)
+    expect(ChatParser.parseGiftCount('')).toBeUndefined()
   })
 })
 

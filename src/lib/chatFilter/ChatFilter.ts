@@ -26,6 +26,7 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
         && !chat.isMember
         && !chat.isJoinMember
         && !chat.isMilestone
+        && !chat.isGift
         && chat.topChatRank === undefined
       )
     },
@@ -66,6 +67,11 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
     func: (chat: Chat) => chat.isMilestone,
   },
   {
+    key: 'gift',
+    title: '🎁 メンバーシップギフト',
+    func: (chat: Chat) => chat.isGift,
+  },
+  {
     key: 'topchat',
     title: '👑 トップチャット(順位あり)',
     func: (chat: Chat) => chat.topChatRank !== undefined,
@@ -74,11 +80,13 @@ const BASE_FILTERS: ChatFilterDataInterface[] = [
 
 /**
  * 後から追加したフィルターが、既存の設定に無い場合の初期値の引き継ぎ元.
- * (milestone は v2.0.0 まで joinmember、topchat は plain として扱っていた)
+ * (milestone は v2.0.0 まで joinmember、topchat は plain として扱っていた.
+ *  gift は v2.0.0 まで保存できなかったので、メンバー関連の joinmember に合わせる)
  */
 const INHERIT_FILTER_KEYS: Record<string, string> = {
   milestone: 'joinmember',
   topchat: 'plain',
+  gift: 'joinmember',
 }
 
 // 警告を出すフィルターキー
