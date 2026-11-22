@@ -66,6 +66,9 @@ export default class NodeToPng {
       height: displays.height, // dom-to-image-more v3 は指定しないと padding 分が切れる
       // スパチャの menu が展開されるため描画しない (iframe 内のノードは realm が違うので instanceof は使わない)
       filter: (child: Node) => (child as Element).id !== 'menu',
+      // YouTube が読み込む Google Fonts の CSS は別ドメインで中身を読めず、毎回 console.error が出る.
+      // 読めない CSS は飛ばして描画は続くので、ログだけ止める.
+      ignoreCSSRuleErrors: true,
     })
 
     const ctx = canvas.getContext('2d')
