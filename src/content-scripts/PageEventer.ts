@@ -20,8 +20,13 @@ const CHAT_IFRAME_SELECTOR = 'iframe#chatframe'
 const CHAT_SCROLLER_SELECTOR = 'yt-live-chat-item-list-renderer #item-scroller'
 
 /** 配信中の「〇人が視聴中」の表示. aria-label に数字が全桁で入る. 無ければ中の回転する数字 (yt-animated-rolling-number) を読む. */
-const VIEW_COUNT_SELECTOR = 'ytd-watch-info-text #view-count, #view-count'
-const ROLLING_NUMBER_SELECTOR = 'yt-animated-rolling-number, .animatedRollingNumberDigits'
+const VIEW_COUNT_SELECTOR = '#view-count'
+/** 回転する数字の表示. #view-count の外 (レイアウト違い) にある場合は、周りの文字が「視聴中」のものだけ使う. */
+const ROLLING_NUMBER_SELECTOR = '.animatedRollingNumberDigits'
+/** 同時接続数の表示の周りの文字. */
+const CONCURRENT_LABEL_RE = /視聴中|watching/i
+/** 何回読めなかったら警告を出すか (ページごとに 1 回だけ). */
+const VIEWERS_WARN_AFTER = 3
 /** 同時接続数を読む間隔 (msec). */
 const VIEWERS_INTERVAL = 30 * 1000
 
@@ -239,11 +244,17 @@ export default class PageEventer {
     if (!videoId) return
 
     let max = video.maxViewers ?? 0
+    let misses = 0
     const check = async () => {
       if (generation !== this.generation || !Runtime.isContextValid()) return this.stopWatchViewers()
       const viewers = this.readConcurrentViewers()
-      Logger.trace(`concurrent viewers: ${viewers ?? '(not found)'}`)
-      if (viewers === undefined || viewers <= max) return
+      Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max})`)
+      if (viewers === undefined) {
+        // 見つからない時は、原因を調べられるようにページの状態を 1 回だけ出す
+        if (++misses === VIEWERS_WARN_AFTER) Logger.warn(`👀[viewers] concurrent viewers not found: ${this.describeViewCount()}`)
+        return
+      }
+      if (viewers <= max) return
 
       max = viewers
       await VideoStorage.updateMaxViewers(videoId, viewers)
@@ -254,7 +265,13 @@ export default class PageEventer {
     Logger.debug('⚙️[start] watch concurrent viewers')
   }
 
-  /** ページから同時接続数を読む. (aria-label → 回転する数字の順に試す) */
+  /**
+   * ページから同時接続数を読む.
+   *
+   * 1. #view-count の aria-label ("26,905 人が視聴中")
+   * 2. #view-count の中の回転する数字
+   * 3. それ以外の場所の回転する数字のうち、周りの文字が「視聴中」のもの (レイアウト違い用)
+   */
   protected readConcurrentViewers(): number | undefined {
     for (const element of Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))) {
       const fromLabel = VideoParser.parseConcurrentViewers(element.getAttribute('aria-label'))
@@ -264,7 +281,40 @@ export default class PageEventer {
       const fromRolling = rolling ? VideoParser.parseConcurrentViewers(VideoParser.readRollingNumber(rolling)) : undefined
       if (fromRolling !== undefined) return fromRolling
     }
+
+    for (const rolling of Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))) {
+      if (rolling.closest(VIEW_COUNT_SELECTOR)) continue // 上で読めなかったもの
+      if (!CONCURRENT_LABEL_RE.test(this.rollingLabel(rolling))) continue
+      const viewers = VideoParser.parseConcurrentViewers(VideoParser.readRollingNumber(rolling))
+      if (viewers !== undefined) return viewers
+    }
     return undefined
+  }
+
+  /** 回転する数字の周りの文字 (aria-label か、数字を除いた文字). 「〇人が視聴中」の "人が視聴中" の部分. */
+  protected rollingLabel(rolling: Element): string {
+    for (let e: Element | null = rolling.parentElement, i = 0; e && i < 3; e = e.parentElement, i++) {
+      const label = e.getAttribute('aria-label')
+      if (label) return label
+      const clone = e.cloneNode(true) as Element
+      clone.querySelectorAll(ROLLING_NUMBER_SELECTOR).forEach(r => r.remove())
+      const text = clone.textContent?.trim()
+      if (text) return text
+    }
+    return ''
+  }
+
+  /** 同時接続数が読めない時の調査用. 候補の要素の情報を短くまとめる. */
+  protected describeViewCount(): string {
+    const viewCounts = Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))
+      .map(e => `#view-count[aria-label=${JSON.stringify(e.getAttribute('aria-label'))}]`)
+    const rollings = Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))
+      .map((r) => {
+        const parent = r.parentElement?.parentElement
+        const where = parent ? `${parent.localName}${parent.id ? '#' + parent.id : ''}` : '?'
+        return `rolling(${where})=${JSON.stringify(VideoParser.readRollingNumber(r))} label=${JSON.stringify(this.rollingLabel(r).slice(0, 30))}`
+      })
+    return [...viewCounts, ...rollings].join(' / ') || 'no #view-count and no rolling number'
   }
 
   protected stopWatchViewers(): void {
