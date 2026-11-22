@@ -1,35 +1,42 @@
-import { type Options, toast } from 'bulma-toast'
+import { reactive } from 'vue'
 
-// ref: https://github.com/rfoel/bulma-toast
+export type ToastType = 'success' | 'warn' | 'error'
+
+export interface ToastItem {
+  id: number
+  type: ToastType
+  message: string
+}
+
+const DURATION = 4000
+
+/** 表示中のトースト. ToastContainer.vue が描画する. */
+export const toasts = reactive<ToastItem[]>([])
+
+let sequence = 0
+
+export function dismissToast(id: number): void {
+  const index = toasts.findIndex(t => t.id === id)
+  if (index >= 0) toasts.splice(index, 1)
+}
+
+function show(type: ToastType, message: string): void {
+  const id = ++sequence
+  toasts.push({ id, type, message })
+  setTimeout(() => dismissToast(id), DURATION)
+}
+
+/** 画面右上に通知を出す. (画面に <ToastContainer /> を置いておくこと) */
 export default class Toast {
   public static success(message: string): void {
-    this.show(message, 'check-circle', 'is-success')
+    show('success', message)
   }
 
   public static warn(message: string): void {
-    this.show(message, 'alert', 'is-warning')
+    show('warn', message)
   }
 
   public static error(message: string): void {
-    this.show(message, 'alert', 'is-danger')
+    show('error', message)
   }
-
-  ///
-
-  protected static show(message: string, icon: string, type: Options['type']): void {
-    toast({
-      message: `<p><span class="icon"><i class="mdi mdi-${icon}"></i></span>${escapeHtml(message)}</p>`,
-      type,
-      duration: 5000,
-      position: 'top-right',
-      dismissible: true,
-      pauseOnHover: true,
-      animate: { in: 'fadeInRight', out: 'fadeOutRight' },
-    })
-  }
-}
-
-/** toast は innerHTML で描画されるため、メッセージ (ファイル名など) はエスケープする. */
-function escapeHtml(text: string): string {
-  return text.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
 }

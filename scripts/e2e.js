@@ -180,13 +180,9 @@ async function main() {
       if (sample) fs.writeFileSync(path.join(RESULTS, 'chat-image.png'), Buffer.from(sample.pngUrl.split(',')[1], 'base64'))
 
       const popup = await context.newPage()
-      await popup.setViewportSize({ width: 640, height: 820 })
+      await popup.setViewportSize({ width: 600, height: 600 })
       await popup.goto(`chrome-extension://${extensionId}/popup/popup.html`)
-      await popup.waitForTimeout(1000)
-      // popup は開いているタブの動画を初期選択するが、別タブで開いているので先頭の動画を選ぶ
-      await popup.click('.dropdown-trigger button')
-      await popup.click('.dropdown-item')
-      await popup.waitForTimeout(1000)
+      await popup.waitForTimeout(1500) // 開いているタブが無いので、最近見た動画が選ばれる
       await popup.screenshot({ path: path.join(RESULTS, 'popup.png') })
 
       const options = await context.newPage()

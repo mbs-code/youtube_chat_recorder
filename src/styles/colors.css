@@ -1,0 +1,106 @@
+/*
+ * カラーパレット
+ *
+ * 値は Tailwind CSS v4 の標準パレット (https://tailwindcss.com/docs/colors) をそのままコピーしたもの.
+ * (Tailwind 本体は使っていない. 使う色の系統だけを持っている)
+ *
+ * 画面では下の「用途ごとの色」を使うこと. 色を変えたいときは用途ごとの色の参照先を差し替える.
+ * 例: --primary: var(--indigo-600); (パレットに無い系統は Tailwind のドキュメントから追加する)
+ */
+:root {
+  --red-50: oklch(97.1% 0.013 17.38);
+  --red-100: oklch(93.6% 0.032 17.717);
+  --red-200: oklch(88.5% 0.062 18.334);
+  --red-300: oklch(80.8% 0.114 19.571);
+  --red-400: oklch(70.4% 0.191 22.216);
+  --red-500: oklch(63.7% 0.237 25.331);
+  --red-600: oklch(57.7% 0.245 27.325);
+  --red-700: oklch(50.5% 0.213 27.518);
+  --red-800: oklch(44.4% 0.177 26.899);
+  --red-900: oklch(39.6% 0.141 25.723);
+  --red-950: oklch(25.8% 0.092 26.042);
+  --amber-50: oklch(98.7% 0.022 95.277);
+  --amber-100: oklch(96.2% 0.059 95.617);
+  --amber-200: oklch(92.4% 0.12 95.746);
+  --amber-300: oklch(87.9% 0.169 91.605);
+  --amber-400: oklch(82.8% 0.189 84.429);
+  --amber-500: oklch(76.9% 0.188 70.08);
+  --amber-600: oklch(66.6% 0.179 58.318);
+  --amber-700: oklch(55.5% 0.163 48.998);
+  --amber-800: oklch(47.3% 0.137 46.201);
+  --amber-900: oklch(41.4% 0.112 45.904);
+  --amber-950: oklch(27.9% 0.077 45.635);
+  --emerald-50: oklch(97.9% 0.021 166.113);
+  --emerald-100: oklch(95% 0.052 163.051);
+  --emerald-200: oklch(90.5% 0.093 164.15);
+  --emerald-300: oklch(84.5% 0.143 164.978);
+  --emerald-400: oklch(76.5% 0.177 163.223);
+  --emerald-500: oklch(69.6% 0.17 162.48);
+  --emerald-600: oklch(59.6% 0.145 163.225);
+  --emerald-700: oklch(50.8% 0.118 165.612);
+  --emerald-800: oklch(43.2% 0.095 166.913);
+  --emerald-900: oklch(37.8% 0.077 168.94);
+  --emerald-950: oklch(26.2% 0.051 172.552);
+  --sky-50: oklch(97.7% 0.013 236.62);
+  --sky-100: oklch(95.1% 0.026 236.824);
+  --sky-200: oklch(90.1% 0.058 230.902);
+  --sky-300: oklch(82.8% 0.111 230.318);
+  --sky-400: oklch(74.6% 0.16 232.661);
+  --sky-500: oklch(68.5% 0.169 237.323);
+  --sky-600: oklch(58.8% 0.158 241.966);
+  --sky-700: oklch(50% 0.134 242.749);
+  --sky-800: oklch(44.3% 0.11 240.79);
+  --sky-900: oklch(39.1% 0.09 240.876);
+  --sky-950: oklch(29.3% 0.066 243.157);
+  --zinc-50: oklch(98.5% 0 0);
+  --zinc-100: oklch(96.7% 0.001 286.375);
+  --zinc-200: oklch(92% 0.004 286.32);
+  --zinc-300: oklch(87.1% 0.006 286.286);
+  --zinc-400: oklch(70.5% 0.015 286.067);
+  --zinc-500: oklch(55.2% 0.016 285.938);
+  --zinc-600: oklch(44.2% 0.017 285.786);
+  --zinc-700: oklch(37% 0.013 285.805);
+  --zinc-800: oklch(27.4% 0.006 286.033);
+  --zinc-900: oklch(21% 0.006 285.885);
+  --zinc-950: oklch(14.1% 0.005 285.823);
+  --white: #fff;
+
+  /* ===== 用途ごとの色 ===== */
+
+  /* 無彩色: 文字・背景・枠線 */
+  --bg: var(--zinc-50);
+  --surface: var(--white);
+  --surface-muted: var(--zinc-50);
+  --border: var(--zinc-200);
+  --border-strong: var(--zinc-300);
+  --text: var(--zinc-800);
+  --text-strong: var(--zinc-950);
+  --text-muted: var(--zinc-500);
+  --text-subtle: var(--zinc-400);
+  --hover: var(--zinc-100);
+
+  /* 主要なボタン・選択中の状態 */
+  --primary: var(--zinc-900);
+  --primary-hover: var(--zinc-700);
+  --primary-soft: var(--zinc-100);
+  --primary-ring: var(--zinc-400);
+  --on-primary: var(--white);
+
+  /* ロゴ・配信中マークなどのアクセント (YouTube の赤) */
+  --accent: var(--red-600);
+  --accent-soft: var(--red-50);
+
+  /* 状態 */
+  --success: var(--emerald-600);
+  --success-soft: var(--emerald-50);
+  --warning: var(--amber-600);
+  --warning-soft: var(--amber-50);
+  --warning-border: var(--amber-200);
+  --danger: var(--red-600);
+  --danger-hover: var(--red-700);
+  --danger-soft: var(--red-50);
+  --danger-border: var(--red-200);
+  --info: var(--sky-600);
+  --info-soft: var(--sky-50);
+  --info-border: var(--sky-200);
+}

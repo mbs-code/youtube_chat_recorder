@@ -1,49 +1,107 @@
 <template>
-  <div v-if="video" class="app-video" :data-videoid="video.id" @click="emit('click', video)">
-    <div class="columns is-mobile">
-      <div class="column is-narrow video-image">
-        <img :src="video.thumbnailUrl" alt="thumbnail" />
+  <div class="video">
+    <div class="thumbnail">
+      <img v-if="video.thumbnailUrl" :src="video.thumbnailUrl" alt="" />
+      <i v-else class="mdi mdi-youtube" />
+    </div>
+    <div class="body">
+      <p class="title">{{ video.title || '(タイトルなし)' }}</p>
+      <div class="meta">
+        <span v-if="TYPE_LABELS[video.type]" class="badge" :class="video.type === 'live' ? 'is-accent' : ''">
+          {{ TYPE_LABELS[video.type] }}
+        </span>
+        <span v-if="video.channelName" class="channel">{{ video.channelName }}</span>
       </div>
-      <div class="column video-text">
-        <p class="line-clamp-3 video-title">{{ title }}</p>
-        <div>
-          <span class="icon is-nonspace">
-            <i class="mdi mdi-alarm" aria-hidden="true" />
-          </span>
-          <span>{{ datetimeString(video.startDate || video.publishedAt) }}</span>
-        </div>
-        <div>
-          <span class="icon is-nonspace">
-            <i class="mdi mdi-eye-outline" aria-hidden="true" />
-          </span>
-          <span>{{ distanceHumanized(video.updatedAt) }}</span>
-        </div>
+      <div class="meta muted">
+        <span>
+          <i class="mdi mdi-calendar-blank-outline" />
+          {{ datetimeString(video.startDate || video.publishedAt) }}
+        </span>
+        <span>
+          <i class="mdi mdi-eye-outline" />
+          {{ distanceHumanized(video.updatedAt) }}
+        </span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { datetimeString, distanceHumanized } from '../../lib/util/format'
 import type Video from '../../models/Video'
+import type { VideoType } from '../../models/Video'
 
-const props = defineProps<{ video: Video | null }>()
-const emit = defineEmits<{ click: [video: Video] }>()
+defineProps<{ video: Video }>()
 
-const title = computed(() => {
-  const title = props.video?.title || '-'
-  return props.video?.isBroadcast ? '🔴' + title : title
-})
+const TYPE_LABELS: Record<VideoType, string> = {
+  live: '● ライブ',
+  upcoming: '配信予定',
+  archive: 'アーカイブ',
+  video: '',
+}
 </script>
 
 <style scoped>
-.video-image img {
-  width: 200px;
+.video {
+  display: flex;
+  gap: 12px;
+  min-width: 0;
+  text-align: left;
 }
 
-.video-title {
-  height: 72px; /* 高さ固定 */
+.thumbnail {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 128px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--hover);
+  color: var(--text-subtle);
+  font-size: 28px;
+
+  & img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-strong);
   font-weight: 600;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+  font-size: 12px;
+
+  & .mdi {
+    margin-right: 2px;
+  }
+}
+
+.channel {
+  overflow: hidden;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

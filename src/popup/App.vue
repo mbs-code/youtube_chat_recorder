@@ -1,106 +1,94 @@
 <template>
-  <section class="section">
-    <div class="field">
-      <VideoDropdown :videos="videos" @change="handleVideoChange" @close="scrollToTop" />
-    </div>
+  <div class="popup">
+    <header class="header">
+      <img class="logo" src="/icons/icon-32x32.png" alt="" />
+      <h1 class="app-name">Youtube Chat Recorder</h1>
+      <button class="btn btn-ghost is-small" title="使い方" @click="Runtime.openReadmePage()">
+        <i class="mdi mdi-help-circle-outline" />
+        使い方
+      </button>
+      <button class="btn btn-ghost is-small" title="設定" @click="Runtime.openOptionPage()">
+        <i class="mdi mdi-cog-outline" />
+        設定
+      </button>
+    </header>
 
-    <div class="field is-grouped">
-      <div class="control">
-        <div class="select">
-          <select v-model="selectedFilterKey">
+    <main class="main">
+      <VideoDropdown :videos="videos" @change="handleVideoChange" />
+
+      <div v-if="selectedVideo" class="video-actions">
+        <button class="btn btn-ghost is-small" :disabled="!selectedVideo.url" @click="handleOpenUrl(selectedVideo.url)">
+          <i class="mdi mdi-open-in-new" />
+          動画を開く
+        </button>
+        <button class="btn btn-ghost is-small" :disabled="!selectedVideo.thumbnailUrl" @click="handleOpenUrl(selectedVideo.thumbnailUrl)">
+          <i class="mdi mdi-image-outline" />
+          サムネイル
+        </button>
+        <span class="spacer" />
+        <button class="btn btn-ghost is-small delete-all" :disabled="chats.length === 0" @click="handleDeleteChats(selectedVideo)">
+          <i class="mdi mdi-delete-outline" />
+          この動画のチャットを全て削除
+        </button>
+      </div>
+
+      <section v-if="selectedVideo" class="chats">
+        <div class="toolbar">
+          <select v-model="selectedFilterKey" class="select filter" aria-label="表示するチャット">
             <option v-for="filter in chatFilters" :key="filter.key" :value="filter.key">
               {{ filter.title }}
             </option>
           </select>
+          <span class="count">
+            <strong>{{ sortedChats.length }}</strong>
+            件
+            <span v-if="sortedChats.length !== chats.length" class="muted">/ 全 {{ chats.length }} 件</span>
+          </span>
+          <span class="spacer" />
+          <button class="btn btn-secondary is-small" :disabled="filteredChats.length === 0" @click="selectedChats = [...filteredChats]">
+            すべて選択
+          </button>
+          <button class="btn btn-secondary is-small" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
         </div>
+
+        <p v-if="isOver" class="notice is-warning">
+          <i class="mdi mdi-alert-outline" />
+          表示できるのは {{ MAX_CHAT_LENGTH }} 件までです。上の選択欄で絞り込んでください。
+        </p>
+
+        <ChatList v-if="filteredChats.length" v-model:selected="selectedChats" :chats="filteredChats" />
+        <div v-else class="empty">
+          <i class="mdi mdi-message-text-outline" />
+          <p>記録したチャットはありません</p>
+          <p class="muted">記録するチャットの種類は「設定」で変えられます。</p>
+        </div>
+      </section>
+
+      <div v-else class="empty">
+        <i class="mdi mdi-youtube" />
+        <p>まだ記録した動画がありません</p>
+        <p class="muted">YouTube でライブ配信やアーカイブを開くと、自動でチャットを記録します。</p>
       </div>
-      <p class="control">
-        <button class="button is-light" @click="Runtime.openOptionPage()">
-          <span class="icon">
-            <i class="mdi mdi-cog" />
-          </span>
-          <span>設定</span>
-        </button>
-      </p>
+    </main>
 
-      <template v-if="selectedVideo">
-        <p class="control">
-          <button class="button" title="動画ページを開く" :disabled="!selectedVideo.url" @click="handleOpenUrl(selectedVideo.url)">
-            <span class="icon has-text-danger">
-              <i class="mdi mdi-youtube" />
-            </span>
-          </button>
-        </p>
-        <p class="control">
-          <button
-            class="button"
-            title="サムネイルを開く"
-            :disabled="!selectedVideo.thumbnailUrl"
-            @click="handleOpenUrl(selectedVideo.thumbnailUrl)"
-          >
-            <span class="icon has-text-success">
-              <i class="mdi mdi-image" />
-            </span>
-          </button>
-        </p>
-        <p class="control">
-          <button class="button is-danger is-light" :disabled="chats.length === 0" @click="handleDeleteChats(selectedVideo)">
-            <span class="icon">
-              <i class="mdi mdi-comment" />
-            </span>
-            <span>削除</span>
-          </button>
-        </p>
-      </template>
-    </div>
-
-    <div class="field is-grouped">
-      <p class="control">
-        <button class="button" @click="selectedChats = [...filteredChats]">
-          <span>すべて選択</span>
-        </button>
-      </p>
-      <p class="control">
-        <button class="button" @click="selectedChats = []">
-          <span>選択解除</span>
-        </button>
-      </p>
-      <p class="control">
-        <button
-          class="button is-success"
-          :class="{ 'is-loading': isSaving }"
-          :disabled="selectedChats.length === 0"
-          @click="handleSaveToMerge"
-        >
-          <span class="icon">
-            <i class="mdi mdi-content-save" />
-          </span>
-          <span>結合して保存</span>
-        </button>
-      </p>
-      <p class="control">
-        <button class="button is-danger" :disabled="selectedChats.length === 0" @click="handleDeleteSelectedChats">
-          <span class="icon">
-            <i class="mdi mdi-comment" />
-          </span>
-          <span>選択削除</span>
-        </button>
-      </p>
-    </div>
-
-    <div class="field">
-      <span v-if="isOver" class="has-text-danger has-text-weight-bold">{{ MAX_CHAT_LENGTH }}件以上</span>
-      <span v-else>{{ filteredChats.length }}件</span>
-
-      <span>(全{{ chats.length }}件)</span>
-      <span v-if="selectedChats.length">- {{ selectedChats.length }}件 選択中</span>
-    </div>
-
-    <div class="field">
-      <ChatList v-if="filteredChats.length" v-model:selected="selectedChats" :chats="filteredChats" />
-      <div v-else>チャットがありません。</div>
-    </div>
-  </section>
+    <footer v-if="selectedVideo" class="footer">
+      <span class="selection">
+        <template v-if="selectedChats.length">
+          <strong>{{ selectedChats.length }}</strong>
+          件を選択中
+        </template>
+        <span v-else class="muted">チャットをクリックして選択</span>
+      </span>
+      <button class="btn btn-danger" :disabled="selectedChats.length === 0" @click="handleDeleteSelectedChats">
+        <i class="mdi mdi-delete-outline" />
+        削除
+      </button>
+      <button class="btn btn-primary" :disabled="selectedChats.length === 0 || isSaving" @click="handleSaveToMerge">
+        <i class="mdi" :class="isSaving ? 'mdi-loading mdi-spin' : 'mdi-download'" />
+        画像をつなげて保存
+      </button>
+    </footer>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -159,10 +147,6 @@ async function handleVideoChange(video: Video | null): Promise<void> {
   await reloadChats()
 }
 
-function scrollToTop(): void {
-  window.scrollTo(0, 0)
-}
-
 async function handleOpenUrl(url?: string): Promise<void> {
   if (!url) return
   // 現在表示されているページなら開かない
@@ -174,7 +158,7 @@ async function handleOpenUrl(url?: string): Promise<void> {
 
 async function handleDeleteChats(video: Video): Promise<void> {
   // 動画を削除すると色々と不都合なので、全チャットのみ削除する
-  if (video.id && window.confirm(`「${video.title}」のチャットを全て削除します。`)) {
+  if (video.id && window.confirm(`「${video.title}」のチャットを全て削除します。\nこの操作は元に戻せません。`)) {
     await ChatStorage.clear(video.id)
     await reloadChats()
   }
@@ -183,7 +167,11 @@ async function handleDeleteChats(video: Video): Promise<void> {
 async function handleDeleteSelectedChats(): Promise<void> {
   const videoId = selectedVideo.value?.id
   const selected = selectedChats.value
-  if (videoId && selected.length > 0 && window.confirm(`選択されている ${selected.length}個 のチャットを削除します。`)) {
+  if (
+    videoId &&
+    selected.length > 0 &&
+    window.confirm(`選択した ${selected.length} 件のチャットを削除します。\nこの操作は元に戻せません。`)
+  ) {
     await ChatStorage.remove(videoId, selected)
     await reloadChats()
   }
@@ -217,7 +205,11 @@ async function handleSaveToMerge(): Promise<void> {
       if (url) urls.push(url)
     }
 
-    if (urls.length === 0) throw new Error('画像があるチャットが選択されていません。')
+    if (urls.length === 0) {
+      throw new Error(
+        '画像があるチャットが選択されていません。\n画像が無いチャットも保存したい場合は、設定の「取得できていないチャット画像を独自に生成する」をオンにしてください。'
+      )
+    }
 
     const filename = config.formatFilename(video, selected)
     const mergeUrl = await NodeToPng.merge(urls)
@@ -233,15 +225,137 @@ async function handleSaveToMerge(): Promise<void> {
 <style>
 html {
   width: 600px;
-  height: 800px;
-  overflow-y: scroll;
+  height: 600px;
+}
+</style>
+
+<style scoped>
+.popup {
+  display: flex;
+  flex-direction: column;
+  min-height: 600px;
 }
 
-/* 3行まで表示 */
-.line-clamp-3 {
-  -webkit-line-clamp: 3;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.logo {
+  width: 20px;
+  height: 20px;
+  margin-right: 6px;
+}
+
+.app-name {
+  flex: 1;
+  color: var(--text-strong);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.video-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: -6px;
+}
+
+.delete-all:hover:enabled {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.chats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toolbar {
+  position: sticky;
+  top: 49px; /* header の高さ */
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -16px;
+  padding: 8px 16px;
+  background: var(--bg);
+}
+
+.filter {
+  width: 190px;
+  height: 28px;
+  font-size: 12px;
+}
+
+.count {
+  font-size: 12px;
+
+  & strong {
+    color: var(--text-strong);
+    font-size: 14px;
+  }
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 48px 16px;
+  color: var(--text);
+  text-align: center;
+
+  & > .mdi {
+    margin-bottom: 4px;
+    color: var(--text-subtle);
+    font-size: 40px;
+  }
+
+  & .muted {
+    font-size: 12px;
+  }
+}
+
+.footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.selection {
+  flex: 1;
+
+  & strong {
+    color: var(--text-strong);
+    font-size: 15px;
+  }
 }
 </style>

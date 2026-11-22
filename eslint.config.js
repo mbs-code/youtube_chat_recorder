@@ -23,7 +23,7 @@ export default tseslint.config(
   },
   {
     // page.evaluate() などブラウザ内で実行されるコードを含む
-    files: ['scripts/e2e.js'],
+    files: ['scripts/e2e.js', 'scripts/screenshots.js'],
     languageOptions: { globals: { ...globals.browser, chrome: 'readonly' } },
   },
   {

@@ -1,29 +1,36 @@
 <template>
-  <div ref="root" class="dropdown is-fullwidth" :class="{ 'is-active': isActive }">
-    <div class="dropdown-trigger">
-      <button class="button" aria-haspopup="true" @click.stop="isActive = !isActive">
-        <span v-if="selected">
-          <VideoPanel :key="selected.id" :video="selected" />
-        </span>
-        <span v-else>--- 動画を選択してください ---</span>
-        <span class="icon is-small">
-          <i class="mdi mdi-chevron-down" aria-hidden="true" />
-        </span>
-      </button>
-    </div>
-    <div class="dropdown-menu" role="menu">
-      <div class="dropdown-content">
-        <VideoPanel
+  <div ref="root" class="dropdown">
+    <button
+      class="trigger card"
+      :class="{ 'is-open': isOpen }"
+      aria-haspopup="listbox"
+      :aria-expanded="isOpen"
+      @click.stop="isOpen = !isOpen"
+    >
+      <VideoPanel v-if="selected" :video="selected" />
+      <span v-else class="placeholder">
+        <i class="mdi mdi-playlist-play" />
+        {{ videos.length ? '動画を選択してください' : 'まだ動画がありません' }}
+      </span>
+      <i class="mdi mdi-chevron-down chevron" />
+    </button>
+
+    <Transition name="menu">
+      <ul v-if="isOpen" class="menu card" role="listbox">
+        <li
           v-for="video in videos"
           :key="video.id"
-          :video="video"
-          class="dropdown-item"
-          :class="{ 'is-active': video.id === selected?.id }"
+          class="item"
+          :class="{ 'is-selected': video.id === selected?.id }"
+          role="option"
+          :aria-selected="video.id === selected?.id"
           @click="handleSelected(video)"
-        />
-        <div v-if="videos.length === 0" class="box">動画がありません。</div>
-      </div>
-    </div>
+        >
+          <VideoPanel :video="video" />
+        </li>
+        <li v-if="videos.length === 0" class="empty muted">YouTube でライブ配信やアーカイブを開くと、ここに表示されます。</li>
+      </ul>
+    </Transition>
   </div>
 </template>
 
@@ -35,94 +42,136 @@ import type Video from '../../models/Video'
 import VideoPanel from './VideoPanel.vue'
 
 const props = defineProps<{ videos: Video[] }>()
-const emit = defineEmits<{ change: [video: Video | null]; close: [] }>()
+const emit = defineEmits<{ change: [video: Video | null] }>()
 
-const isActive = ref(false)
+const isOpen = ref(false)
 const selected = shallowRef<Video | null>(null)
 const root = useTemplateRef<HTMLElement>('root')
 
-// 動画一覧が変わったら、開いているタブの動画を初期選択にする
+// 動画一覧が変わったら、開いているタブの動画 (無ければ最近見た動画) を初期選択にする
 watch(
   () => props.videos,
   async videos => {
-    selected.value = null
     const activeTab = await BrowserTabs.getActiveTab()
     const videoId = PageHelper.getPageVideoId(activeTab?.url)
-    const find = videoId ? videos.find(v => v.id === videoId) : undefined
-    if (find) {
-      selected.value = find
-      emit('change', find)
-    }
+    const find = (videoId ? videos.find(v => v.id === videoId) : undefined) ?? videos[0] ?? null
+    selected.value = find
+    emit('change', find)
   }
 )
-
-function handleClose(): void {
-  if (isActive.value) {
-    isActive.value = false
-    emit('close')
-  }
-}
 
 function handleSelected(video: Video): void {
   selected.value = video
   emit('change', video)
-  handleClose()
+  isOpen.value = false
 }
 
-// ドロップダウンの外側をクリックしたら閉じる
+// ドロップダウンの外側をクリック / Esc で閉じる
 function onClickOutside(event: MouseEvent): void {
-  if (root.value && !root.value.contains(event.target as Node)) handleClose()
+  if (root.value && !root.value.contains(event.target as Node)) isOpen.value = false
 }
-onMounted(() => document.addEventListener('click', onClickOutside))
-onBeforeUnmount(() => document.removeEventListener('click', onClickOutside))
+function onKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Escape') isOpen.value = false
+}
+onMounted(() => {
+  document.addEventListener('click', onClickOutside)
+  document.addEventListener('keydown', onKeydown)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onClickOutside)
+  document.removeEventListener('keydown', onKeydown)
+})
 </script>
 
 <style scoped>
-/* is-fullwidth に対応させる */
-.dropdown.is-fullwidth {
+.dropdown {
+  position: relative;
+}
+
+.trigger {
   display: flex;
-}
-
-.dropdown-trigger {
-  width: 560px;
-}
-
-.dropdown-menu,
-.dropdown-trigger > button,
-.dropdown-trigger > button > span:first-child {
+  align-items: center;
+  gap: 8px;
   width: 100%;
+  padding: 10px;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+
+  &:hover,
+  &.is-open {
+    border-color: var(--border-strong);
+  }
+
+  & > .video {
+    flex: 1;
+  }
 }
 
-/* ボタン内部に block 要素を入れる */
-.dropdown-trigger > button {
-  height: auto !important;
-  text-align: unset;
-  white-space: unset;
-  justify-content: space-between;
+.placeholder {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  height: 72px;
+  padding-left: 6px;
+  color: var(--text-muted);
 }
 
-/* dropdown 全体のフチ */
-.dropdown-content {
-  padding: 0;
-  border: solid 1px gray;
+.chevron {
+  color: var(--text-subtle);
+  font-size: 20px;
+  transition: transform 0.15s;
+
+  .is-open & {
+    transform: rotate(180deg);
+  }
 }
 
-/* dropdown の要素 */
-.dropdown-item {
-  font-size: 1rem;
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: 0;
+  z-index: 20;
+  max-height: 480px;
+  margin: 0;
+  padding: 6px;
+  overflow-y: auto;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.12);
+  list-style: none;
+}
+
+.item {
+  padding: 8px;
+  border-radius: 8px;
   cursor: pointer;
 
-  &.is-active {
-    background: aliceblue;
-    color: inherit;
-  }
-
   &:hover {
-    background: gainsboro !important;
+    background: var(--hover);
   }
 
-  &:not(:last-child) {
-    border-bottom: solid 1px lightgray;
+  &.is-selected {
+    background: var(--primary-soft);
+    box-shadow: inset 3px 0 0 var(--primary);
   }
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+}
+
+.menu-enter-active,
+.menu-leave-active {
+  transition:
+    opacity 0.12s,
+    transform 0.12s;
+}
+
+.menu-enter-from,
+.menu-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>

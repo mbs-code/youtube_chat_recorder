@@ -7,7 +7,7 @@ AI エージェント (Claude Code など) と開発者向けのガイド。人�
 YouTube のライブ配信・アーカイブのチャット欄を監視し、設定したフィルターに一致するチャットを保存・画像化する Chrome 拡張機能 (Manifest V3)。
 データは全て `chrome.storage.local` に保存し、外部には送信しない。
 
-- TypeScript 5.9 / Vue 3 (`<script setup>`) / Vite 8 / Bulma 1
+- TypeScript 5.9 / Vue 3 (`<script setup>`) / Vite 8 / CSS フレームワークなし (自前の CSS)
 - テスト: Vitest (jsdom) / 実ブラウザ確認: Playwright (`npm run e2e`)
 - Node.js 20.19 以上
 
@@ -21,6 +21,7 @@ YouTube のライブ配信・アーカイブのチャット欄を監視し、設
 | `npm run check` | 型チェック + lint + テスト + ビルド。**変更後は必ずこれを通す** |
 | `npm run test` | ユニットテスト (Vitest) |
 | `npm run e2e -- [url] [--wait 60] [--screenshot] [--headed]` | `dist/` を読み込んだ Chromium で実際の YouTube を開き、保存結果を表示する |
+| `npm run screenshots` | 架空のサンプルデータで popup / options のスクリーンショットを `test-results/` に撮る (UI 確認・使い方ページの画像用) |
 | `npm run build-zip` | Chrome Web Store 公開用の zip を `dist-zip/` に作る |
 | `npm run format` | Prettier |
 
@@ -141,6 +142,14 @@ YouTube に依存している箇所:
 - 見出しの id は GitHub と同じ規則で付けている (`scripts/build.js` の `headingSlug`) ので、目次リンクは `[文字](#見出し文字)` で両方で動く。
 - 囲みは `<div class="note|tip|warn">`、開閉する項目は `<details><summary>` (スタイルは `docs/assets/readme.css`)。
 - 機能や設定項目を変えたら、ここの説明も更新する。
+
+## 画面のスタイル
+
+- CSS フレームワークは使わない (Bulma / Tailwind は入れない方針)。共通部品は `src/styles/main.css` (`.btn`, `.input`, `.select`, `.card`, `.badge`, `.notice` など)、画面固有のものは各 `.vue` の `<style scoped>` に書く。
+- 色は `src/styles/colors.css` の **用途ごとの色** (`--primary`, `--text`, `--border`, `--danger` など) だけを使い、パレット (`--zinc-500` など) や色コードを直接書かない。
+- パレットの値は Tailwind CSS v4 の標準パレットをコピーしたもの。配色を変えるときは用途ごとの色の参照先を差し替える。
+- 共通コンポーネント: `components/ToggleSwitch.vue`, `components/ToastContainer.vue` (+ `plugins/Toast.ts`)。
+- popup の `.app-chat-main` は「独自のデザインで画像化」でそのまま画像になるので、見た目を変えるときは出力画像も確認する。
 
 ## コーディング規約
 
