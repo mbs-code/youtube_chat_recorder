@@ -36,6 +36,16 @@ export default class Chat {
   createdAt?: Date
   updatedAt?: Date
 
+  /**
+   * 投稿時間の早い順に並べるための比較関数. (`chats.sort(Chat.compareByTime)`)
+   *
+   * - 配信開始からの経過秒で比べ、無ければ投稿日時で比べる.
+   */
+  public static compareByTime(a: Chat, b: Chat): number {
+    if (a.seconds !== undefined && b.seconds !== undefined) return a.seconds - b.seconds
+    return (a.timestamp?.getTime() ?? 0) - (b.timestamp?.getTime() ?? 0)
+  }
+
   /** storage から復元する. */
   public static fromPlain(plain: Plain): Chat {
     const chat = Object.assign(new Chat(), plain)

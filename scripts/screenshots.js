@@ -122,6 +122,12 @@ async function main() {
     await download.saveAs(path.join(RESULTS, 'sample.csv'))
     console.log(`csv: ${download.suggestedFilename()}`)
 
+    // 並び順の切り替え (新しい順)
+    await popup.click('button:has-text("古い順")')
+    await popup.evaluate(() => window.scrollTo(0, 0))
+    await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-desc.png') })
+    await popup.click('button:has-text("新しい順")')
+
     await popup.click('.trigger')
     await popup.waitForTimeout(300)
     await popup.screenshot({ path: path.join(RESULTS, 'screenshot-popup-dropdown.png') })

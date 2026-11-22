@@ -1,5 +1,5 @@
 import { format as dateFormat } from 'date-fns'
-import type Chat from '../../models/Chat'
+import Chat from '../../models/Chat'
 import type Video from '../../models/Video'
 import { hmsString } from './format'
 
@@ -54,9 +54,9 @@ export default class ChatCsv {
    * - 投稿時間 (経過秒) の順に並べる.
    */
   public static generate(video: Video, chats: Chat[]): string {
-    const sorted = [...chats].sort((a, b) => (a.seconds ?? 0) - (b.seconds ?? 0))
+    const sorted = [...chats].sort(Chat.compareByTime)
     const lines = [COLUMNS.map(c => escapeCell(c.header)), ...sorted.map(chat => COLUMNS.map(c => escapeCell(c.value(chat, video))))]
-    return '﻿' + lines.map(cells => cells.join(',')).join('\r\n') + '\r\n'
+    return '\uFEFF' + lines.map(cells => cells.join(',')).join('\r\n') + '\r\n'
   }
 
   /** ダウンロード用の object url を作る. (使い終わったら URL.revokeObjectURL すること) */

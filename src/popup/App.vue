@@ -48,6 +48,14 @@
             件
             <span v-if="sortedChats.length !== chats.length" class="text-zinc-500">/ 全 {{ chats.length }} 件</span>
           </span>
+          <button
+            class="btn btn-secondary btn-sm"
+            :title="sortOrder === 'asc' ? '古い順 (クリックで新しい順)' : '新しい順 (クリックで古い順)'"
+            @click="toggleSortOrder"
+          >
+            <i class="mdi" :class="sortOrder === 'asc' ? 'mdi-sort-clock-ascending-outline' : 'mdi-sort-clock-descending-outline'" />
+            {{ sortOrder === 'asc' ? '古い順' : '新しい順' }}
+          </button>
           <button class="btn btn-secondary btn-sm" :disabled="filteredChats.length === 0" @click="selectedChats = [...filteredChats]">
             すべて選択
           </button>
@@ -110,7 +118,7 @@ import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import ChatCsv from '../lib/util/ChatCsv'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
 import NodeToPng from '../lib/util/NodeToPng'
-import type Chat from '../models/Chat'
+import Chat from '../models/Chat'
 import type Video from '../models/Video'
 import ChatList from './components/ChatList.vue'
 import VideoDropdown from './components/VideoDropdown.vue'
@@ -126,15 +134,39 @@ const selectedChats = ref<Chat[]>([])
 const chatFilters = ChatFilter.generatePopupChatFilters()
 const selectedFilterKey = ref(chatFilters[0].key)
 
+type SortOrder = 'asc' | 'desc'
+const SORT_ORDER_KEY = 'ycr:popup:sortOrder'
+
+function loadSortOrder(): SortOrder {
+  try {
+    return localStorage.getItem(SORT_ORDER_KEY) === 'desc' ? 'desc' : 'asc'
+  } catch {
+    return 'asc'
+  }
+}
+
 const isSaving = ref(false)
 
 const CSV_FILENAME = '%title%_チャット_%now%'
 
-/** フィルター & 時間順ソート済みのチャット. */
+/** 並び順 (asc: 古い順, desc: 新しい順). 次に開いたときも同じ並び順にする. */
+const sortOrder = ref<SortOrder>(loadSortOrder())
+
+function toggleSortOrder(): void {
+  sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  try {
+    localStorage.setItem(SORT_ORDER_KEY, sortOrder.value)
+  } catch {
+    // 保存できなくても並び替え自体はできる
+  }
+}
+
+/** フィルター & 並び替え済みのチャット. */
 const sortedChats = computed(() => {
   const chatFilter = chatFilters.find(c => c.key === selectedFilterKey.value)
   const filtered = chatFilter?.func ? chats.value.filter(chatFilter.func) : chats.value
-  return [...filtered].sort((a, b) => (a.seconds ?? 0) - (b.seconds ?? 0))
+  const sorted = [...filtered].sort(Chat.compareByTime)
+  return sortOrder.value === 'desc' ? sorted.reverse() : sorted
 })
 const isOver = computed(() => sortedChats.value.length > MAX_CHAT_LENGTH)
 const filteredChats = computed(() => sortedChats.value.slice(0, MAX_CHAT_LENGTH))

@@ -79,6 +79,20 @@ describe('後から追加した基本フィルターの補完', () => {
   })
 })
 
+describe('Chat.compareByTime', () => {
+  const chat = (props: Partial<Chat>) => Object.assign(new Chat(), props)
+
+  it('経過秒で並べる (配信前の負の秒も含む)', () => {
+    const chats = [chat({ id: 'b', seconds: 20 }), chat({ id: 'a', seconds: -5 }), chat({ id: 'c', seconds: 100 })]
+    expect(chats.sort(Chat.compareByTime).map(c => c.id)).toEqual(['a', 'b', 'c'])
+  })
+
+  it('経過秒が無ければ投稿日時で並べる', () => {
+    const chats = [chat({ id: 'b', timestamp: new Date(2000) }), chat({ id: 'a', timestamp: new Date(1000) })]
+    expect(chats.sort(Chat.compareByTime).map(c => c.id)).toEqual(['a', 'b'])
+  })
+})
+
 describe('ChatFilter', () => {
   const chat = (props: Partial<Chat>) => Object.assign(new Chat(), props)
   const filter = (configs: ChatFilterConfigInterface[]) => {
