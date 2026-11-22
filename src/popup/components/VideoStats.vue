@@ -9,6 +9,7 @@
       <dd class="min-w-0" :title="row.title">
         <strong class="text-sm text-zinc-950">{{ row.value }}</strong>
         <span v-if="row.note" class="ml-1.5 text-zinc-500">{{ row.note }}</span>
+        <span v-if="row.sub" class="block text-zinc-500">{{ row.sub }}</span>
       </dd>
     </template>
   </dl>
@@ -20,6 +21,7 @@
  *
  * - 最大同時接続数・最大再生数: 記録した日時と、配信開始からの経過時間を添える.
  * - スーパーチャット合計: 一番多い通貨の合計 + それ以外は「外貨 〇 件」にまとめる (内訳は title).
+ *   無くても出し、メンバーシップギフトの配布数・ギフト (星など) の件数も添える.
  */
 import { format } from 'date-fns'
 import { computed } from 'vue'
@@ -38,6 +40,7 @@ interface Row {
   value: string
   note?: string
   title?: string
+  sub?: string // 2 行目の補足
 }
 
 /** 金額の表示 (小数は 2 桁まで). */
@@ -71,17 +74,20 @@ const rows = computed<Row[]>(() => {
     list.push({ label: '最大再生数', icon: 'mdi-play-circle-outline', value: `${viewCount.toLocaleString()} 回`, note: formatAt(at) })
   }
 
+  // 無くても出す. メンバーシップギフトの配布数・ギフト (星など) の件数も添える
   const [main, ...others] = Chat.sumMoney(props.chats)
-  if (main) {
-    const otherCount = others.reduce((sum, o) => sum + o.count, 0)
-    list.push({
-      label: 'スパチャ合計',
-      icon: 'mdi-cash-multiple',
-      value: formatMoney(main.unit, main.money),
-      note: `(${main.count} 件)${otherCount ? ` + 外貨 ${otherCount} 件` : ''}`,
-      title: [main, ...others].map(s => `${formatMoney(s.unit, s.money)} (${s.count} 件)`).join('\n'),
-    })
-  }
+  const otherCount = others.reduce((sum, o) => sum + o.count, 0)
+  const giftChats = props.chats.filter(c => c.isGift)
+  const giftMembers = giftChats.reduce((sum, c) => sum + (c.giftCount ?? 1), 0) // 個数が読めなかったものは 1 個
+  const giftItems = props.chats.filter(c => c.giftItem !== undefined).length
+  list.push({
+    label: 'スパチャ合計',
+    icon: 'mdi-cash-multiple',
+    value: main ? formatMoney(main.unit, main.money) : '0',
+    note: `(${main?.count ?? 0} 件)${otherCount ? ` + 外貨 ${otherCount} 件` : ''}`,
+    title: main ? [main, ...others].map(s => `${formatMoney(s.unit, s.money)} (${s.count} 件)`).join('\n') : undefined,
+    sub: `🎁 メンバーシップ配布 ${giftMembers} 個 (${giftChats.length} 件)・🎀 ギフト(星など) ${giftItems} 件`,
+  })
   return list
 })
 </script>
