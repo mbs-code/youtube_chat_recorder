@@ -65,7 +65,7 @@
         </button>
       </nav>
 
-      <!-- 記録・グラフのタブ: 最大同接・最大再生数・スーパーチャット合計と、推移のグラフ -->
+      <!-- 記録・グラフのタブ: 最大再生数・最大同接・スーパーチャット合計と、推移のグラフ -->
       <section v-if="selectedVideo && tab === 'stats'" class="flex flex-col gap-3">
         <p class="help">
           <i class="mdi mdi-information-outline" />
@@ -73,7 +73,9 @@
         </p>
         <VideoStats :video="selectedVideo" :chats="chats" />
         <template v-if="recordStats">
+          <!-- 同接・コメント・スパチャのグラフは配信 (ライブ・アーカイブ) だけ -->
           <TimelineChart
+            v-if="selectedVideo.type !== 'video'"
             :points="timeline"
             :chats="chats"
             :start-date="selectedVideo.startDate"

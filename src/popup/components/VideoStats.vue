@@ -1,5 +1,5 @@
 <template>
-  <!-- 選んだ動画の記録: 最大同接・最大再生数・スーパーチャット合計 (どれも見ていた間の記録なので目安) -->
+  <!-- 選んだ動画の記録: 最大再生数・最大同接・スーパーチャット合計 (どれも見ていた間の記録なので目安) -->
   <dl v-if="rows.length" class="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-xs">
     <template v-for="row in rows" :key="row.label">
       <dt class="text-zinc-500">
@@ -19,7 +19,8 @@
 /**
  * 動画の記録の要約 (popup のチャット一覧の上).
  *
- * - 最大同時接続数・最大再生数: 記録した日時と、配信開始からの経過時間を添える.
+ * - 最大再生数・最大同時接続数: 記録した日時と、配信開始からの経過時間を添える.
+ * - 普通の動画 (配信ではない) は最大再生数だけ. ライブ・アーカイブは同接・スパチャ合計を記録が無くても出す.
  * - スーパーチャット合計: 一番多い通貨の合計 + それ以外は「外貨 〇 件」にまとめる (内訳は title).
  *   無くても出し、メンバーシップギフトの配布数・ギフト (星など) の件数も添える.
  */
@@ -60,18 +61,21 @@ const rows = computed<Row[]>(() => {
   const video = props.video
   const list: Row[] = []
 
-  // 同時接続数は配信中にページを開いている間しか取れない (この機能より前に記録した動画にも無い)
-  if (video.maxViewers) {
-    list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: `${video.maxViewers.toLocaleString()} 人`, note: formatAt(video.maxViewersAt) })
-  } else if (video.isBroadcast) {
-    list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: '-', note: '記録なし' })
-  }
-
   // 最大再生数が無い古い記録は、最後に開いた時の再生数を出す
   const viewCount = video.maxViewCount || video.viewCount
   if (viewCount) {
     const at = video.maxViewCount ? video.maxViewCountAt : video.updatedAt
     list.push({ label: '最大再生数', icon: 'mdi-play-circle-outline', value: `${viewCount.toLocaleString()} 回`, note: formatAt(at) })
+  }
+
+  // 普通の動画 (配信ではない) には同接・スパチャが無いので出さない
+  if (video.type === 'video') return list
+
+  // 同時接続数は配信中にページを開いている間しか取れない (この機能より前に記録した動画にも無い)
+  if (video.maxViewers) {
+    list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: `${video.maxViewers.toLocaleString()} 人`, note: formatAt(video.maxViewersAt) })
+  } else {
+    list.push({ label: '最大同接', icon: 'mdi-account-multiple-outline', value: '-', note: '記録なし' })
   }
 
   // 無くても出す. メンバーシップギフトの配布数・ギフト (星など) の件数も添える
