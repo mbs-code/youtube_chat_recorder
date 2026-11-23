@@ -12,6 +12,7 @@
           {{ TYPE_LABELS[video.type] }}
         </span>
         <span v-if="video.channelName" class="truncate text-zinc-500">{{ video.channelName }}</span>
+        <i v-if="video.isProtected" class="mdi mdi-pin ml-auto text-zinc-500" title="自動で削除しない" />
       </div>
       <div class="flex items-center gap-x-2.5 text-xs text-zinc-500">
         <span>

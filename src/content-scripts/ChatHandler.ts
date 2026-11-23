@@ -4,6 +4,7 @@ import ChatParser, { CHAT_NODE_NAMES } from '../lib/parser/ChatParser'
 import DrawDomQueue from '../lib/queue/DrawDomQueue'
 import SaveChatQueue from '../lib/queue/SaveChatQueue'
 import Logger from '../loggers/Logger'
+import type Chat from '../models/Chat'
 import type Video from '../models/Video'
 
 const CHAT_NODE_NAME_SET: ReadonlySet<string> = new Set(CHAT_NODE_NAMES)
@@ -14,6 +15,9 @@ export default class ChatHandler {
   protected saveChatQueue = new SaveChatQueue()
   protected drawDomQueue = new DrawDomQueue(this.saveChatQueue)
   protected video?: Video
+
+  /** 解析した全てのチャット (保存しないものも含む) を受け取る. (コメント数の記録に使う) */
+  public onChat?: (chat: Chat) => void
 
   public setDrawOnce(drawOnce: boolean): void {
     this.drawDomQueue.drawOnce = drawOnce
@@ -74,6 +78,7 @@ export default class ChatHandler {
 
     try {
       const chat = await ChatParser.parse(video, node as Element)
+      this.onChat?.(chat)
 
       const taskType = chatFilter.checkChatTaskType(chat)
       if (taskType === 'image') {

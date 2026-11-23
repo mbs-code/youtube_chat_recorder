@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import ChatParser from '../src/lib/parser/ChatParser'
+import ChatFilter from '../src/lib/chatFilter/ChatFilter'
 import Video from '../src/models/Video'
 import {
   createElement,
+  GIFT_MESSAGE,
+  GIFT_PURCHASE,
   MEMBERSHIP_ITEM,
+  MEMBERSHIP_JOIN,
   MEMBERSHIP_MILESTONE,
   PAID_MESSAGE,
+  PAID_MESSAGE_SUPER_COUNT,
   TEXT_MESSAGE_MEMBER,
   TEXT_MESSAGE_OWNER,
+  TEXT_MESSAGE_SUPERCHAT_REPLY,
   TEXT_MESSAGE_TOPCHAT,
 } from './fixtures/chat'
 
@@ -111,6 +117,109 @@ describe('ChatParser.parse', () => {
     expect(chat.topChatRank).toBeUndefined()
   })
 
+  it('スーパーチャットへの返信を解析できる (トップチャットとは区別する)', async () => {
+    const chat = await ChatParser.parse(archiveVideo(), createElement(TEXT_MESSAGE_SUPERCHAT_REPLY))
+
+    expect(chat.replyTo).toBe('@gikaqi-ぎかき')
+    expect(chat.topChatRank).toBeUndefined()
+    expect(chat.authorName).toBe('@moku8444')
+    expect(chat.message).toBe('ないすぱ！')
+    expect(chat.isSuperChat).toBe(false)
+    expect(chat.memberMonths).toBe(2)
+    expect(chat.seconds).toBe(7)
+  })
+
+  it('トップチャットは返信ではない', async () => {
+    const chat = await ChatParser.parse(liveVideo(), createElement(TEXT_MESSAGE_TOPCHAT))
+    expect(chat.replyTo).toBeUndefined()
+  })
+
+  it('スーパーチャットの購入回数のおまけを解析できる (本文はおまけの文と混ざらない)', async () => {
+    const chat = await ChatParser.parse(archiveVideo(), createElement(PAID_MESSAGE_SUPER_COUNT))
+
+    expect(chat.isSuperChat).toBe(true)
+    expect(chat.money).toBe(800)
+    expect(chat.moneyUnit).toBe('￥')
+    expect(chat.superCount).toBe(5)
+    expect(chat.message).toBe('卒業おめでとう！！！')
+    expect(chat.authorName).toBe('@jiro9608')
+    expect(chat.replyTo).toBeUndefined()
+    expect(chat.seconds).toBe(22)
+  })
+
+  it('メンバー歴: 追加直後で #header-primary-text が空でも、属性でマイルストーンと分かる', async () => {
+    const node = createElement(MEMBERSHIP_MILESTONE)
+    node.querySelector('#header-primary-text')!.textContent = ''
+    const chat = await ChatParser.parse(liveVideo(), node)
+
+    expect(chat.isMilestone).toBe(true)
+    expect(chat.isJoinMember).toBe(false)
+  })
+
+  it('メンバー歴: 属性が無くても、#header-primary-text の文字が後から入れば待って判定する', async () => {
+    const node = createElement(MEMBERSHIP_MILESTONE)
+    node.removeAttribute('has-primary-header-text')
+    const header = node.querySelector('#header-primary-text')!
+    header.textContent = ''
+    setTimeout(() => (header.textContent = 'メンバー歴 4 か月'), 100)
+    const chat = await ChatParser.parse(liveVideo(), node)
+
+    expect(chat.isMilestone).toBe(true)
+    expect(chat.milestoneText).toBe('メンバー歴 4 か月')
+    expect(chat.memberMonths).toBe(4)
+  })
+
+  it('メンバー加入 (実 DOM, #header-primary-text が空) はマイルストーンにしない', async () => {
+    const now = new Date(2026, 10, 22, 14, 14, 30)
+    const chat = await ChatParser.parse(liveVideo(), createElement(MEMBERSHIP_JOIN), now)
+
+    expect(chat.authorName).toBe('@藍染Aizen')
+    expect(chat.isJoinMember).toBe(true)
+    expect(chat.isMilestone).toBe(false)
+    expect(chat.milestoneText).toBeUndefined()
+    expect(chat.memberMonths).toBe(0)
+    expect(chat.altMessage).toBe('ろありー へようこそ！')
+    expect(chat.timestamp).toEqual(now)
+  })
+
+  it('メンバーシップギフトを解析できる (時刻表示が無いので配信中は現在時刻)', async () => {
+    const now = new Date(2026, 10, 22, 14, 20, 0)
+    const chat = await ChatParser.parse(liveVideo(), createElement(GIFT_PURCHASE), now)
+
+    expect(chat.id).toBe('ChwKGkNOeU5rLVRvbXBnREZTVVRyUVlkek5vN1l3')
+    expect(chat.authorName).toBe('@SUGI3_san')
+    expect(chat.authorPhoto).toContain('yt4.ggpht.com/gift')
+    expect(chat.isGift).toBe(true)
+    expect(chat.giftCount).toBe(10)
+    expect(chat.isJoinMember).toBe(false)
+    expect(chat.isMember).toBe(true)
+    expect(chat.memberMonths).toBe(12)
+    expect(chat.message).toBe('Roa Ch. 海月雲ろあ のメンバーシップ ギフトを 10 個贈りました')
+    expect(chat.timestamp).toEqual(now)
+    expect(chat.seconds).toBe((14 - 8) * 3600 + 20 * 60)
+  })
+
+  it('ギフト (星など): 名前・本文・ギフトの名前を取り出し、id を作る', async () => {
+    const now = new Date(2026, 10, 22, 14, 20, 0)
+    const chat = await ChatParser.parse(liveVideo(), createElement(GIFT_MESSAGE), now)
+
+    expect(chat.id).toMatch(/^ycr-/)
+    expect(chat.authorName).toBe('@AIBO0988')
+    expect(chat.authorPhoto).toContain('yt4.ggpht.com/ytc/gift-sender')
+    expect(chat.message).toBe('星 を送信しました')
+    expect(chat.giftItem).toBe('星')
+    expect(chat.isGift).toBe(false)
+    expect(chat.isSuperChat).toBe(false)
+    expect(chat.timestamp).toEqual(now)
+    expect(ChatFilter.generatePopupChatFilters().find(f => f.key === 'plain')?.func?.(chat)).toBe(false)
+  })
+
+  it('時刻表示の無いチャットはアーカイブでは時刻なし', async () => {
+    const chat = await ChatParser.parse(archiveVideo(), createElement(GIFT_PURCHASE))
+    expect(chat.timestamp).toBeUndefined()
+    expect(chat.seconds).toBeUndefined()
+  })
+
   it('メンバー歴 (本文なし) はヘッダーを本文にする', async () => {
     const node = createElement(MEMBERSHIP_MILESTONE)
     node.querySelector('#message')!.textContent = ''
@@ -118,6 +227,23 @@ describe('ChatParser.parse', () => {
 
     expect(chat.isMilestone).toBe(true)
     expect(chat.altMessage).toBe('メンバー歴 11 か月')
+  })
+})
+
+describe('ChatParser.parseSuperCount', () => {
+  it('Super の購入回数を取り出す', () => {
+    expect(ChatParser.parseSuperCount('ライブ配信での 5 回目の Super をお祝いしましょう')).toBe(5)
+    expect(ChatParser.parseSuperCount('Celebrate your 10th Super in live streams')).toBe(10)
+    expect(ChatParser.parseSuperCount('')).toBeUndefined()
+  })
+})
+
+describe('ChatParser.parseGiftCount', () => {
+  it('ギフトの数を取り出す (チャンネル名の数字は無視する)', () => {
+    expect(ChatParser.parseGiftCount('Roa Ch. 海月雲ろあ のメンバーシップ ギフトを 10 個贈りました')).toBe(10)
+    expect(ChatParser.parseGiftCount('ch2 のメンバーシップ ギフトを 1,000 個贈りました')).toBe(1000)
+    expect(ChatParser.parseGiftCount('Sent 5 Channel 3 gift memberships')).toBe(5)
+    expect(ChatParser.parseGiftCount('')).toBeUndefined()
   })
 })
 

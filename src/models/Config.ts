@@ -25,6 +25,9 @@ export interface ConfigInterface {
   // 全てのチャット画像を独自に描画する
   generateOriginalImage: boolean
 
+  // 配信の推移 (同接・コメント数・再生数) と最大同接を記録し、グラフにする
+  recordStats: boolean
+
   // 最大保存video数
   maxVideoLength: number
 
@@ -47,6 +50,8 @@ export default class Config implements ConfigInterface {
   chatDrawOnce = true
   complementImage = false
   generateOriginalImage = false
+
+  recordStats = true
 
   maxVideoLength = 20
   ignoreSimpleVideo = false

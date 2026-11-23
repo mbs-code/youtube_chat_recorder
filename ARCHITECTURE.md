@@ -98,6 +98,9 @@ sequenceDiagram
   PE->>PE: VideoParser.parse(videoData) → Video
   PE->>VS: save(video, config.maxVideoLength)
   PE->>BM: waitingIcon() (青)
+  opt video.isLiveNow
+    PE->>PE: startWatchViewers(video, generation)<br/>全ての #view-count を MutationObserver で監視<br/>aria-label が変わったら即読む / 回転する数字は 2 秒後 (+ 30 秒ごと)<br/>最大を超えたらすぐ VideoStorage.updateMaxViewers<br/>推移 (同接) は 1 分ごとに記録
+  end
   PE->>PE: attachChatFrame(generation)<br/>iframe#chatframe を探す / load と削除の監視を付ける
   alt iframe が読み込み済み
     PE->>PE: connectChat(iframe, generation)
@@ -213,7 +216,9 @@ flowchart TD
 | `member` | 🟩 メンバー | `isMember` |
 | `joinmember` | ➕ メンバー加入 | `isJoinMember` |
 | `milestone` | 🎉 メンバー歴 | `isMilestone` |
+| `gift` | 🎁 メンバーシップギフト | `isGift` |
 | `topchat` | 👑 トップチャット | `topChatRank !== undefined` |
+| `screply` | 💬 スーパーチャットへの返信 | `replyTo !== undefined` |
 
 テキストマッチング (`generateChatFilterFunc`) は `textMode` で比べる対象 (`message` → `chat.message` / `author` → `chat.authorName`) を決め、`isRegex` → 正規表現、`isExact` → 完全一致、どちらでもなければ部分一致で判定する。不正な正規表現のフィルターは判定関数が作れないので無視される。
 
@@ -221,7 +226,9 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  N(["チャット要素 (CHAT_NODE_NAMES のどれか)"]) --> T["parseTimestamp(#timestamp)"]
+  N(["チャット要素 (CHAT_NODE_NAMES のどれか)"]) --> TS{"#timestamp がある?"}
+  TS -- "はい" --> T["parseTimestamp(#timestamp)"]
+  TS -- "いいえ (ギフト)" --> LN["liveNowTimes()<br/>配信中なら現在時刻 / それ以外は空"]
   N --> AU["#author-name / #author-photo img"]
   N --> MSG["#message → extractText()<br/>message (文字のみ) / altMessage (絵文字を :名前: で展開)"]
   N --> TYPE{"author-type 属性"}
@@ -232,14 +239,20 @@ flowchart TD
   BADGE -- "owner / verified / moderator" --> F1["isOwner / isVerified / isModerator"]
   BADGE -- "member" --> F2["isMember<br/>memberMonths = parseMemberMonth(aria-label)"]
   N --> RANK["parseTopChatRank()<br/>#before-content-buttons の button aria-label='#1'"]
+  N --> RPL["parseReplyTo()<br/>#before-content-buttons の button の文字が '@handle' → replyTo"]
   N --> SC{"#purchase-amount がある?"}
-  SC -- "はい" --> SC1["isSuperChat / money・moneyUnit<br/>(parsePurchaseAmount)"]
+  SC -- "はい" --> SC1["isSuperChat / money・moneyUnit<br/>(parsePurchaseAmount)<br/>superCount = parseSuperCount(#lower-bumper)"]
   N --> ST{"#purchase-amount-chip がある?"}
   ST -- "はい" --> ST1["isSuperStickers / money<br/>altMessage = ステッカーの alt"]
   N --> MB{"タグが membership-item-renderer?"}
-  MB -- "はい" --> MB1{"#header-primary-text がある?"}
+  MB -- "はい" --> MB0{"show-only-header 属性がある?"}
+  MB0 -- "はい (加入)" --> MB1
+  MB0 -- "いいえ" --> MBW["#header-primary-text の文字を待つ<br/>retry 3 回 × 300ms"] --> MB1
+  MB1{"#header-primary-text に文字がある<br/>または has-primary-header-text 属性?"}
   MB1 -- "はい" --> MS["isMilestone (メンバー歴)<br/>memberMonths はヘッダーの値を優先"]
   MB1 -- "いいえ" --> JN["isJoinMember (メンバー加入)"]
+  N --> GF{"タグが gift-purchase-announcement-renderer?"}
+  GF -- "はい" --> GF1["isGift / giftCount = parseGiftCount(#primary-text)<br/>message = #primary-text"]
 ```
 
 時刻の解析 (`parseTimestamp`):
@@ -342,9 +355,11 @@ flowchart TD
   V --> VD["VideoDropdown の watch<br/>開いているタブの動画 ID (PageHelper.getPageVideoId)<br/>無ければ videos[0]"]
   VD -- "emit change" --> HV["handleVideoChange(video)"]
   HV --> RC["reloadChats()<br/>ChatStorage.get(video.id) → chats"]
+  ST0["chrome.storage.onChanged<br/>(@videos / 選んでいる動画のチャット)"] --> STAT
+  ST0 --> SC
+  RC --> STAT["VideoStats (一覧の上)<br/>最大同接・最大再生数 (日時・配信開始から)<br/>Chat.sumMoney(chats): 一番多い通貨 + 外貨 〇 件"]
   RC --> SC["sortedChats (computed)<br/>絞り込み: chatFilters[selectedFilterKey].func<br/>並び: Chat.compareByTime<br/>sortOrder が 'desc' なら逆順"]
-  SC --> FC["filteredChats = 先頭 MAX_CHAT_LENGTH (100) 件"]
-  FC --> CL["ChatList → ChatPanel<br/>クリックで selectedChats に追加 / 削除"]
+  SC --> CL["ChatList → ChatPanel (全件表示)<br/>クリックで selectedChats に追加 / 削除"]
 
   CL --> DEL["handleDeleteSelectedChats<br/>ChatStorage.remove()"]
   CL --> CSV["handleSaveCsv<br/>ChatCsv.createObjectURL(video, selectedChats)<br/>→ Filer.downloadFile()"]
@@ -392,7 +407,7 @@ flowchart TD
   end
 ```
 
-後から追加された基本フィルターは、`Config.fromPlain()` の中で `complementChatFilterConfigs()` が補う。初期値は `INHERIT_FILTER_KEYS` の引き継ぎ元 (`milestone` ← `joinmember`, `topchat` ← `plain`) があればその設定、無ければ `defaultTrueKeys` に入っているかで決まる。
+後から追加された基本フィルターは、`Config.fromPlain()` の中で `complementChatFilterConfigs()` が補う。初期値は `INHERIT_FILTER_KEYS` の引き継ぎ元 (`milestone` ← `joinmember`, `topchat` ← `plain`, `screply` ← `plain`, `gift` ← `joinmember`) があればその設定、無ければ `defaultTrueKeys` に入っているかで決まる。
 
 ---
 
@@ -404,6 +419,7 @@ flowchart LR
     K1["@config<br/>Config.toPlain()"]
     K2["@videos<br/>Video.toPlain()[]<br/>最近見た順・最大 maxVideoLength 件"]
     K3["動画 ID (11 文字)<br/>Chat.toPlain()[]"]
+    K4["@timeline:動画 ID<br/>TimelinePoint[] (1 分ごとの同接・コメント数)"]
   end
 
   PE["PageEventer.loadConfig"] -- "読む" --> K1
@@ -411,18 +427,23 @@ flowchart LR
   OPT["設定画面"] -- "読む・書く" --> K1
   POPS["popup.handleSaveToMerge"] -- "読む" --> K1
 
-  LV["PageEventer.loadVideo<br/>→ VideoStorage.save"] -- "書く" --> K2
+  LV["PageEventer.loadVideo<br/>→ VideoStorage.save<br/>(最大同接・再生数は前回から引き継ぐ)"] -- "書く" --> K2
+  WV["PageEventer.startWatchViewers<br/>→ VideoStorage.updateMaxViewers"] -- "書く" --> K2
   VSS["VideoStorage.save"] -- "溢れた動画のチャットを消す<br/>ChatStorage.clear" --> K3
   POP["popup"] -- "読む" --> K2
 
   SQ["SaveChatQueue.invoke<br/>→ ChatStorage.save"] -- "書く" --> K3
   CH["ChatHandler.setVideo"] -- "画像化済み ID を読む" --> K3
   POP -- "読む・削除" --> K3
+
+  TR["TimelineRecorder.flush (3 秒後・以降 10 秒ごと / 遷移時 / pagehide)<br/>← ChatHandler.onChat (全チャット)<br/>← startWatchViewers (同接)"] -- "足す" --> K4
+  VSS -- "溢れた動画の推移も消す<br/>TimelineStorage.clear" --> K4
+  POP -- "読む (TimelineChart)" --> K4
 ```
 
 | 関数 | 何をするか |
 | :-- | :-- |
-| `VideoStorage.save(video, maxLength)` | 同じ ID は置き換え (作成日時を引き継ぐ) → 先頭に追加 → `updatedAt` の新しい順に並べて `maxLength` 件に切る → 溢れた動画のチャットを `ChatStorage.clear` |
+| `VideoStorage.save(video, maxLength)` | 同じ ID は置き換え (作成日時と、`Video.mergeMaxStats` で最大同接・最大再生数を引き継ぐ) → 先頭に追加 → `updatedAt` の新しい順に並べて `maxLength` 件に切る → 溢れた動画のチャットを `ChatStorage.clear` |
 | `ChatStorage.save(videoId, chats)` | 同じ ID は置き換え (作成日時と、新しい方に画像が無ければ古い画像を引き継ぐ) → 無ければ末尾に追加 |
 | `ChatStorage.remove(videoId, chats)` | 渡された ID のチャットを消す |
 | `Config.fromPlain` / `Video.fromPlain` / `Chat.fromPlain` | `Object.assign(new X(), plain)` で初期値を補い、日時 (epoch msec) を `Date` に戻す |
@@ -439,7 +460,10 @@ flowchart LR
 | `PageEventer.init` | `content-script.ts` | — → `loadConfig`, `onPageUpdated` |
 | `PageEventer.loadConfig` | `init` | `ConfigStorage.get()` → `chatFilter.setChatFilters`, `handler.setDrawOnce` |
 | `PageEventer.onPageUpdated` | `init`, `yt-page-data-updated` イベント | — → `loadVideo`, `attachChatFrame` |
-| `PageEventer.loadVideo` | `onPageUpdated` | URL → `VideoData` → `Video` → `VideoStorage.save` |
+| `PageEventer.loadVideo` | `onPageUpdated` | URL → `VideoData` (開いた時点の同接 `concurrentViewers` を含む. page-bridge が `ytd-watch-flexy.data` から `parseConcurrentViewers` で取る) → `Video` → `VideoStorage.save` |
+| `TimelineRecorder.start / addChat / addViewers / flush / stop` | `PageEventer` (配信中のみ), `ChatHandler.onChat` | 1 分ごとのコメント数 (開く前のチャット・同じ ID は数えない) と同接の最大をメモリに貯め、3 秒後・以降 10 秒ごと・遷移時・`pagehide` で `TimelineStorage.add` (書き込みは 1 つずつ順番に) |
+| `PageEventer.startWatchViewers` | `onPageUpdated` (配信中のみ) | `#view-count` の aria-label → `VideoParser.parseConcurrentViewers` → 最大を超えたらすぐ `VideoStorage.updateMaxViewers`. 推移 (`TimelineRecorder`) は 1 分ごとに記録 (再生数は `onVideoPlay` で再生のたび). 設定 `recordStats` がオフなら動かさない. 遷移時に `stopWatchViewers` |
+| `PageEventer.onVideoPlay` | `document` の `play` (capture, プレイヤーの video のみ) | page-bridge から今の再生数を読み `TimelineStorage.addViews` (`@views:<動画ID>`). 動画情報を読む前に再生が始まっていたら `loadVideo` で記録 |
 | `PageEventer.attachChatFrame` | `onPageUpdated`, `removalObserver` | `document` → `iframe` → `connectChat` |
 | `PageEventer.onIframeLoad` | iframe の `load` イベント | `iframe` → `connectChat` |
 | `PageEventer.connectChat` | `attachChatFrame`, `onIframeLoad` | `iframe` → `#item-scroller` → `handler.setVideo`, `chatObserver.observe`, `handler.findInvoke` |
@@ -452,7 +476,9 @@ flowchart LR
 | `ChatFilter.checkChatTaskType` | `ChatHandler.invoke` | `Chat` → `'image' \| 'save' \| false` |
 | `DrawDomQueue.invoke` | `BaseQueue.exec` | `{ node, chat }[]` → `NodeToPng.generateChatImageUrl` → `SaveChatQueue.push` |
 | `SaveChatQueue.invoke` | `BaseQueue.exec` | `Chat[]` → `ChatStorage.save`, `BadgeManager.addBadgeCounter` |
-| `NodeToPng.generateChatImageUrl` | `DrawDomQueue.invoke` | `HTMLElement` → style を一時変更 → `generate` → data url |
+| `NodeToPng.generateChatImageUrl` | `DrawDomQueue.invoke` | `HTMLElement` → style を一時変更 → `getEmbeddedFontCss` → `generate` → data url |
+| `getEmbeddedFontCss` (`WebFontEmbedder.ts`) | `NodeToPng.generateChatImageUrl` | iframe の `Document` → Google Fonts の CSS を fetch → latin のフォントを data url にした CSS (初回のみ作成, 以降は使い回し) |
+| `NodeToPng.generate` | `generateChatImageUrl`, popup `generateOriginalImage` | `(HTMLElement, { strict, fontCss })` → modern-screenshot `domToCanvas` → 透明部分を切り取り → png data url |
 | `PageHelper.getPageVideoId` | `loadVideo`, popup の `VideoDropdown` | URL → 動画 ID |
 | `PageHelper.requestVideoData` | `loadVideo` (retry) | 動画 ID → postMessage → `VideoData \| null` |
 | `BadgeManager.*` | `PageEventer`, `SaveChatQueue`, `content-script.ts` | → `Runtime.sendBadgeText` / `sendIconState` |
@@ -492,9 +518,12 @@ flowchart LR
 | `PAGE_UPDATED_EVENT` | `PageEventer.ts` | `'yt-page-data-updated'` | YouTube の SPA 遷移を検知するイベント |
 | `CHAT_FRAME_SELECTOR` / `CHAT_IFRAME_SELECTOR` | `PageEventer.ts` | `ytd-live-chat-frame#chat` / `iframe#chatframe` | チャット欄の iframe を探す |
 | `CHAT_SCROLLER_SELECTOR` | `PageEventer.ts` | `yt-live-chat-item-list-renderer #item-scroller` | チャットの追加を監視する要素 |
-| `CHAT_NODE_NAMES` | `ChatParser.ts` | text / paid / membership / sticker の renderer | `ChatHandler.invoke` が処理するタグ名 |
+| `VIEW_COUNT_SELECTOR` | `PageEventer.ts` | `#view-count[aria-label]` | 配信中の「〇人が視聴中」 |
+| `VIEWERS_INTERVAL` | `PageEventer.ts` | `30000` (msec) | 同時接続数を読む間隔 (表示の変化を監視できなかった時の予備) |
+| `VIEWERS_THROTTLE` | `PageEventer.ts` | `2000` (msec) | 回転する数字が変わってから読むまでの待ち (回転中に何度も読まない). `#view-count` の aria-label が変わった時は待たずにその値を記録する |
+| `CHAT_NODE_NAMES` | `ChatParser.ts` | text / paid / membership / sticker / ギフト (gift-purchase-announcement) の renderer | `ChatHandler.invoke` が処理するタグ名 |
 | `BASE_FILTERS` | `ChatFilter.ts` | [4-2 の表](#4-2-chatfiltercheckstuckchatfilter-保存するか画像化するか) | チャットの種類の判定 |
-| `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain` | 後から追加したフィルターの初期値の引き継ぎ元 |
+| `INHERIT_FILTER_KEYS` | `ChatFilter.ts` | `milestone ← joinmember`, `topchat ← plain`, `screply ← plain`, `gift ← joinmember` | 後から追加したフィルターの初期値の引き継ぎ元 |
 | `defaultTrueKeys` | `ChatFilter.ts` | `owner`, `verified`, `moderator` | 初期設定で「保存する」「画像化する」をオンにするもの |
 | `warnFilterKeys` | `ChatFilter.ts` | `plain`, `member` | 設定画面で「負荷注意」を出すもの |
 | `COUNT_TO_PROCESS_AT_ONE` | `BaseQueue.ts` | `10` | キューが一度に処理する件数 |
@@ -502,7 +531,6 @@ flowchart LR
 | `MESSAGE_TYPES` | `messages.ts` | `YCR_*` 4 種 | 受け付けるメッセージ (それ以外は無視) |
 | `ICONS` | `background.ts` | `active` / `waiting` / `inactive` → アイコン画像 | アイコンの色 |
 | `BRIDGE_REQUEST_SOURCE` / `BRIDGE_RESPONSE_SOURCE` | `bridge/protocol.ts` | `'ycr:content'` / `'ycr:bridge'` | postMessage の送り主の判定 |
-| `MAX_CHAT_LENGTH` | `popup/App.vue` | `100` | popup に表示する最大件数 |
 | `MIN_VIDEO_LENGTH` | `models/Config.ts` | `5` | 動画の最大保存数の下限 |
 | `CSV_FILENAME` | `popup/App.vue` | `'%title%_チャット_%now%'` | popup の CSV のファイル名 |
 | `FORMULA_PREFIX` | `ChatCsv.ts` | `= + - @ タブ 改行` で始まる | CSV で先頭に `'` を付ける値 |
