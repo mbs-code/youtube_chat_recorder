@@ -87,6 +87,20 @@
           />
         </template>
 
+        <!-- 最大値の所に ▼ と値 (値は ▼ の横. 右端に近い時は左に出す) -->
+        <g v-if="panel.peak" pointer-events="none">
+          <path :d="`M${panel.peak.x - 4},${panel.peak.y - 10}h8l-4,6z`" :fill="panel.color" />
+          <text
+            :x="panel.peak.x + (panel.peak.anchor === 'start' ? 6 : -6)"
+            :y="panel.peak.y - 7"
+            :text-anchor="panel.peak.anchor"
+            dominant-baseline="middle"
+            :fill="PEAK_TEXT"
+            font-size="10"
+            font-weight="bold"
+          >{{ panel.peak.label }}</text>
+        </g>
+
         <!-- 時刻の目盛り (下のグラフだけ) -->
         <template v-if="panel.showXAxis">
           <text
@@ -130,7 +144,7 @@
         <span class="inline-block size-2 rounded-xs" :style="{ backgroundColor: COMMENTS_COLOR }" />
         コメント <strong class="ml-auto text-zinc-950">{{ hoverPoint.comments.toLocaleString() }} 件</strong>
       </p>
-      <p v-if="superUnit" class="flex items-center gap-1.5 text-zinc-700">
+      <p class="flex items-center gap-1.5 text-zinc-700">
         <span class="inline-block size-2 rounded-xs" :style="{ backgroundColor: SUPER_COLOR }" />
         スパチャ <strong class="ml-auto text-zinc-950">{{ superLabel(hoverPoint.t) }}</strong>
       </p>
@@ -152,7 +166,7 @@
               <th class="font-normal">配信開始から</th>
               <th class="font-normal">同接</th>
               <th class="font-normal">コメント</th>
-              <th v-if="superUnit" class="font-normal">スパチャ</th>
+              <th class="font-normal">スパチャ{{ superUnit ? ` (${superUnit})` : '' }}</th>
             </tr>
           </thead>
           <tbody class="text-zinc-700">
@@ -161,7 +175,7 @@
               <td>{{ elapsed(point.t) ?? '-' }}</td>
               <td>{{ point.viewers?.toLocaleString() ?? '-' }}</td>
               <td>{{ point.comments.toLocaleString() }}</td>
-              <td v-if="superUnit">{{ superLabel(point.t) }}</td>
+              <td>{{ superLabel(point.t) }}</td>
             </tr>
           </tbody>
         </table>
@@ -205,15 +219,17 @@ const SUPER_COLOR = '#1baf7a'
 const GRID_COLOR = '#f4f4f5' // zinc-100
 const AXIS_COLOR = '#d4d4d8' // zinc-300
 const MUTED_TEXT = '#71717a' // zinc-500
+const PEAK_TEXT = '#3f3f46' // zinc-700
 const MISSING_COLOR = '#e4e4e7' // zinc-200
 
 // SVG の座標 (viewBox). 幅は popup に合わせ、表示は w-full で伸縮する
 const WIDTH = 540
 const PLOT_LEFT = 40
 const PLOT_RIGHT = 6
-const PLOT_TOP = 6
+const PLOT_TOP = 16 // 最大値の ▼ と値を出す分あける
 const PLOT_HEIGHT = 72
 const X_AXIS_HEIGHT = 16
+const MAX_BAR_WIDTH = 10 // 棒の最大の幅 (popup では viewBox の 1 ≒ 1px). 記録が数分しか無い時に横に広がりすぎないように
 
 /** 1, 2, 5 × 10^n で切りのいい最大値にする. */
 function niceMax(value: number): number {
@@ -225,15 +241,20 @@ function niceMax(value: number): number {
 /** 目盛りの値 (1.2万 のように短く). */
 const compact = new Intl.NumberFormat('ja-JP', { notation: 'compact', maximumFractionDigits: 1 })
 
-/** 時刻の範囲 (最初の分の先頭 〜 最後の分の終わり). */
+/** 配信開始からグラフを始めるのは、記録の最初までがこれ以内の時だけ (24 時間配信・待機所などで何か月も前が開始のことがある). */
+const MAX_LEAD = 24 * 60 * MINUTE
+
+/** 時刻の範囲 (最初の分の先頭 〜 最後の分の終わり). 配信の途中から見た時は、配信開始からにする (前は記録の無い時間になる). */
 const range = computed(() => {
   // 記録が無い時は配信の時間 (分からなければ直近 1 時間) を軸にする
   if (shown.value.length === 0) {
     const end = toMinute(props.endDate ?? new Date())
-    const start = props.startDate ? Math.min(toMinute(props.startDate), end) : end - 60 * MINUTE
+    const begin = props.startDate ? toMinute(props.startDate) : undefined
+    const start = begin !== undefined && begin <= end && end - begin <= MAX_LEAD ? begin : end - 60 * MINUTE
     return { start, end: end + MINUTE }
   }
-  const first = shown.value[0].t
+  const begin = props.startDate ? toMinute(props.startDate) : undefined
+  const first = begin !== undefined && begin < shown.value[0].t && shown.value[0].t - begin <= MAX_LEAD ? begin : shown.value[0].t
   const last = shown.value.at(-1)?.t ?? first
   return { start: first, end: last + MINUTE }
 })
@@ -301,6 +322,25 @@ interface Panel {
   color: string
   gaps: Gap[]
   empty: boolean // 記録が無い (「記録なし」と出す)
+  peak?: Peak // 最大値の印
+}
+
+interface Peak {
+  x: number
+  y: number
+  label: string
+  anchor: 'start' | 'end'
+}
+
+/** 最大値の所 (同じ値が複数あれば最初). 0 ばかりの時は出さない. */
+function findPeak(values: { t: number, value: number }[], toY: (v: number) => number, toLabel: (v: number) => string): Peak | undefined {
+  let best: { t: number, value: number } | undefined
+  for (const v of values) {
+    if (v.value > 0 && (!best || v.value > best.value)) best = v
+  }
+  if (!best) return undefined
+  const x = centerX(best.t)
+  return { x, y: toY(best.value), label: toLabel(best.value), anchor: x > WIDTH * 0.8 ? 'end' : 'start' }
 }
 
 interface Gap {
@@ -343,6 +383,7 @@ const panels = computed<Panel[]>(() => {
       color: VIEWERS_COLOR,
       gaps: viewerGaps.value,
       empty: !shown.value.some(p => p.viewers !== undefined),
+      peak: findPeak(shown.value.map(p => ({ t: p.t, value: p.viewers ?? 0 })), viewersY, v => `${v.toLocaleString()} 人`),
     },
     {
       key: 'comments',
@@ -355,6 +396,7 @@ const panels = computed<Panel[]>(() => {
       color: COMMENTS_COLOR,
       gaps: commentGaps.value,
       empty: shown.value.length === 0,
+      peak: findPeak(shown.value.map(p => ({ t: p.t, value: p.comments })), commentsY, v => `${v.toLocaleString()} 件`),
     },
   ]
   // スーパーチャットが 1 件も無くても出す (0 が続くグラフ)
@@ -370,6 +412,7 @@ const panels = computed<Panel[]>(() => {
     color: SUPER_COLOR,
     gaps: commentGaps.value,
     empty: shown.value.length === 0,
+    peak: findPeak(superValues, superY, v => `${superUnit.value ?? ''}${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}`),
   })
   return list
 })
@@ -396,15 +439,15 @@ const viewerPaths = computed(() => {
   return paths.map(d => (d.includes('L') ? d : d + `h0.1`))
 })
 
-/** 1 分ごとの棒 (上の角だけ丸める). */
+/** 1 分ごとの棒 (上の角だけ丸める). 太すぎる時は MAX_BAR_WIDTH にして、その分の中心に置く. */
 function bars(values: { t: number, value: number }[], toY: (v: number) => number): { t: number, d: string }[] {
   const slot = plotWidth / ((range.value.end - range.value.start) / MINUTE)
   const gap = slot > 4 ? 1 : 0
-  const width = Math.max(1, slot - gap)
+  const width = Math.min(MAX_BAR_WIDTH, Math.max(1, slot - gap))
   return values
     .filter(p => p.value > 0)
     .map((p) => {
-      const x = timeX(p.t) + gap / 2
+      const x = centerX(p.t) - width / 2
       const y = toY(p.value)
       const h = plotBottom - y
       const r = Math.min(2, width / 2, h)
@@ -413,14 +456,28 @@ function bars(values: { t: number, value: number }[], toY: (v: number) => number
     })
 }
 
-/** 時刻の目盛り (5 個前後になる間隔で、切りのいい時刻に置く). */
+/** 目盛りの間隔の候補 (分). 1 日以上も入れておく (長い記録でも目盛りが多くなりすぎないように). */
+const X_STEPS = [1, 2, 5, 10, 15, 30, 60, 120, 180, 360, 720, 1440, 2880, 10080]
+
+/**
+ * 時刻の目盛り. 配信開始が分かれば、開始からの経過時間が切りのいい所 (0:30, 1:00 ...) に置く.
+ * 文字が重ならない数 (文字の幅の目安ごと) に間引き、端からはみ出すものは出さない.
+ */
 const xTicks = computed(() => {
   const { start, end } = range.value
   const minutes = (end - start) / MINUTE
-  const step = [5, 10, 15, 30, 60, 120, 180, 360].find(s => minutes / s <= 5) ?? 720
+  // 1 日を超える時は時刻に日付も付ける. 文字の幅の目安 ("1:05 (21:10)" が 70, "26:00 (11/24 8:00)" が 100 くらい)
+  const pattern = minutes > 24 * 60 ? 'M/d H:mm' : 'H:mm'
+  const labelWidth = minutes > 24 * 60 ? 110 : 80
+  const maxCount = Math.max(2, Math.floor(plotWidth / labelWidth))
+  // 候補で足りない (何週間もある) 時は 1 週間の倍数にする
+  const step = (X_STEPS.find(s => minutes / s <= maxCount) ?? Math.ceil(minutes / maxCount / 10080) * 10080) * MINUTE
+  const base = props.startDate ? toMinute(props.startDate) : 0
   const ticks = []
-  for (let t = Math.ceil(start / (step * MINUTE)) * step * MINUTE; t <= end; t += step * MINUTE) {
-    ticks.push({ t, x: timeX(t), label: timeLabel(t, props.startDate) })
+  for (let t = base + Math.ceil((start - base) / step) * step; t <= end; t += step) {
+    const x = timeX(t)
+    if (x - labelWidth / 2 < 0 || x + labelWidth / 2 > WIDTH) continue
+    ticks.push({ t, x, label: timeLabel(t, props.startDate, pattern) })
   }
   return ticks
 })

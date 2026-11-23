@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import ChatFilter from '../src/lib/chatFilter/ChatFilter'
 import type { ChatFilterConfigInterface } from '../src/lib/chatFilter/ChatFilterInterface'
 import FilenameFormatter from '../src/lib/util/FilenameFormatter'
-import { ellipsis, formatByte, hmsString, hmsToSeconds } from '../src/lib/util/format'
+import { ellipsis, formatByte, hmsString, hmsToSeconds, timeLabel } from '../src/lib/util/format'
 import Chat from '../src/models/Chat'
 import Config from '../src/models/Config'
 import Video from '../src/models/Video'
@@ -176,6 +176,14 @@ describe('format', () => {
     expect(formatByte(0)).toBe('0 B')
     expect(formatByte(42500)).toBe('42.5 kB')
     expect(formatByte(1_234_567)).toBe('1.2 MB')
+  })
+
+  it('timeLabel は経過時間 (時刻) で、開始時刻の秒の端数で :59 にならない', () => {
+    const start = new Date(2026, 10, 23, 19, 0, 30) // 秒の端数あり
+    expect(timeLabel(new Date(2026, 10, 23, 20, 5).getTime(), start)).toBe('1:05 (20:05)')
+    expect(timeLabel(new Date(2026, 10, 24, 20, 0).getTime(), start, 'M/d H:mm')).toBe('25:00 (11/24 20:00)')
+    expect(timeLabel(new Date(2026, 10, 23, 18, 0).getTime(), start)).toBe('18:00') // 開始前は時刻だけ
+    expect(timeLabel(new Date(2026, 10, 23, 18, 0).getTime())).toBe('18:00')
   })
 
   it('ellipsis はサロゲートペアを壊さない', () => {

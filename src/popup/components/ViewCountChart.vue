@@ -126,9 +126,9 @@
  * - 同時接続数のグラフとは時間の軸が違う (開いた時の記録は数日おきのこともある) ので別のグラフにする.
  * - 再生数は増えるだけなので、縦軸は 0 からではなく記録の範囲に合わせる (変化が見えるように).
  */
-import { format } from 'date-fns'
+import { format, startOfDay } from 'date-fns'
 import { computed, ref } from 'vue'
-import { hmsString, timeLabel } from '../../lib/util/format'
+import { hmsString } from '../../lib/util/format'
 import type { ViewCountPoint } from '../../models/Timeline'
 
 const props = defineProps<{
@@ -199,18 +199,35 @@ function x(t: number): number {
 
 const linePath = computed(() => props.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.views).toFixed(1)}`).join(''))
 
-/** 時刻の目盛り: 両端と間 (1 日以内なら時刻、それ以上は日付). */
+/** 目盛りの文字の幅の目安 ("2026/11/23 21:10" が 10px の文字で 80 くらい). 間引き・はみ出しの判定に使う. */
+const X_LABEL_WIDTH = 96
+const MINUTE = 60 * 1000
+const HOUR = 60 * MINUTE
+const DAY = 24 * HOUR
+/** 目盛りの間隔の候補 (切りのいい時間). */
+const X_STEPS = [1, 2, 5, 10, 15, 30].map(m => m * MINUTE)
+  .concat([1, 2, 3, 6, 12].map(h => h * HOUR))
+  .concat([1, 2, 7, 14, 30, 60, 90, 180, 365].map(d => d * DAY))
+
+/**
+ * 時刻の目盛り: 切りのいい時刻 (その日の 0 時から数えて間隔の倍数) に置き、文字が重ならない数に間引く.
+ * 年月日を出し、間隔が 1 日より短い時は時刻も出す. 数日にまたがるので配信開始からの時間は出さない.
+ */
 const xTicks = computed(() => {
   const { start, end } = xRange.value
-  const pattern = end - start < 24 * 60 * 60 * 1000 ? 'H:mm' : 'M/d H:mm'
-  const label = (t: number) => timeLabel(t, props.startDate, pattern)
-  if (end === start) return [{ t: start, x: x(start), label: label(start), anchor: 'middle' }]
-  const count = 3
-  return Array.from({ length: count + 1 }, (_, i) => {
-    const t = start + ((end - start) * i) / count
-    const anchor = i === 0 ? 'start' : i === count ? 'end' : 'middle'
-    return { t, x: x(t), label: label(t), anchor }
-  })
+  if (end === start) return [{ t: start, x: x(start), label: format(start, 'yyyy/M/d H:mm'), anchor: 'middle' }]
+  const maxCount = Math.max(2, Math.floor(plotWidth / X_LABEL_WIDTH))
+  const step = X_STEPS.find(s => (end - start) / s <= maxCount) ?? X_STEPS.at(-1)!
+  const pattern = step < DAY ? 'yyyy/M/d H:mm' : 'yyyy/M/d'
+  const base = startOfDay(start).getTime()
+  const ticks = []
+  for (let t = base + Math.ceil((start - base) / step) * step; t <= end; t += step) {
+    const tx = x(t)
+    // 端からはみ出すものは出さない
+    if (tx - X_LABEL_WIDTH / 2 < 0 || tx + X_LABEL_WIDTH / 2 > WIDTH) continue
+    ticks.push({ t, x: tx, label: format(t, pattern), anchor: 'middle' })
+  }
+  return ticks
 })
 
 /// マウスを乗せた時 ///
