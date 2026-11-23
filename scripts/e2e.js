@@ -169,6 +169,14 @@ async function main() {
       console.log(`  ${time} (${chat.seconds}s) [${chat.authorName}] ${chat.altMessage} ${flags.join(',')}${chat.pngUrl ? ' 🖼' : ''}`)
     }
 
+    // 配信の推移 (1 分ごとの同時接続数・コメント数). 配信中のみ, 10 秒ごとに書き込まれる
+    const timeline = storage[`@timeline:${videoId}`] ?? []
+    console.log('\n=== timeline ===')
+    console.log(timeline.map(p => `${new Date(p.t).toLocaleTimeString()} viewers=${p.viewers ?? '-'} comments=${p.comments}`).join('\n') || '(none)')
+
+    const views = storage[`@views:${videoId}`] ?? []
+    console.log(`views: ${views.map(p => `${new Date(p.t).toLocaleTimeString()}=${p.views}`).join(', ') || '(none)'}`)
+
     console.log('\n=== logs (last 15) ===')
     console.log(logs.slice(-15).join('\n'))
 
@@ -176,8 +184,15 @@ async function main() {
       fs.mkdirSync(RESULTS, { recursive: true })
       await page.screenshot({ path: path.join(RESULTS, 'youtube.png') })
 
-      const sample = chats.find(c => c.pngUrl)
-      if (sample) fs.writeFileSync(path.join(RESULTS, 'chat-image.png'), Buffer.from(sample.pngUrl.split(',')[1], 'base64'))
+      // 画像化したチャット (最新 6 件) と、チャット欄に残っていれば実際の見た目を並べて保存する (画像化の確認用)
+      // chat-image-N.png = 拡張機能が作った画像, chat-real-N.png = ブラウザが描いた実物
+      const frame = page.frames().find(f => /\/live_chat(_replay)?/.test(f.url()))
+      const samples = chats.filter(c => c.pngUrl).slice(-6)
+      for (const [i, chat] of samples.entries()) {
+        fs.writeFileSync(path.join(RESULTS, `chat-image-${i + 1}.png`), Buffer.from(chat.pngUrl.split(',')[1], 'base64'))
+        const node = chat.id ? await frame?.$(`[id="${chat.id}"]`) : null
+        await node?.screenshot({ path: path.join(RESULTS, `chat-real-${i + 1}.png`) }).catch(() => {})
+      }
 
       const popup = await context.newPage()
       await popup.setViewportSize({ width: 600, height: 600 })

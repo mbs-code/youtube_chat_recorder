@@ -24,6 +24,18 @@ export function hmsString(seconds?: number | null): string {
   return h > 0 ? `${sign}${h}:${pad(m)}:${pad(s)}` : `${sign}${pad(m)}:${pad(s)}`
 }
 
+/**
+ * グラフの時刻の目盛り. 配信開始が分かれば経過時間 (h:mm) を先にし、時刻をカッコに入れる: "1:05 (21:10)".
+ *
+ * @param pattern 時刻の書式 (date-fns)
+ */
+export function timeLabel(time: number, start?: Date, pattern = 'H:mm'): string {
+  const label = dateFormat(time, pattern)
+  const elapsed = start ? Math.round((time - start.getTime()) / 60000) : undefined // 開始時刻の秒の端数で 0:59 にならないよう四捨五入
+  if (elapsed === undefined || elapsed < 0) return label
+  return `${Math.floor(elapsed / 60)}:${String(elapsed % 60).padStart(2, '0')} (${label})`
+}
+
 /** [-]h:m:s 形式の文字列を秒数にする. */
 export function hmsToSeconds(value: string): number {
   const sign = value.trim().startsWith('-') ? -1 : 1

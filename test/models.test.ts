@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import ChatFilter from '../src/lib/chatFilter/ChatFilter'
 import type { ChatFilterConfigInterface } from '../src/lib/chatFilter/ChatFilterInterface'
 import FilenameFormatter from '../src/lib/util/FilenameFormatter'
-import { ellipsis, formatByte, hmsString, hmsToSeconds } from '../src/lib/util/format'
+import { ellipsis, formatByte, hmsString, hmsToSeconds, timeLabel } from '../src/lib/util/format'
 import Chat from '../src/models/Chat'
 import Config from '../src/models/Config'
 import Video from '../src/models/Video'
@@ -61,6 +61,8 @@ describe('後から追加した基本フィルターの補完', () => {
     expect(config.chatFilters.find(cf => cf.key === 'milestone')).toMatchObject({ doSave: true, doImage: true })
     expect(config.chatFilters.find(cf => cf.key === 'owner')).toMatchObject({ doSave: true, doImage: true }) // 初期値
     expect(config.chatFilters.find(cf => cf.key === 'topchat')).toMatchObject({ doSave: false, doImage: false }) // plain を引き継ぐ
+    expect(config.chatFilters.find(cf => cf.key === 'screply')).toMatchObject({ doSave: false, doImage: false }) // plain を引き継ぐ
+    expect(config.chatFilters.find(cf => cf.key === 'gift')).toMatchObject({ doSave: true, doImage: true }) // joinmember を引き継ぐ
   })
 
   it('既にあるものは変更しない', () => {
@@ -76,6 +78,22 @@ describe('後から追加した基本フィルターの補完', () => {
     ])
     expect(cf.checkChatTaskType(Object.assign(new Chat(), { isMilestone: true }))).toBe(false)
     expect(cf.checkChatTaskType(Object.assign(new Chat(), { topChatRank: 3 }))).toBe(false)
+  })
+})
+
+describe('Chat.sumMoney', () => {
+  it('スーパーチャット・ステッカーの金額を通貨ごとに合計する (件数の多い順)', () => {
+    const chats = [
+      Object.assign(new Chat(), { isSuperChat: true, money: 800, moneyUnit: '￥' }),
+      Object.assign(new Chat(), { isSuperStickers: true, money: 200, moneyUnit: '￥' }),
+      Object.assign(new Chat(), { isSuperChat: true, money: 5.5, moneyUnit: '$' }),
+      Object.assign(new Chat(), { isMember: true }),
+    ]
+    expect(Chat.sumMoney(chats)).toEqual([
+      { unit: '￥', money: 1000, count: 2 },
+      { unit: '$', money: 5.5, count: 1 },
+    ])
+    expect(Chat.sumMoney([])).toEqual([])
   })
 })
 
@@ -158,6 +176,14 @@ describe('format', () => {
     expect(formatByte(0)).toBe('0 B')
     expect(formatByte(42500)).toBe('42.5 kB')
     expect(formatByte(1_234_567)).toBe('1.2 MB')
+  })
+
+  it('timeLabel は経過時間 (時刻) で、開始時刻の秒の端数で :59 にならない', () => {
+    const start = new Date(2026, 10, 23, 19, 0, 30) // 秒の端数あり
+    expect(timeLabel(new Date(2026, 10, 23, 20, 5).getTime(), start)).toBe('1:05 (20:05)')
+    expect(timeLabel(new Date(2026, 10, 24, 20, 0).getTime(), start, 'M/d H:mm')).toBe('25:00 (11/24 20:00)')
+    expect(timeLabel(new Date(2026, 10, 23, 18, 0).getTime(), start)).toBe('18:00') // 開始前は時刻だけ
+    expect(timeLabel(new Date(2026, 10, 23, 18, 0).getTime())).toBe('18:00')
   })
 
   it('ellipsis はサロゲートペアを壊さない', () => {

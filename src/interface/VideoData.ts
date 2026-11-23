@@ -11,6 +11,7 @@ export default interface VideoData {
   channelId?: string
   lengthSeconds?: number
   viewCount?: number
+  concurrentViewers?: number // 配信中の同時接続数 (ページのデータ videoViewCountRenderer から. 開いた時点の値)
   thumbnails: { url: string, width?: number, height?: number }[]
 
   isLive: boolean // 配信中

@@ -29,6 +29,16 @@
           サムネイル
         </button>
         <button
+          class="btn btn-ghost btn-sm"
+          :class="{ 'text-primary': selectedVideo.isProtected }"
+          :aria-pressed="selectedVideo.isProtected"
+          title="オンにすると、動画の最大保存数を超えても自動で削除しません"
+          @click="handleToggleProtected(selectedVideo)"
+        >
+          <i class="mdi" :class="selectedVideo.isProtected ? 'mdi-pin' : 'mdi-pin-outline'" />
+          自動で削除しない
+        </button>
+        <button
           class="btn btn-ghost btn-sm ml-auto enabled:hover:bg-danger-soft enabled:hover:text-danger"
           :disabled="chats.length === 0"
           @click="handleDeleteChats(selectedVideo)"
@@ -38,42 +48,91 @@
         </button>
       </div>
 
-      <!-- 選んだ動画のチャット -->
-      <section v-if="selectedVideo" class="flex flex-col gap-2.5">
-        <!-- ツールバー: 絞り込み・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
-        <div class="sticky top-12.25 z-10 -mx-4 flex items-center gap-2 bg-zinc-50 px-4 py-2">
-          <select v-model="selectedFilterKey" class="select h-7 w-47.5 text-xs" aria-label="表示するチャット">
-            <option v-for="filter in chatFilters" :key="filter.key" :value="filter.key">
-              {{ filter.title }}
-            </option>
-          </select>
-          <span class="flex-1 text-xs">
-            <strong class="text-sm text-zinc-950">{{ sortedChats.length }}</strong>
-            件
-            <span v-if="sortedChats.length !== chats.length" class="text-zinc-500">/ 全 {{ chats.length }} 件</span>
-          </span>
-          <button
-            class="btn btn-secondary btn-sm"
-            :title="sortOrder === 'asc' ? '古い順 (クリックで新しい順)' : '新しい順 (クリックで古い順)'"
-            @click="toggleSortOrder"
-          >
-            <i class="mdi" :class="sortOrder === 'asc' ? 'mdi-sort-clock-ascending-outline' : 'mdi-sort-clock-descending-outline'" />
-            {{ sortOrder === 'asc' ? '古い順' : '新しい順' }}
-          </button>
-          <button class="btn btn-secondary btn-sm" :disabled="filteredChats.length === 0" @click="selectedChats = [...filteredChats]">
-            すべて選択
-          </button>
-          <button class="btn btn-secondary btn-sm" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
+      <!-- タブ: チャット / 記録・グラフ (チャットの一覧がすぐ見えるように、記録は別のタブにする) -->
+      <nav v-if="selectedVideo" class="-mx-4 flex gap-1 border-b border-zinc-200 px-4" role="tablist">
+        <button
+          v-for="item in TABS"
+          :key="item.key"
+          role="tab"
+          :aria-selected="tab === item.key"
+          class="-mb-px flex items-center gap-1.5 border-b-2 px-3 py-2 text-sm"
+          :class="tab === item.key ? 'border-zinc-900 font-bold text-zinc-950' : 'border-transparent text-zinc-500 hover:text-zinc-800'"
+          @click="setTab(item.key)"
+        >
+          <i class="mdi" :class="item.icon" />
+          {{ item.label }}
+          <span v-if="item.key === 'chats'" class="badge">{{ chats.length }}</span>
+        </button>
+      </nav>
+
+      <!-- 記録・グラフのタブ: 最大再生数・最大同接・スーパーチャット合計と、推移のグラフ -->
+      <section v-if="selectedVideo && tab === 'stats'" class="flex flex-col gap-3">
+        <p class="help">
+          <i class="mdi mdi-information-outline" />
+          ページを開いている間に、画面に表示された数字・チャットをもとに数えています。開いていない間の分はありません。
+        </p>
+        <VideoStats :video="selectedVideo" :chats="chats" />
+        <template v-if="recordStats">
+          <!-- 同接・コメント・スパチャのグラフは配信 (ライブ・アーカイブ) だけ -->
+          <TimelineChart
+            v-if="selectedVideo.type !== 'video'"
+            :points="timeline"
+            :chats="chats"
+            :start-date="selectedVideo.startDate"
+            :end-date="selectedVideo.endDate"
+          />
+          <ViewCountChart :points="viewCounts" :start-date="selectedVideo.startDate" />
+        </template>
+      </section>
+
+      <!-- チャットのタブ -->
+      <section v-else-if="selectedVideo" class="flex flex-col gap-2.5">
+        <!-- ツールバー: 絞り込み・検索・件数・並び順・まとめて選択 (スクロールしても上に残る. top の 12.25 (49px) は header の高さ) -->
+        <div class="sticky top-12.25 z-10 -mx-4 flex flex-col gap-2 bg-zinc-50 px-4 py-2">
+          <div class="flex items-center gap-2">
+            <FilterDropdown v-model="selectedFilterKeys" :options="filterOptions" :count="filteredChats.length" />
+            <div class="relative flex-1">
+              <i class="mdi mdi-magnify pointer-events-none absolute top-1/2 left-2 -translate-y-1/2 text-zinc-400" />
+              <input
+                v-model="searchText"
+                class="input h-7 w-full px-7 text-xs"
+                type="search"
+                placeholder="名前・本文で検索"
+                aria-label="チャットを検索"
+              >
+              <button
+                v-if="searchText"
+                class="absolute top-1/2 right-1.5 -translate-y-1/2 cursor-pointer text-zinc-400 hover:text-zinc-700"
+                title="検索をやめる"
+                @click="searchText = ''"
+              >
+                <i class="mdi mdi-close-circle" />
+              </button>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="flex-1 text-xs">
+              <strong class="text-sm text-zinc-950">{{ sortedChats.length }}</strong>
+              件
+              <span v-if="sortedChats.length !== chats.length" class="text-zinc-500">/ 全 {{ chats.length }} 件</span>
+            </span>
+            <button
+              class="btn btn-secondary btn-sm"
+              :title="sortOrder === 'asc' ? '古い順 (クリックで新しい順)' : '新しい順 (クリックで古い順)'"
+              @click="toggleSortOrder"
+            >
+              <i class="mdi" :class="sortOrder === 'asc' ? 'mdi-sort-clock-ascending-outline' : 'mdi-sort-clock-descending-outline'" />
+              {{ sortOrder === 'asc' ? '古い順' : '新しい順' }}
+            </button>
+            <button class="btn btn-secondary btn-sm" :disabled="sortedChats.length === 0" @click="selectedChats = [...sortedChats]">
+              すべて選択
+            </button>
+            <button class="btn btn-secondary btn-sm" :disabled="selectedChats.length === 0" @click="selectedChats = []">選択解除</button>
+          </div>
         </div>
 
-        <!-- 表示の上限を超えた時の注意 -->
-        <p v-if="isOver" class="notice notice-warning">
-          <i class="mdi mdi-alert-outline" />
-          表示できるのは {{ MAX_CHAT_LENGTH }} 件までです。上の選択欄で絞り込んでください。
-        </p>
-
         <!-- チャットの一覧 (無ければ案内) -->
-        <ChatList v-if="filteredChats.length" v-model:selected="selectedChats" :chats="filteredChats" />
+        <ChatList v-if="sortedChats.length" v-model:selected="selectedChats" :chats="sortedChats" />
         <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
           <i class="mdi mdi-message-text-outline mb-1 text-4xl text-zinc-400" />
           <p>記録したチャットはありません</p>
@@ -82,7 +141,7 @@
       </section>
 
       <!-- 動画がまだ 1 本も無い時の案内 -->
-      <div v-else class="flex flex-col items-center gap-1 px-4 py-12 text-center">
+      <div v-if="!selectedVideo" class="flex flex-col items-center gap-1 px-4 py-12 text-center">
         <i class="mdi mdi-youtube mb-1 text-4xl text-zinc-400" />
         <p>まだ記録した動画がありません</p>
         <p class="text-xs text-zinc-500">YouTube でライブ配信やアーカイブを開くと、自動でチャットを記録します。</p>
@@ -90,7 +149,10 @@
     </main>
 
     <!-- フッター: 選択中のチャットへの操作 (常に下に残る) -->
-    <footer v-if="selectedVideo" class="sticky bottom-0 z-30 flex items-center gap-2 border-t border-zinc-200 bg-white px-4 py-2.5">
+    <footer
+      v-if="selectedVideo && tab === 'chats'"
+      class="sticky bottom-0 z-30 flex items-center gap-2 border-t border-zinc-200 bg-white px-4 py-2.5"
+    >
       <span class="flex-1">
         <template v-if="selectedChats.length">
           <strong class="text-[15px] text-zinc-950">{{ selectedChats.length }}</strong>
@@ -122,13 +184,14 @@
  * - 選んだチャットを削除・CSV で保存・画像をつなげて保存する.
  * - 開いた時に、開いているタブのバッジ (取得数) をリセットする.
  */
-import { computed, onMounted, ref, shallowRef } from 'vue'
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from 'vue'
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import BrowserTabs from '../lib/chrome/BrowserTabs'
 import Filer from '../lib/chrome/Filer'
 import Runtime from '../lib/chrome/Runtime'
 import ChatStorage from '../lib/chrome/storage/ChatStorage'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
+import TimelineStorage from '../lib/chrome/storage/TimelineStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
 import ChatCsv from '../lib/util/ChatCsv'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
@@ -137,8 +200,11 @@ import Chat from '../models/Chat'
 import type Video from '../models/Video'
 import ChatList from './components/ChatList.vue'
 import VideoDropdown from './components/VideoDropdown.vue'
-
-const MAX_CHAT_LENGTH = 100 // 最大表示チャット数
+import VideoStats from './components/VideoStats.vue'
+import TimelineChart from './components/TimelineChart.vue'
+import ViewCountChart from './components/ViewCountChart.vue'
+import FilterDropdown from './components/FilterDropdown.vue'
+import type { TimelinePoint, ViewCountPoint } from '../models/Timeline'
 
 /** 最近見た動画. */
 const videos = shallowRef<Video[]>([])
@@ -147,12 +213,46 @@ const selectedVideo = shallowRef<Video | null>(null)
 
 /** 選んでいる動画の全チャット (絞り込み前). */
 const chats = shallowRef<Chat[]>([])
+/** 選んでいる動画の推移 (1 分ごとの同時接続数・コメント数). */
+const timeline = shallowRef<TimelinePoint[]>([])
+/** 選んでいる動画の再生数の記録. */
+const viewCounts = shallowRef<ViewCountPoint[]>([])
+/** 推移を記録・表示するか (設定). */
+const recordStats = ref(true)
+
 /** 選択中のチャット (選択した順). */
 const selectedChats = ref<Chat[]>([])
 
 /** 絞り込みの選択肢と、選んでいるもの. */
 const chatFilters = ChatFilter.generatePopupChatFilters()
-const selectedFilterKey = ref(chatFilters[0].key)
+/** 「すべて表示」の絞り込みの key. */
+const ALL_FILTER_KEY = 'all'
+/** 絞り込みを覚えておく localStorage の key. */
+const FILTER_KEYS_KEY = 'ycr:popup:filterKeys'
+
+/** 前回の絞り込みを読み込む (読めない・今は無い key だけなら「すべて表示」). */
+function loadFilterKeys(): string[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(FILTER_KEYS_KEY) ?? '[]')
+    const keys = Array.isArray(parsed) ? parsed.filter(k => chatFilters.some(c => c.key === k)) : []
+    return keys.length ? keys : [ALL_FILTER_KEY]
+  } catch {
+    return [ALL_FILTER_KEY]
+  }
+}
+
+/** 選んでいる絞り込み (複数選んだら、どれかに当てはまるチャットを出す). 次に開いた時も同じにする. */
+const selectedFilterKeys = ref<string[]>(loadFilterKeys())
+watch(selectedFilterKeys, (keys) => {
+  try {
+    localStorage.setItem(FILTER_KEYS_KEY, JSON.stringify(keys))
+  } catch {
+    // 保存できなくても絞り込み自体はできる
+  }
+})
+
+/** 検索する文字 (空白区切りで、全部を含むチャットを出す). */
+const searchText = ref('')
 
 type SortOrder = 'asc' | 'desc'
 /** 並び順を覚えておく localStorage の key. */
@@ -164,6 +264,36 @@ function loadSortOrder(): SortOrder {
     return localStorage.getItem(SORT_ORDER_KEY) === 'desc' ? 'desc' : 'asc'
   } catch {
     return 'asc'
+  }
+}
+
+type Tab = 'chats' | 'stats'
+/** タブ. */
+const TABS: { key: Tab, label: string, icon: string }[] = [
+  { key: 'chats', label: 'チャット', icon: 'mdi-message-text-outline' },
+  { key: 'stats', label: '記録・グラフ', icon: 'mdi-chart-line' },
+]
+/** 開いているタブを覚えておく localStorage の key. */
+const TAB_KEY = 'ycr:popup:tab'
+
+/** 前回のタブを読み込む (読めなければチャット). */
+function loadTab(): Tab {
+  try {
+    return localStorage.getItem(TAB_KEY) === 'stats' ? 'stats' : 'chats'
+  } catch {
+    return 'chats'
+  }
+}
+
+/** 開いているタブ. 次に開いたときも同じタブにする. */
+const tab = ref<Tab>(loadTab())
+
+function setTab(value: Tab): void {
+  tab.value = value
+  try {
+    localStorage.setItem(TAB_KEY, value)
+  } catch {
+    // 覚えられなくても切り替え自体はできる
   }
 }
 
@@ -186,30 +316,99 @@ function toggleSortOrder(): void {
   }
 }
 
+/** 絞り込みの選択肢 (それぞれに当てはまる件数付き). */
+const filterOptions = computed(() => chatFilters.map(filter => ({
+  key: filter.key,
+  title: filter.title,
+  count: filter.func ? chats.value.filter(filter.func).length : chats.value.length,
+  exclusive: filter.key === ALL_FILTER_KEY, // 「すべて表示」は他と一緒に選ばない
+})))
+
 /** フィルター & 並び替え済みのチャット. */
+/** 絞り込んだチャット (検索の前). */
+const filteredChats = computed(() => {
+  const keys = selectedFilterKeys.value
+  const funcs = keys.includes(ALL_FILTER_KEY)
+    ? []
+    : chatFilters.filter(c => keys.includes(c.key)).flatMap(c => (c.func ? [c.func] : []))
+  return funcs.length ? chats.value.filter(chat => funcs.some(func => func(chat))) : chats.value
+})
+
+/** チャットの検索対象の文字 (名前・本文・返信先・ギフトなど). 大文字小文字は区別しない. */
+function searchableText(chat: Chat): string {
+  return [chat.authorName, chat.altMessage ?? chat.message, chat.replyTo, chat.milestoneText, chat.giftItem]
+    .filter(Boolean)
+    .join('\n')
+    .toLowerCase()
+}
+
 const sortedChats = computed(() => {
-  const chatFilter = chatFilters.find(c => c.key === selectedFilterKey.value)
-  const filtered = chatFilter?.func ? chats.value.filter(chatFilter.func) : chats.value
+  const words = searchText.value.toLowerCase().split(/\s+/).filter(Boolean)
+  const filtered = words.length
+    ? filteredChats.value.filter((chat) => {
+        const text = searchableText(chat)
+        return words.every(word => text.includes(word))
+      })
+    : filteredChats.value
   const sorted = [...filtered].sort(Chat.compareByTime)
   return sortOrder.value === 'desc' ? sorted.reverse() : sorted
 })
-/** 表示の上限を超えているか. */
-const isOver = computed(() => sortedChats.value.length > MAX_CHAT_LENGTH)
-/** 実際に表示するチャット (上限まで). */
-const filteredChats = computed(() => sortedChats.value.slice(0, MAX_CHAT_LENGTH))
 
 onMounted(async () => {
+  void ConfigStorage.get().then(config => (recordStats.value = config.recordStats))
   // 開いているタブのバッジをリセットする (content script が居なければ何もしない)
   const activeTab = await BrowserTabs.getActiveTab()
   if (activeTab?.id !== undefined) void Runtime.sendResetBadge(activeTab.id)
 
   videos.value = await VideoStorage.getAll()
+  chrome.storage.onChanged.addListener(onStorageChanged)
 })
+
+onUnmounted(() => chrome.storage.onChanged.removeListener(onStorageChanged))
+
+/**
+ * 開いている間に記録された内容を反映する. (配信中は同時接続数・チャットが増えていく)
+ *
+ * - 動画一覧 (@videos) が変わったら、選んでいる動画の情報 (最大同接など) だけ差し替える.
+ *   (一覧ごと差し替えると選択欄が選び直されてしまうため)
+ * - 選んでいる動画のチャットが変わったら読み込み直す. 選択中のチャットはそのまま残す.
+ */
+async function onStorageChanged(changes: Record<string, chrome.storage.StorageChange>, area: string): Promise<void> {
+  const videoId = selectedVideo.value?.id
+  if (area !== 'local' || !videoId) return
+
+  if (changes[VideoStorage.STORAGE_KEY]) {
+    // 選択欄は選んでいる動画を選んだまま一覧だけ差し替える
+    const latest = await VideoStorage.getAll()
+    videos.value = latest
+    const updated = latest.find(v => v.id === videoId)
+    if (updated && selectedVideo.value?.id === videoId) selectedVideo.value = updated
+  }
+  if (changes[TimelineStorage.key(videoId)]) {
+    const latest = await TimelineStorage.get(videoId)
+    if (selectedVideo.value?.id === videoId) timeline.value = latest
+  }
+  if (changes[TimelineStorage.viewsKey(videoId)]) {
+    const latest = await TimelineStorage.getViews(videoId)
+    if (selectedVideo.value?.id === videoId) viewCounts.value = latest
+  }
+  if (changes[videoId]) {
+    const selectedIds = new Set(selectedChats.value.map(c => c.id))
+    const latest = await ChatStorage.get(videoId)
+    if (selectedVideo.value?.id !== videoId) return
+    chats.value = latest
+    selectedChats.value = selectedChats.value
+      .map(s => latest.find(c => c.id === s.id))
+      .filter((c): c is Chat => c !== undefined && selectedIds.has(c.id))
+  }
+}
 
 /** 選んでいる動画のチャットを読み込み直す (選択は解除). */
 async function reloadChats(): Promise<void> {
   const videoId = selectedVideo.value?.id
   chats.value = videoId ? await ChatStorage.get(videoId) : []
+  timeline.value = videoId ? await TimelineStorage.get(videoId) : []
+  viewCounts.value = videoId ? await TimelineStorage.getViews(videoId) : []
   selectedChats.value = []
 }
 
@@ -227,6 +426,11 @@ async function handleOpenUrl(url?: string): Promise<void> {
   if (url !== activeTab?.url) {
     await BrowserTabs.windowOpen(url, activeTab)
   }
+}
+
+/** 動画の最大保存数を超えても自動で削除しないかを切り替える. (画面は onStorageChanged で更新される) */
+async function handleToggleProtected(video: Video): Promise<void> {
+  if (video.id) await VideoStorage.setProtected(video.id, !video.isProtected)
 }
 
 /** 選んでいる動画のチャットを全て削除する. */

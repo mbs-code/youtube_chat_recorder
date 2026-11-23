@@ -46,7 +46,7 @@ src/
     chrome/                  chrome.* API のラッパー (storage, messages, tabs)
     queue/                   画像化・保存を順番に処理するキュー
     chatFilter/              チャットフィルター (保存する/画像化する の判定)
-    util/                    日付整形, dom-to-image, ファイル名整形 など
+    util/                    日付整形, 画像化 (modern-screenshot), Web フォントの埋め込み, ファイル名整形 など
   models/                    Chat, Video, Config (fromPlain / toPlain で storage と相互変換)
   popup/, options/           Vue 3 の画面
 scripts/
@@ -74,7 +74,7 @@ YouTube ページ (www.youtube.com/watch?v=...)
  ├─ content-script (isolated)  yt-page-data-updated → PageEventer
  │     └─ iframe#chatframe (/live_chat or /live_chat_replay, same origin)
  │          └─ MutationObserver(#item-scroller) → ChatHandler → ChatParser
- │               → DrawDomQueue (dom-to-image-more) → SaveChatQueue → chrome.storage.local
+ │               → DrawDomQueue (modern-screenshot) → SaveChatQueue → chrome.storage.local
  └─ chrome.runtime.sendMessage → background → chrome.action (アイコン/バッジ)
 popup / options → chrome.storage.local を直接読み書き
 ```
@@ -86,6 +86,8 @@ popup / options → chrome.storage.local を直接読み書き
 | `@config` | `Config.toPlain()` |
 | `@videos` | `Video.toPlain()[]` (閲覧日時の降順, 最大 `maxVideoLength` 件) |
 | `<動画ID>` | `Chat.toPlain()[]` |
+| `@timeline:<動画ID>` | `TimelinePoint[]` (1 分ごとの `{ t, viewers?, comments }`, 時刻の昇順). 配信中のみ `TimelineRecorder` が 10 秒ごと (最初は 3 秒後) に足す (コメント数は合計、同接は 1 分ごとに読んだ値) |
+| `@views:<動画ID>` | `ViewCountPoint[]` (`{ t, views }`, 時刻の昇順, 同じ分は大きい方). 動画が再生されるたび (`play` イベント) に `PageEventer.onVideoPlay` が足す |
 
 - 日時は **epoch msec の number** で保存する (v1 の class-transformer 時代と同じ)。`lib/util/serialize.ts` の `toTime` / `toDate` を使う。
 - フィールドを追加する場合はクラスの初期値で既存データを補完できるようにする (`fromPlain` は `Object.assign(new X(), plain)`)。
@@ -108,6 +110,8 @@ YouTube に依存している箇所:
 | SPA 遷移イベント `yt-page-data-updated` | `content-scripts/PageEventer.ts` |
 | 動画情報 `movie_player.getPlayerResponse()`, `ytd-watch-flexy.playerData`, `ytInitialPlayerResponse` | `content-scripts/page-bridge.ts` |
 | playerResponse の構造 (`videoDetails`, `microformat.playerMicroformatRenderer.liveBroadcastDetails`) | `lib/parser/PlayerResponseParser.ts` |
+| 開いた時点の同時接続数 `ytd-watch-flexy.data` の `videoPrimaryInfoRenderer.viewCount.videoViewCountRenderer` (`isLive`, `originalViewCount`) | `content-scripts/page-bridge.ts`, `PlayerResponseParser.parseConcurrentViewers` |
+| 同時接続数 `#view-count` の aria-label ("26,905 人が視聴中", 配信中のみ更新される)。aria-label が無ければ中の `yt-animated-rolling-number` (margin-top で数字の列をずらす表示) を `VideoParser.readRollingNumber` で読む | `content-scripts/PageEventer.ts`, `VideoParser.parseConcurrentViewers` |
 | チャット欄 `ytd-live-chat-frame#chat iframe#chatframe`, `yt-live-chat-item-list-renderer #item-scroller` | `content-scripts/PageEventer.ts` |
 | チャット要素のタグ名・`#author-name`・`#message`・`#timestamp`・バッジ等 | `lib/parser/ChatParser.ts` |
 | 時刻表示 (配信中 `9:50 AM`、アーカイブ `1:23:45`) | `ChatParser.parseTimestamp` |
@@ -120,10 +124,16 @@ YouTube に依存している箇所:
 - `DOMNodeRemoved` (Mutation Events) は Chrome 127 で削除された → MutationObserver で iframe の切断を検知
 - 時刻表示は ja ロケールでも `9:50 AM` 形式で、間に `U+202F` (narrow no-break space) が入る
 - 投稿者名は `@handle` 形式
-- メンバー歴 (マイルストーン) チャットは加入と同じ `yt-live-chat-membership-item-renderer` で、`#header-primary-text` ("メンバー歴 11 か月") の有無で区別する。`#header-subtext` はメンバーシップ名、`#message` は本文 (省略可)
+- メンバー歴 (マイルストーン) チャットは加入と同じ `yt-live-chat-membership-item-renderer` で、`#header-primary-text` ("メンバー歴 11 か月") の中身の有無で区別する (加入でも空の `#header-primary-text` がある)。`#header-subtext` はメンバーシップ名、`#message` は本文 (省略可)
 - トップチャット (名前の後ろの 👑#1) は `#before-content-buttons` 内の `<button aria-label="#1">`。`ChatParser.parseTopChatRank` で順位を取る
+- スーパーチャットへの返信は、同じ `#before-content-buttons` 内のボタンの文字が `@handle` (背景はスパチャの色)。`ChatParser.parseReplyTo` で返信先を取る
 
-未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、メンバーシップギフト (`ytd-sponsorships-live-chat-*`, 未対応)。
+- メンバー歴と加入の要素には、それぞれ `has-primary-header-text` / `show-only-header` 属性が付く。要素の追加直後は `#header-primary-text` の文字がまだ無いことがあるので、属性も見て判定する (文字だけで判定すると加入に混ざる)
+- スーパーチャットには購入回数の節目のおまけが付くことがある: `#lower-bumper` に "ライブ配信での 5 回目の Super をお祝いしましょう" (`ChatParser.parseSuperCount`)、`#overlay-image` に飾り画像 (www.gstatic.com, CORS で読めないので画像化しない)
+- メンバーシップギフト (贈った側) は `ytd-sponsorships-live-chat-gift-purchase-announcement-renderer`。文は `#primary-text` ("〇〇 のメンバーシップ ギフトを 10 個贈りました")、**`#timestamp` が無い**ので配信中は現在時刻にする (`ChatParser.liveNowTimes`)。右の飾り画像 `.rhs-image` は www.gstatic.com にあり CORS で読めないので画像化しない
+- ギフト (星など) は `yt-gift-message-view-model`。**id 属性も `#timestamp` も無い**ので、id は `ycr-<uuid>` を作り、配信中は現在時刻にする。名前は `#author-name-v2`、本文は `#message-v2` ("星 を送信しました" → `Chat.giftItem = "星"`)。`#gift-image` は www.gstatic.com で CORS で読めないので画像化しない
+
+未確認 (実データで検証できていない) もの: スーパーチャット・スーパーステッカーの DOM、ギフトを受け取った側のお知らせ (`ytd-sponsorships-live-chat-gift-redemption-announcement-renderer` と思われる, 未対応)、アーカイブでのギフトの表示。
 
 ## ハマりどころ
 
@@ -131,7 +141,9 @@ YouTube に依存している箇所:
 - **Service Worker は状態を持てない**: いつでも停止・再起動される。グローバル変数に状態を置かない。
 - **onMessage は Promise を返せない**: `lib/chrome/messages.ts` の `listenMessages` を使う (`sendResponse` + `return true`)。
 - **拡張機能を再読み込みすると、開いているタブの古い content script は `chrome.runtime` が使えなくなる**: `Runtime.isContextValid()` で確認している。ページを再読み込みすれば直る。
-- **dom-to-image-more v3 は高さを指定しないと padding 分が切れる**: `NodeToPng.generate` で width / height を明示している。
+- **画像化 (modern-screenshot) ではページの Web フォントが使えない**: SVG を img として読み込んで描くため、フォントは data url で埋め込む必要がある。YouTube の Google Fonts の CSS は別ドメインで `cssRules` を読めないので、`lib/util/WebFontEmbedder.ts` が fetch し直して英数字 (latin) の範囲だけ埋め込んでいる (1 回だけ作って使い回す)。日本語は Roboto に無いので端末のフォントで描かれる (YouTube の画面と同じ)。
+- **画像化は width / height を明示している**: 指定しないと横幅が揃わず、margin 分が切れる (`NodeToPng.generate`)。
+- **画像化の確認は `npm run e2e -- --screenshot`**: `test-results/chat-image-N.png` (作った画像) と `chat-real-N.png` (ブラウザの実物) を見比べる。
 - **headless Chromium の UA (`HeadlessChrome`) だと YouTube のチャットが「ブラウザが古い」になる**: E2E では通常の UA を指定している。
 - **拡張機能は Playwright の headless shell では動かない**: `channel: 'chromium'` を指定している。
 - **Windows でカレントディレクトリが `c:\` (小文字) だと Vitest が壊れる**: `npm test` は `scripts/vitest.js` 経由で起動して回避している。`npx vitest` を直接使わない。

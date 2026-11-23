@@ -2,7 +2,7 @@
  * YouTube ライブチャットの DOM から、パースに関係する部分だけを残したもの.
  *
  * - TEXT_MESSAGE_*: 2026-11 時点の実際の DOM を縮小したもの.
- * - MEMBERSHIP_MILESTONE / TEXT_MESSAGE_TOPCHAT: 2026-11 時点の実際の DOM を縮小したもの.
+ * - MEMBERSHIP_MILESTONE / MEMBERSHIP_JOIN / GIFT_PURCHASE / TEXT_MESSAGE_TOPCHAT / TEXT_MESSAGE_SUPERCHAT_REPLY: 2026-11 時点の実際の DOM を縮小したもの.
  * - PAID_MESSAGE / MEMBERSHIP_ITEM: 既知の構造から再現したもの (実 DOM との突き合わせは未確認).
  *
  * YouTube の DOM が変わったら `npm run e2e` で確認し、ここも更新すること.
@@ -157,3 +157,162 @@ export function createElement(html: string): HTMLElement {
   template.innerHTML = html.trim()
   return template.content.firstElementChild as HTMLElement
 }
+
+/** メンバー加入. 2026-11 時点の実際の DOM を縮小したもの (#header-primary-text は空で存在する). */
+export const MEMBERSHIP_JOIN = `
+<yt-live-chat-membership-item-renderer class="style-scope yt-live-chat-item-list-renderer" modern="" show-only-header="" id="ChwKGkNMcWZ4dXpvbXBnREZZX0h3Z1FkMkJzSU93">
+  <div id="card">
+    <div id="header">
+      <yt-img-shadow id="author-photo" height="40" width="40"><img id="img" alt="" height="40" width="40" src="https://yt4.ggpht.com/join=s32-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+      <div id="header-content">
+        <div id="header-content-primary-column">
+          <div id="header-content-inner-column">
+            <yt-live-chat-author-chip>
+              <span id="prepend-chat-badges"></span>
+              <span id="author-name" dir="auto" class="member">@藍染Aizen<span id="chip-badges"></span></span>
+              <span id="chat-badges">
+                <yt-live-chat-author-badge-renderer aria-label="新規メンバー" type="member" shared-tooltip-text="新規メンバー">
+                  <div id="image"><img src="https://yt3.ggpht.com/badge=s16-c-k" alt="新規メンバー"></div>
+                </yt-live-chat-author-badge-renderer>
+              </span>
+            </yt-live-chat-author-chip>
+            <div id="header-primary-text"></div>
+          </div>
+          <div id="header-subtext">ろありー へようこそ！</div>
+        </div>
+        <div id="timestamp">2:14 PM</div>
+      </div>
+      <div id="menu"></div>
+    </div>
+    <div id="content">
+      <div id="message" dir="auto"></div>
+      <yt-formatted-string id="deleted-state" is-empty=""></yt-formatted-string>
+    </div>
+  </div>
+</yt-live-chat-membership-item-renderer>
+`
+
+/** メンバーシップギフト (贈った側). 2026-11 時点の実際の DOM を縮小したもの. #timestamp は無い. */
+export const GIFT_PURCHASE = `
+<ytd-sponsorships-live-chat-gift-purchase-announcement-renderer class="style-scope yt-live-chat-item-list-renderer" modern="" id="ChwKGkNOeU5rLVRvbXBnREZTVVRyUVlkek5vN1l3">
+  <ytd-sponsorships-live-chat-header-renderer modern="" whole-message-clickable="">
+    <div id="header">
+      <div id="content">
+        <yt-img-shadow id="author-photo" height="40" width="40"><img id="img" alt="" height="40" width="40" src="https://yt4.ggpht.com/gift=s64-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+        <div id="header-content">
+          <div id="header-content-primary-column">
+            <div id="header-content-inner-column">
+              <yt-live-chat-author-chip single-line="">
+                <span id="prepend-chat-badges"></span>
+                <span id="author-name" dir="auto" class="member single-line">@SUGI3_san<span id="chip-badges"></span></span>
+                <span id="chat-badges">
+                  <yt-live-chat-author-badge-renderer aria-label="メンバー（1 年）" type="member" shared-tooltip-text="メンバー（1 年）">
+                    <div id="image"><img src="https://yt3.ggpht.com/badge=s16-c-k" alt="メンバー（1 年）"></div>
+                  </yt-live-chat-author-badge-renderer>
+                </span>
+              </yt-live-chat-author-chip>
+              <div id="primary-text">Roa Ch. 海月雲ろあ のメンバーシップ ギフトを 10 個贈りました</div>
+            </div>
+            <div id="secondary-text"></div>
+          </div>
+          <div id="header-content-deleted-state" hidden=""><div id="deleted-primary-text"></div></div>
+        </div>
+      </div>
+      <yt-img-shadow class="rhs-image" height="104" width="104"><img id="img" alt="" height="104" width="104" src="https://www.gstatic.com/youtube/img/sponsorships/sponsorships_gift_purchase_announcement_artwork.png"></yt-img-shadow>
+      <div id="menu"></div>
+    </div>
+  </ytd-sponsorships-live-chat-header-renderer>
+  <div id="opt-in-prompt" hidden=""></div>
+</ytd-sponsorships-live-chat-gift-purchase-announcement-renderer>
+`
+
+/** スーパーチャットへの返信 (名前の後ろに返信先のボタン). 2026-11 時点の実際の DOM (アーカイブ) を縮小したもの. */
+export const TEXT_MESSAGE_SUPERCHAT_REPLY = `
+<yt-live-chat-text-message-renderer class="style-scope yt-live-chat-item-list-renderer" modern="" id="ChwKGkNQVFZwOHI5LTRjREZjWU1yUVlkeE1RRXhB" author-type="member">
+  <yt-img-shadow id="author-photo" height="24" width="24"><img id="img" alt="" height="24" width="24" src="https://yt4.ggpht.com/reply=s32-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+  <div id="content">
+    <span id="timestamp">0:07</span>
+    <yt-live-chat-author-chip>
+      <span id="prepend-chat-badges"></span>
+      <span id="author-name" dir="auto" class="member">@moku8444<span id="chip-badges"></span></span>
+      <span id="chat-badges">
+        <yt-live-chat-author-badge-renderer aria-label="メンバー（2 か月）" type="member" shared-tooltip-text="メンバー（2 か月）">
+          <div id="image"><img src="https://yt3.ggpht.com/badge=s16-c-k" alt="メンバー（2 か月）"></div>
+        </yt-live-chat-author-badge-renderer>
+      </span>
+    </yt-live-chat-author-chip>&ZeroWidthSpace;<div id="before-content-buttons">
+      <yt-button-view-model><button-view-model class="ytSpecButtonViewModelHost">
+        <button class="ytSpecButtonShapeNextHost ytSpecButtonShapeNextTonal" title="" aria-disabled="false" style="color: rgba(0, 0, 0, 0.875); background-color: rgb(255, 202, 40);">
+          <div class="ytSpecButtonShapeNextButtonTextContent">@gikaqi-ぎかき</div>
+          <div class="ytSpecButtonShapeNextIcon"><span class="ytIconWrapperHost"><svg viewBox="0 0 12 12" width="12" height="12"><path d="M9.5 1"></path></svg></span></div>
+        </button>
+      </button-view-model></yt-button-view-model>
+    </div>&ZeroWidthSpace;<span id="message-container">
+      <span id="message-prefix-icon-container"></span>
+      <span id="message" dir="auto">ないすぱ！</span>
+    </span>
+    <span id="hover-message" dir="auto"></span>
+    <span id="deleted-state"></span>
+  </div>
+  <div id="menu"></div>
+</yt-live-chat-text-message-renderer>
+`
+
+/** スーパーチャット (購入回数のおまけ付き). 2026-11 時点の実際の DOM (アーカイブ) を縮小したもの. */
+export const PAID_MESSAGE_SUPER_COUNT = `
+<yt-live-chat-paid-message-renderer class="style-scope yt-live-chat-item-list-renderer" modern="" id="ChwKGkNPeW9pcWJEbDRnREZVUER3Z1FkeV80dU9R" allow-animations="">
+  <div id="card">
+    <div id="header">
+      <yt-img-shadow id="author-photo"><img id="img" alt="" width="32" height="32" src="https://yt4.ggpht.com/paid=s32-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+      <yt-img-shadow id="overlay-image"><img id="img" alt="" width="130" src="https://www.gstatic.com/youtube/img/pdg/novelty/purchase_milestones/5th_purchase_milestone/5th_Purchase_Celebration_Novelty_ILSC_T3.webp"></yt-img-shadow>
+      <div id="header-content">
+        <div id="header-content-primary-column">
+          <div id="single-line">
+            <div id="author-name-chip">
+              <yt-live-chat-author-chip disable-highlighting="" single-line="">
+                <span id="prepend-chat-badges"></span>
+                <span id="author-name" dir="auto" class="single-line">@jiro9608<span id="chip-badges"></span></span>
+                <span id="chat-badges"></span>
+              </yt-live-chat-author-chip>
+            </div>
+            <div id="leaderboard-badge" class="leaderboard-badge"></div>
+            <div id="purchase-amount-column">
+              <yt-img-shadow id="currency-img" height="16" width="16" hidden=""><img id="img" alt="" height="16" width="16"></yt-img-shadow>
+              <div id="purchase-amount"><yt-formatted-string>￥800</yt-formatted-string></div>
+            </div>
+          </div>
+        </div>
+        <span id="timestamp">0:22</span>
+        <div id="menu"></div>
+      </div>
+    </div>
+    <div id="content">
+      <div id="message" dir="auto">卒業おめでとう！！！</div>
+      <div id="action-buttons">
+        <div id="reply-button" class="action-button"><button aria-label="この Super Chat に返信します"><div class="ytSpecButtonShapeNextButtonTextContent">返信</div></button></div>
+      </div>
+    </div>
+  </div>
+  <div id="lower-bumper">
+    <yt-live-chat-item-bumper-view-model><div id="bumper"><div id="content">
+      <div id="bumper-content"><div id="message-block">
+        <yt-attributed-string id="message"><span class="ytAttributedStringHost" role="text"><span>ライブ配信での 5 回目の Super をお祝いしましょう</span></span></yt-attributed-string>
+      </div></div>
+    </div></div></yt-live-chat-item-bumper-view-model>
+  </div>
+</yt-live-chat-paid-message-renderer>
+`
+
+/** ギフト (星など). 2026-11 時点の実際の DOM を縮小したもの. id 属性・#timestamp は無い. */
+export const GIFT_MESSAGE = `
+<yt-gift-message-view-model class="style-scope yt-live-chat-item-list-renderer">
+  <div id="gift-message-v2" tabindex="0" role="article" class="style-scope yt-gift-message-view-model">
+    <yt-img-shadow id="author-photo" class="no-transition style-scope yt-gift-message-view-model" height="24" width="24" loaded=""><img id="img" draggable="false" class="style-scope yt-img-shadow" alt="" height="24" width="24" src="https://yt4.ggpht.com/ytc/gift-sender=s32-c-k-c0x00ffffff-no-rj"></yt-img-shadow>
+    <div id="content" class="style-scope yt-gift-message-view-model">
+      <yt-attributed-string id="author-name-v2" class="style-scope yt-gift-message-view-model"><span class="ytAttributedStringHost ytAttributedStringWhiteSpacePreWrap" role="text"><span class="">@AIBO0988 </span></span></yt-attributed-string>
+      <yt-attributed-string id="message-v2" class="style-scope yt-gift-message-view-model"><span class="ytAttributedStringHost ytAttributedStringWhiteSpacePreWrap" role="text"><span class="">星 を送信しました</span></span></yt-attributed-string>
+      <yt-image id="gift-image" class="style-scope yt-gift-message-view-model"><img class="ytCoreImageHost ytCoreImageLoaded" alt="" src="//www.gstatic.com/youtube/img/pdg/gift/assets/silver_star_v2_320x320.png=w480-h480"></yt-image>
+    </div>
+  </div>
+</yt-gift-message-view-model>
+`

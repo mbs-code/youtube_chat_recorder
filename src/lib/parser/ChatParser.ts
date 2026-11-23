@@ -5,12 +5,19 @@ import DomQueryHelper from '../util/DomQueryHelper'
 import { hmsToSeconds } from '../util/format'
 import retry from '../util/Retry'
 
+/** ギフト (星など) の要素. 他のチャットと違い id 属性が無く、名前・本文の id も違う. */
+const GIFT_MESSAGE_NODE_NAME = 'yt-gift-message-view-model'
+/** ギフトの本文 "星 を送信しました" からギフトの名前を取り出す. */
+const GIFT_NAME_RE = /^(.+?)\s*を送信しました/
+
 /** 処理対象のチャット要素のタグ名. */
 export const CHAT_NODE_NAMES = [
   'yt-live-chat-text-message-renderer', // 通常チャット
   'yt-live-chat-paid-message-renderer', // スーパーチャット
   'yt-live-chat-membership-item-renderer', // メンバー加入・マイルストーン
   'yt-live-chat-paid-sticker-renderer', // スーパーステッカー
+  'ytd-sponsorships-live-chat-gift-purchase-announcement-renderer', // メンバーシップギフト
+  'yt-gift-message-view-model', // ギフト (星など)
   // 'yt-live-chat-banner-renderer', // 固定チャット
 ] as const
 
@@ -24,19 +31,27 @@ export default class ChatParser {
    */
   public static async parse(video: Video, node: Element, now = new Date()): Promise<Chat> {
     const chat = new Chat()
-    chat.id = node.getAttribute('id') || undefined
+    const tagName = node.tagName.toLowerCase()
+    const isGiftMessage = tagName === GIFT_MESSAGE_NODE_NAME
+    // id 属性の無いチャット (ギフトなど) は、選択・削除で区別できるように作る
+    chat.id = node.getAttribute('id') || `ycr-${crypto.randomUUID()}`
 
     // 時刻 ///
-    const times = this.parseTimestamp(DomQueryHelper.getTextContent(node, '#timestamp'), video, now)
+    // (ギフトなど時刻表示の無いチャットは、配信中なら今の投稿とみなす)
+    const timestampText = DomQueryHelper.getTextContent(node, '#timestamp')
+    const times = timestampText
+      ? this.parseTimestamp(timestampText, video, now)
+      : this.liveNowTimes(video, now)
     chat.timestamp = times.datetime
     chat.seconds = times.seconds
 
     // 投稿者 ///
-    chat.authorName = (await retry(() => DomQueryHelper.getTextContent(node, '#author-name'), 3, 300)) || undefined // 稀に描画が遅れる
+    const authorSelector = isGiftMessage ? '#author-name-v2' : '#author-name'
+    chat.authorName = (await retry(() => DomQueryHelper.getTextContent(node, authorSelector), 3, 300)) || undefined // 稀に描画が遅れる
     chat.authorPhoto = DomQueryHelper.getAttribute(node, '#author-photo img', 'src')
 
     // 本文 ///
-    const messageNode = node.querySelector('#message')
+    const messageNode = node.querySelector(isGiftMessage ? '#message-v2' : '#message')
     if (messageNode) {
       chat.message = this.extractText(messageNode, false)
       chat.altMessage = this.extractText(messageNode, true)
@@ -62,7 +77,8 @@ export default class ChatParser {
     // トップチャット (名前の後ろの 👑#1 のような順位ボタン) ///
     chat.topChatRank = this.parseTopChatRank(node)
 
-    const tagName = node.tagName.toLowerCase()
+    // スーパーチャットへの返信 (名前の後ろの [@相手の名前 💬] ボタン) ///
+    chat.replyTo = this.parseReplyTo(node)
 
     // スーパーチャット ///
     const purchaseAmount = DomQueryHelper.getTextContent(node, '#purchase-amount')
@@ -71,6 +87,8 @@ export default class ChatParser {
       chat.isSuperChat = true
       chat.money = amount?.money
       chat.moneyUnit = amount?.unit
+      // 購入回数の節目のおまけ ("ライブ配信での 5 回目の Super をお祝いしましょう")
+      chat.superCount = this.parseSuperCount(DomQueryHelper.getTextContent(node, '#lower-bumper'))
     }
 
     // スーパーステッカー ///
@@ -87,11 +105,15 @@ export default class ChatParser {
 
     // メンバー加入・マイルストーン ///
     if (tagName === 'yt-live-chat-membership-item-renderer') {
-      // マイルストーン: #header-primary-text = "メンバー歴 11 か月", #header-subtext = メンバーシップ名, #message = 本文 (省略可)
-      // 加入: #header-primary-text なし, #header-subtext = "〇〇 へようこそ！"
-      const headerPrimaryText = DomQueryHelper.getTextContent(node, '#header-primary-text')
+      // マイルストーン: has-primary-header-text 属性, #header-primary-text = "メンバー歴 11 か月", #header-subtext = メンバーシップ名, #message = 本文 (省略可)
+      // 加入: show-only-header 属性, #header-primary-text は空 (または無い), #header-subtext = "〇〇 へようこそ！"
+      // 要素が追加された直後は #header-primary-text の文字がまだ無いことがあるので、加入と確定できなければ少し待つ
+      const getHeaderPrimaryText = () => DomQueryHelper.getTextContent(node, '#header-primary-text')
+      const headerPrimaryText = DomQueryHelper.hasAttribute(node, null, 'show-only-header')
+        ? getHeaderPrimaryText()
+        : await retry(getHeaderPrimaryText, 3, 300)
       const headerSubtext = DomQueryHelper.getTextContent(node, '#header-subtext')
-      if (headerPrimaryText) {
+      if (headerPrimaryText || DomQueryHelper.hasAttribute(node, null, 'has-primary-header-text')) {
         chat.isMilestone = true
         chat.memberMonths = this.parseMemberMonth(headerPrimaryText) ?? chat.memberMonths // バッジより正確
         chat.milestoneText = headerPrimaryText
@@ -102,6 +124,23 @@ export default class ChatParser {
       const fallback = headerPrimaryText || headerSubtext || ''
       if (!chat.altMessage) chat.altMessage = fallback
       if (!chat.message) chat.message = fallback
+    }
+
+    // メンバーシップギフト ///
+    if (tagName === 'ytd-sponsorships-live-chat-gift-purchase-announcement-renderer') {
+      // #primary-text = "〇〇 のメンバーシップ ギフトを 10 個贈りました" (時刻表示・本文は無い)
+      const primaryText = DomQueryHelper.getTextContent(node, '#primary-text') ?? ''
+      chat.isGift = true
+      chat.giftCount = this.parseGiftCount(primaryText)
+      chat.message = primaryText
+      chat.altMessage = primaryText
+    }
+
+    // ギフト (星など) ///
+    if (isGiftMessage) {
+      // #message-v2 = "星 を送信しました", #gift-image = ギフトの画像 (www.gstatic.com)
+      const text = chat.message ?? ''
+      chat.giftItem = GIFT_NAME_RE.exec(text)?.[1] ?? (text || 'ギフト')
     }
 
     return chat
@@ -188,6 +227,36 @@ export default class ChatParser {
     return {}
   }
 
+  /** 配信中なら現在時刻を投稿日時にする (時刻表示の無いチャット用). アーカイブでは分からないので空. */
+  protected static liveNowTimes(video: Video | undefined, now: Date): { datetime?: Date, seconds?: number } {
+    if (video?.type !== 'live') return {}
+    const startDate = video.startDate
+    return { datetime: new Date(now), seconds: startDate ? differenceInSeconds(now, startDate) : undefined }
+  }
+
+  /**
+   * スーパーチャットのおまけの文から、Super の購入回数を取り出す.
+   *
+   * - "ライブ配信での 5 回目の Super をお祝いしましょう", "Celebrate your 5th Super ..."
+   */
+  public static parseSuperCount(text?: string): number | undefined {
+    if (!text) return undefined
+    const count = text.match(/(\d+)\s*回目/)?.[1] ?? text.match(/(\d+)(?:st|nd|rd|th)\b/i)?.[1]
+    return count ? parseInt(count, 10) : undefined
+  }
+
+  /**
+   * メンバーシップギフトの文からギフトの数を取り出す.
+   *
+   * - "〇〇 のメンバーシップ ギフトを 10 個贈りました", "Sent 10 〇〇 gift memberships"
+   * - チャンネル名に数字が入ることがあるので、数の前後の語で探す.
+   */
+  public static parseGiftCount(text?: string): number | undefined {
+    if (!text) return undefined
+    const count = text.match(/ギフトを\s*([\d,]+)\s*個/)?.[1] ?? text.match(/sent\s+([\d,]+)/i)?.[1]
+    return count ? parseInt(count.replace(/,/g, ''), 10) : undefined
+  }
+
   /**
    * トップチャットの順位を取り出す.
    *
@@ -199,6 +268,20 @@ export default class ChatParser {
       const label = button.getAttribute('aria-label') || button.textContent || ''
       const rank = label.trim().match(/^#(\d+)$/)?.[1]
       if (rank) return parseInt(rank, 10)
+    }
+    return undefined
+  }
+
+  /**
+   * スーパーチャットへの返信先の投稿者名を取り出す.
+   *
+   * - `#before-content-buttons` 内のボタンの文字が "@handle" (背景はスパチャの色). トップチャットの "#1" と同じ場所.
+   * - 返信でなければ undefined.
+   */
+  public static parseReplyTo(node: Element): string | undefined {
+    for (const button of Array.from(node.querySelectorAll('#before-content-buttons button'))) {
+      const text = button.textContent?.trim() ?? ''
+      if (text.startsWith('@')) return text
     }
     return undefined
   }

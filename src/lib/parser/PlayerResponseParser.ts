@@ -52,3 +52,31 @@ export function parsePlayerResponse(playerResponse: unknown): VideoData | undefi
     uploadDate: toStr(micro?.uploadDate),
   }
 }
+
+/**
+ * 動画ページのデータ (ytd-watch-flexy.data / ytInitialData) から、配信中の同時接続数を取り出す.
+ *
+ * - contents.twoColumnWatchNextResults.results.results.contents[].videoPrimaryInfoRenderer.viewCount.videoViewCountRenderer
+ *   = { isLive: true, originalViewCount: "369", viewCount: { simpleText: "369 人が視聴中" } }
+ * - 配信中でなければ (isLive が無い = 再生数の表示) undefined.
+ * - SPA 遷移の途中で別の動画のデータが残っていることがあるので、currentVideoEndpoint の動画 ID を確かめる.
+ *
+ * @param watchResponse ytd-watch-flexy.data など
+ * @param videoId 対象の動画 ID
+ */
+export function parseConcurrentViewers(watchResponse: unknown, videoId: string): number | undefined {
+  const res = watchResponse as any
+  const currentId = res?.currentVideoEndpoint?.watchEndpoint?.videoId
+  if (currentId !== videoId) return undefined
+
+  const contents: any[] = res?.contents?.twoColumnWatchNextResults?.results?.results?.contents ?? []
+  for (const content of contents) {
+    const renderer = content?.videoPrimaryInfoRenderer?.viewCount?.videoViewCountRenderer
+    if (!renderer?.isLive) continue
+    const original = toNumber(renderer.originalViewCount)
+    if (original !== undefined) return original
+    const digits = toStr(renderer.viewCount?.simpleText)?.replace(/\D/g, '')
+    if (digits) return Number(digits)
+  }
+  return undefined
+}

@@ -1,6 +1,7 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
+import TimelineStorage from '../lib/chrome/storage/TimelineStorage'
 import Runtime from '../lib/chrome/Runtime'
 import VideoParser from '../lib/parser/VideoParser'
 import PageHelper from '../lib/util/PageHelper'
@@ -11,6 +12,7 @@ import type Config from '../models/Config'
 import type Video from '../models/Video'
 import BadgeManager from './BadgeManager'
 import type ChatHandler from './ChatHandler'
+import TimelineRecorder from './TimelineRecorder'
 
 /** YouTube の SPA 遷移を検知するイベント (ページのデータ更新完了). */
 const PAGE_UPDATED_EVENT = 'yt-page-data-updated'
@@ -18,6 +20,23 @@ const PAGE_UPDATED_EVENT = 'yt-page-data-updated'
 const CHAT_FRAME_SELECTOR = 'ytd-live-chat-frame#chat'
 const CHAT_IFRAME_SELECTOR = 'iframe#chatframe'
 const CHAT_SCROLLER_SELECTOR = 'yt-live-chat-item-list-renderer #item-scroller'
+
+/** 配信中の「〇人が視聴中」の表示. aria-label に数字が全桁で入る. 無ければ中の回転する数字 (yt-animated-rolling-number) を読む. */
+const VIEW_COUNT_SELECTOR = '#view-count'
+/** 回転する数字の表示. #view-count の外 (レイアウト違い) にある場合は、周りの文字が「視聴中」のものだけ使う. */
+const ROLLING_NUMBER_SELECTOR = '.animatedRollingNumberDigits'
+/** 同時接続数の表示の周りの文字. */
+const CONCURRENT_LABEL_RE = /視聴中|watching/i
+/** 何回読めなかったら警告を出すか (ページごとに 1 回だけ). */
+const VIEWERS_WARN_AFTER = 3
+/** 同時接続数を読み直す間隔 (msec). 表示の変化を取りこぼした時の予備. */
+const VIEWERS_INTERVAL = 30 * 1000
+/** 推移 (同時接続数) を記録する間隔 (msec). (最大同接は表示が変わるたびに記録する) */
+const VIEWERS_SAMPLE_INTERVAL = 60 * 1000
+/** 動画のプレイヤーの video 要素. */
+const MAIN_VIDEO_SELECTOR = '#movie_player video.html5-main-video'
+/** 表示が変わってから読むまでの待ち (msec). 数字が回転している間に何度も読まないようにまとめる. */
+const VIEWERS_THROTTLE = 2 * 1000
 
 /**
  * ページの状態を監視し、チャット欄が現れたら ChatHandler に流す.
@@ -42,11 +61,28 @@ export default class PageEventer {
   protected removalObserver?: MutationObserver
   protected chatIframe?: HTMLIFrameElement
 
+  /** 同時接続数を定期的に読むタイマー. */
+  protected viewersTimer?: ReturnType<typeof setInterval>
+  /** 同時接続数を 1 分ごとに記録するタイマー. */
+  protected viewersSampleTimer?: ReturnType<typeof setInterval>
+  /** 同時接続数の表示の変化を監視する. (変わったらすぐ読む) */
+  protected viewersObserver?: MutationObserver
+  protected viewersPending?: ReturnType<typeof setTimeout>
+
   /** 遷移ごとに増える番号. 非同期処理の途中で遷移したら古い処理を捨てるために使う. */
   protected generation = 0
   protected doInitialChats = false
 
-  constructor(protected handler: ChatHandler) {}
+  /** 配信中の推移 (1 分ごとの同時接続数・コメント数) の記録. */
+  protected timeline = new TimelineRecorder()
+
+  constructor(protected handler: ChatHandler) {
+    handler.onChat = chat => this.timeline.addChat(chat)
+    // タブを閉じる・再読み込みする時は、貯めている記録を書き込む
+    window.addEventListener('pagehide', () => void this.timeline.flush())
+    // 動画が再生されたら再生数を記録する (play はバブリングしないので capture で拾う)
+    document.addEventListener('play', this.onVideoPlay, true)
+  }
 
   public async init(): Promise<void> {
     await this.loadConfig()
@@ -79,6 +115,9 @@ export default class PageEventer {
     Logger.debug(`🔥<${PAGE_UPDATED_EVENT}>`)
     const generation = ++this.generation
 
+    this.stopWatchViewers()
+    void this.timeline.stop()
+
     // 拡張機能が更新・再読み込みされたら、古い content script は何もしない
     if (!Runtime.isContextValid()) {
       this.disconnect()
@@ -101,6 +140,7 @@ export default class PageEventer {
         return
       }
 
+      if (video.isLiveNow && this.recordStats) this.startWatchViewers(video, generation)
       await this.attachChatFrame(generation)
     } catch (err) {
       Logger.error(err)
@@ -136,6 +176,17 @@ export default class PageEventer {
 
     this.video = video
     await VideoStorage.save(video, this.config?.maxVideoLength ?? 20)
+
+    if (!this.recordStats || !video.id || generation !== this.generation) return video
+
+    // 動画情報を読む前に再生が始まっていたら、ここで再生数を記録する
+    if (this.findMainVideo()?.paused === false) void this.recordViews(video.id, video.viewCount)
+
+    // 開いた時に配信中なら、1 分ごとの推移の記録を始める (開いた時点の同時接続数も入れる)
+    if (video.isLiveNow) {
+      this.timeline.start(video.id)
+      if (videoData.concurrentViewers) this.timeline.addViewers(videoData.concurrentViewers)
+    }
     return video
   }
 
@@ -219,6 +270,202 @@ export default class PageEventer {
       Logger.debug('⚙️[start] handle initial chats')
       void this.handler.findInvoke(scroller, this.chatFilter).then(() => Logger.debug('⚙️[finish] handle initial chats'))
     }
+  }
+
+  /** 動画のプレイヤーの video 要素. (広告・プレビューの video は除く) */
+  protected findMainVideo(): HTMLVideoElement | null {
+    return document.querySelector<HTMLVideoElement>(MAIN_VIDEO_SELECTOR)
+  }
+
+  /** 動画が再生された (一時停止からの再開も含む). その時点の再生数を記録する. */
+  protected onVideoPlay = (event: Event): void => {
+    const video = this.video
+    if (!this.recordStats || !video?.id || event.target !== this.findMainVideo()) return
+    if (!Runtime.isContextValid()) return
+    const videoId = video.id
+    void PageHelper.requestVideoData(videoId).then((data) => {
+      // 遷移の直後は前の動画の情報が返ることがあるので、ID を確かめる
+      if (data?.videoId === videoId && this.video?.id === videoId) return this.recordViews(videoId, data.viewCount ?? 0)
+    })
+  }
+
+  /** 再生数を記録する. (同じ分は 1 つにまとまる) */
+  protected async recordViews(videoId: string, views: number): Promise<void> {
+    Logger.debug(`▶️[views] ${views} (${videoId})`)
+    await TimelineStorage.addViews(videoId, views).catch(err => Logger.error(err))
+  }
+
+  /** 推移・最大同接を記録するか (設定). */
+  protected get recordStats(): boolean {
+    return this.config?.recordStats ?? true
+  }
+
+  /**
+   * 配信中の同時接続数を読み続ける.
+   *
+   * - 最大同接: 表示が変わるたびに読み、超えたらすぐ保存する.
+   * - 推移: 1 分ごとに、その時点の同時接続数を記録する.
+   */
+  protected startWatchViewers(video: Video, generation: number): void {
+    const videoId = video.id
+    if (!videoId) return
+
+    let max = video.maxViewers ?? 0
+    let current: number | undefined // 最後に読んだ値
+    let misses = 0
+    let observed: Element[] = []
+
+    /** 今の同時接続数を推移に入れる (1 分ごと). */
+    const sample = () => {
+      if (generation !== this.generation || current === undefined) return
+      this.timeline.addViewers(current)
+    }
+
+    /** 読んだ値を覚え、最大を超えたらすぐ保存する. */
+    const record = async (viewers: number | undefined, from: string) => {
+      if (generation !== this.generation) return
+      Logger.debug(`👀[viewers] ${viewers ?? '(not found)'} (max: ${max}, from: ${from})`)
+      if (viewers === undefined) {
+        // 見つからない時は、原因を調べられるようにページの状態を 1 回だけ出す
+        if (++misses === VIEWERS_WARN_AFTER) Logger.warn(`👀[viewers] concurrent viewers not found: ${this.describeViewCount()}`)
+        return
+      }
+      const first = current === undefined
+      current = viewers
+      if (first) sample() // 最初の値はすぐ推移に入れる (以降は 1 分ごと)
+      if (viewers <= max) return
+
+      max = viewers
+      await VideoStorage.updateMaxViewers(videoId, viewers)
+    }
+
+    /** ページ全体から読む (定期的な確認と、回転する数字が止まった後). */
+    const check = async () => {
+      // 遷移した後の古い呼び出しは何もしない. (ここで stop すると、新しい動画の監視まで止めてしまう)
+      if (generation !== this.generation) return
+      if (!Runtime.isContextValid()) return this.stopWatchViewers()
+      observe()
+      await record(this.readConcurrentViewers(), 'page')
+    }
+
+    // 回転する数字の変化は、止まるまで (VIEWERS_THROTTLE) 待ってから読む
+    const schedule = () => {
+      if (this.viewersPending) return
+      this.viewersPending = setTimeout(() => {
+        this.viewersPending = undefined
+        void check().catch(err => Logger.error(err))
+      }, VIEWERS_THROTTLE)
+    }
+
+    // #view-count の aria-label ("6,679 人が視聴中") が変わったら、その値をすぐ記録する.
+    // (aria-label は回転のアニメーションと違い、最初から変わった後の値になっている)
+    this.viewersObserver = new MutationObserver((records) => {
+      for (const r of records) {
+        if (r.type !== 'attributes' || r.attributeName !== 'aria-label') continue
+        const viewers = VideoParser.parseConcurrentViewers((r.target as Element).getAttribute('aria-label'))
+        if (viewers !== undefined) return void record(viewers, 'aria-label').catch(err => Logger.error(err))
+      }
+      schedule()
+    })
+
+    // 監視先: 全ての #view-count (説明欄の開閉などで複数あることがある). 作り直されることがあるので、読むたびに確かめる
+    const observe = () => {
+      const targets = this.findViewCountTargets()
+      if (targets.length === observed.length && targets.every((t, i) => t === observed[i])) return
+      observed = targets
+      this.viewersObserver?.disconnect()
+      for (const target of targets) {
+        this.viewersObserver?.observe(target, {
+          attributes: true,
+          attributeFilter: ['aria-label', 'style'], // aria-label の数字 / 回転する数字の margin-top
+          subtree: true,
+          childList: true,
+          characterData: true,
+        })
+      }
+      Logger.debug(`👀[viewers] observe ${targets.length} element(s)`)
+    }
+
+    this.viewersTimer = setInterval(() => void check().catch(err => Logger.error(err)), VIEWERS_INTERVAL)
+    this.viewersSampleTimer = setInterval(sample, VIEWERS_SAMPLE_INTERVAL)
+    // 表示を待ってから 1 回目 (遷移したら stopWatchViewers で取り消す)
+    this.viewersPending = setTimeout(() => {
+      this.viewersPending = undefined
+      void check().catch(err => Logger.error(err))
+    }, 5000)
+    Logger.debug('⚙️[start] watch concurrent viewers')
+  }
+
+  /** 同時接続数の表示 (監視先). 全ての #view-count、無ければ「視聴中」の回転する数字の周り. */
+  protected findViewCountTargets(): Element[] {
+    const viewCounts = Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))
+    if (viewCounts.length) return viewCounts
+    return Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))
+      .filter(r => CONCURRENT_LABEL_RE.test(this.rollingLabel(r)))
+      .map(r => r.parentElement?.parentElement ?? r)
+  }
+
+  /**
+   * ページから同時接続数を読む.
+   *
+   * 1. #view-count の aria-label ("26,905 人が視聴中")
+   * 2. #view-count の中の回転する数字
+   * 3. それ以外の場所の回転する数字のうち、周りの文字が「視聴中」のもの (レイアウト違い用)
+   */
+  protected readConcurrentViewers(): number | undefined {
+    for (const element of Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))) {
+      const fromLabel = VideoParser.parseConcurrentViewers(element.getAttribute('aria-label'))
+      if (fromLabel !== undefined) return fromLabel
+
+      const rolling = element.querySelector(ROLLING_NUMBER_SELECTOR)
+      const fromRolling = rolling ? VideoParser.parseConcurrentViewers(VideoParser.readRollingNumber(rolling)) : undefined
+      if (fromRolling !== undefined) return fromRolling
+    }
+
+    for (const rolling of Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))) {
+      if (rolling.closest(VIEW_COUNT_SELECTOR)) continue // 上で読めなかったもの
+      if (!CONCURRENT_LABEL_RE.test(this.rollingLabel(rolling))) continue
+      const viewers = VideoParser.parseConcurrentViewers(VideoParser.readRollingNumber(rolling))
+      if (viewers !== undefined) return viewers
+    }
+    return undefined
+  }
+
+  /** 回転する数字の周りの文字 (aria-label か、数字を除いた文字). 「〇人が視聴中」の "人が視聴中" の部分. */
+  protected rollingLabel(rolling: Element): string {
+    for (let e: Element | null = rolling.parentElement, i = 0; e && i < 3; e = e.parentElement, i++) {
+      const label = e.getAttribute('aria-label')
+      if (label) return label
+      const clone = e.cloneNode(true) as Element
+      clone.querySelectorAll(ROLLING_NUMBER_SELECTOR).forEach(r => r.remove())
+      const text = clone.textContent?.trim()
+      if (text) return text
+    }
+    return ''
+  }
+
+  /** 同時接続数が読めない時の調査用. 候補の要素の情報を短くまとめる. */
+  protected describeViewCount(): string {
+    const viewCounts = Array.from(document.querySelectorAll(VIEW_COUNT_SELECTOR))
+      .map(e => `#view-count[aria-label=${JSON.stringify(e.getAttribute('aria-label'))}]`)
+    const rollings = Array.from(document.querySelectorAll(ROLLING_NUMBER_SELECTOR))
+      .map((r) => {
+        const parent = r.parentElement?.parentElement
+        const where = parent ? `${parent.localName}${parent.id ? '#' + parent.id : ''}` : '?'
+        return `rolling(${where})=${JSON.stringify(VideoParser.readRollingNumber(r))} label=${JSON.stringify(this.rollingLabel(r).slice(0, 30))}`
+      })
+    return [...viewCounts, ...rollings].join(' / ') || 'no #view-count and no rolling number'
+  }
+
+  protected stopWatchViewers(): void {
+    clearInterval(this.viewersTimer)
+    this.viewersTimer = undefined
+    clearInterval(this.viewersSampleTimer)
+    this.viewersSampleTimer = undefined
+    clearTimeout(this.viewersPending)
+    this.viewersPending = undefined
+    this.viewersObserver?.disconnect()
+    this.viewersObserver = undefined
   }
 
   /** 監視を全て止める. */

@@ -49,6 +49,7 @@
  * 動画の選択欄 (ドロップダウン).
  *
  * - 一覧が変わったら、開いているタブの動画 (無ければ最近見た動画) を選んで change を emit する.
+ *   既に選んでいる動画が一覧に残っていれば、それを選んだまま (emit しない).
  * - 外側のクリックや Esc で閉じる.
  */
 import { onBeforeUnmount, onMounted, ref, shallowRef, useTemplateRef, watch } from 'vue'
@@ -76,6 +77,11 @@ const root = useTemplateRef<HTMLElement>('root')
 watch(
   () => props.videos,
   async (videos) => {
+    const current = selected.value ? videos.find(v => v.id === selected.value?.id) : undefined
+    if (current) {
+      selected.value = current
+      return
+    }
     const activeTab = await BrowserTabs.getActiveTab()
     const videoId = PageHelper.getPageVideoId(activeTab?.url)
     const find = (videoId ? videos.find(v => v.id === videoId) : undefined) ?? videos[0] ?? null
