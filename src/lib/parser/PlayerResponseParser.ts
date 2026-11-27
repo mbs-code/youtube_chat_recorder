@@ -111,7 +111,7 @@ function findDeep<T>(root: unknown, pick: (key: string, value: unknown) => T | u
  * 数が無い ("この動画を高評価") なら undefined.
  */
 export function parseLikeCount(text?: string | null): number | undefined {
-  if (!text || !/高評価|like this video/i.test(text)) return undefined
+  if (!text || !/高評価|高く評価|like this video/i.test(text)) return undefined
   return parseCount(text)
 }
 

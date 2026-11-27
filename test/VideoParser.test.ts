@@ -191,6 +191,7 @@ describe('高評価数・コメント数', () => {
   it('表示の文字から数を取り出す', () => {
     expect(parseLikeCount('他の 1,234 人がこの動画を高評価しています')).toBe(1234)
     expect(parseLikeCount('like this video along with 5,678 other people')).toBe(5678)
+    expect(parseLikeCount('他 865 人もこの動画を高く評価しました')).toBe(865)
     expect(parseLikeCount('この動画を高評価')).toBeUndefined()
     expect(parseLikeCount('1.2万')).toBeUndefined()
     expect(parseCommentCount('1,234 件のコメント')).toBe(1234)
