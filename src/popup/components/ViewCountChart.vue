@@ -1,28 +1,12 @@
 <template>
   <!-- 再生数の記録: 動画を開くたび (配信中は 1 分ごと) に記録した値を線でつなぐ. 時刻は記録した間隔のまま (数日にまたがることもある) -->
   <section class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
-    <div class="flex items-center gap-2">
-      <h3 class="text-xs font-bold text-zinc-700">{{ metric.label }}</h3>
-      <div class="ml-auto flex gap-1" role="tablist" aria-label="グラフの項目">
-        <button
-          v-for="m in METRICS"
-          :key="m.key"
-          type="button"
-          role="tab"
-          class="btn btn-sm"
-          :class="m.key === metricKey ? 'btn-primary' : 'btn-ghost'"
-          :aria-selected="m.key === metricKey"
-          @click="metricKey = m.key"
-        >
-          {{ m.label }}
-        </button>
-      </div>
-    </div>
+    <h3 class="text-xs font-bold text-zinc-700">{{ metric.label }}</h3>
     <svg
       class="block w-full touch-none"
       :viewBox="`0 0 ${WIDTH} ${HEIGHT}`"
       role="img"
-      aria-label="推移のグラフ"
+      :aria-label="metric.label"
       @pointermove="handlePointer"
       @pointerdown="handlePointer"
     >
@@ -111,7 +95,7 @@
       </p>
     </div>
 
-    <details v-if="points.length" class="mt-1.5 text-xs">
+    <details v-if="series.length" class="mt-1.5 text-xs">
       <summary class="cursor-pointer text-zinc-500 select-none">表で見る</summary>
       <div class="mt-1 max-h-48 overflow-y-auto">
         <table class="w-full text-right tabular-nums">
@@ -119,18 +103,14 @@
             <tr>
               <th class="py-0.5 text-left font-normal">時刻</th>
               <th class="font-normal">配信開始から</th>
-              <th class="font-normal">再生数</th>
-              <th class="font-normal">高評価</th>
-              <th class="font-normal">コメント</th>
+              <th class="font-normal">{{ metric.label }}</th>
             </tr>
           </thead>
           <tbody class="text-zinc-700">
-            <tr v-for="point in points" :key="point.t" class="border-t border-zinc-100">
+            <tr v-for="point in series" :key="point.t" class="border-t border-zinc-100">
               <td class="py-0.5 text-left">{{ formatTime(point.t) }}</td>
               <td>{{ elapsed(point.t) ?? '-' }}</td>
-              <td>{{ point.views.toLocaleString() }}</td>
-              <td>{{ point.likes?.toLocaleString() ?? '-' }}</td>
-              <td>{{ point.commentCount?.toLocaleString() ?? '-' }}</td>
+              <td>{{ point.value.toLocaleString() }}</td>
             </tr>
           </tbody>
         </table>
@@ -153,22 +133,22 @@ import type { ViewCountPoint } from '../../models/Timeline'
 
 const props = defineProps<{
   points: ViewCountPoint[]
+  metric: MetricKey // 描く項目
   startDate?: Date // 配信開始 (経過時間の表示用)
 }>()
 
-const METRICS = [
-  { key: 'views', label: '再生数', unit: '回' },
-  { key: 'likes', label: '高評価', unit: '件' },
-  { key: 'commentCount', label: 'コメント', unit: '件' },
-] as const
-type MetricKey = (typeof METRICS)[number]['key']
+const METRICS = {
+  views: { label: '再生数', unit: '回' },
+  likes: { label: '高評価', unit: '件' },
+  commentCount: { label: 'コメント', unit: '件' },
+} as const
+type MetricKey = keyof typeof METRICS
 
-const metricKey = ref<MetricKey>('views')
-const metric = computed(() => METRICS.find(m => m.key === metricKey.value)!)
+const metric = computed(() => METRICS[props.metric])
 
 /** 選んだ項目の記録 (その項目が読めなかった記録は除く). */
 const series = computed(() => {
-  const key = metricKey.value
+  const key = props.metric
   return props.points.flatMap(p => (p[key] === undefined ? [] : [{ t: p.t, value: p[key] as number }]))
 })
 

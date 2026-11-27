@@ -81,7 +81,13 @@
             :start-date="selectedVideo.startDate"
             :end-date="selectedVideo.endDate"
           />
-          <ViewCountChart :points="viewCounts" :start-date="selectedVideo.startDate" />
+          <ViewCountChart
+            v-for="metric in VIEW_METRICS"
+            :key="metric"
+            :points="viewCounts"
+            :metric="metric"
+            :start-date="selectedVideo.startDate"
+          />
         </template>
       </section>
 
@@ -203,6 +209,8 @@ import VideoDropdown from './components/VideoDropdown.vue'
 import VideoStats from './components/VideoStats.vue'
 import TimelineChart from './components/TimelineChart.vue'
 import ViewCountChart from './components/ViewCountChart.vue'
+
+const VIEW_METRICS = ['views', 'likes', 'commentCount'] as const
 import FilterDropdown from './components/FilterDropdown.vue'
 import type { TimelinePoint, ViewCountPoint } from '../models/Timeline'
 
