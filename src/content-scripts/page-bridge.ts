@@ -5,7 +5,14 @@
  * - content-script から postMessage で依頼を受け、現在の動画情報を返すだけ (それ以外はしない).
  */
 import { BRIDGE_RESPONSE_SOURCE, type BridgeResponse, isBridgeRequest } from '../lib/bridge/protocol'
-import { parseConcurrentViewers, parsePlayerResponse } from '../lib/parser/PlayerResponseParser'
+import {
+  parseCommentCount,
+  parseCommentCountFromData,
+  parseConcurrentViewers,
+  parseLikeCount,
+  parseLikeCountFromData,
+  parsePlayerResponse,
+} from '../lib/parser/PlayerResponseParser'
 import type VideoData from '../interface/VideoData'
 
 /* eslint-disable @typescript-eslint/no-explicit-any -- YouTube の内部オブジェクトは型が無いため */
@@ -33,6 +40,32 @@ function watchResponseCandidates(): unknown[] {
   ]
 }
 
+/** 高評価数. ページのデータ → 高評価ボタンの表示 (aria-label) の順に探す. */
+function findLikeCount(videoId: string): number | undefined {
+  for (const response of watchResponseCandidates()) {
+    const count = parseLikeCountFromData(response, videoId)
+    if (count !== undefined) return count
+  }
+  for (const button of Array.from(document.querySelectorAll('like-button-view-model button, #segmented-like-button button'))) {
+    const count = parseLikeCount(button.getAttribute('aria-label') ?? button.getAttribute('title'))
+    if (count !== undefined) return count
+  }
+  return undefined
+}
+
+/** コメント数. コメント欄は遅れて読み込まれるので、ページのデータ → コメント欄の見出しの表示の順に探す. */
+function findCommentCount(videoId: string): number | undefined {
+  for (const response of watchResponseCandidates()) {
+    const count = parseCommentCountFromData(response, videoId)
+    if (count !== undefined) return count
+  }
+  for (const element of Array.from(document.querySelectorAll('ytd-comments-header-renderer #count'))) {
+    const count = parseCommentCount(element.textContent)
+    if (count !== undefined) return count
+  }
+  return undefined
+}
+
 function findVideoData(videoId?: string): VideoData | null {
   for (const candidate of playerResponseCandidates()) {
     const data = parsePlayerResponse(candidate)
@@ -42,6 +75,8 @@ function findVideoData(videoId?: string): VideoData | null {
         data.concurrentViewers = parseConcurrentViewers(response, data.videoId)
         if (data.concurrentViewers !== undefined) break
       }
+      data.likeCount = findLikeCount(data.videoId)
+      data.commentCount = findCommentCount(data.videoId)
       return data
     }
   }

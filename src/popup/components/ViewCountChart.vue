@@ -1,12 +1,28 @@
 <template>
   <!-- 再生数の記録: 動画を開くたび (配信中は 1 分ごと) に記録した値を線でつなぐ. 時刻は記録した間隔のまま (数日にまたがることもある) -->
   <section class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
-    <h3 class="text-xs font-bold text-zinc-700">再生数</h3>
+    <div class="flex items-center gap-2">
+      <h3 class="text-xs font-bold text-zinc-700">{{ metric.label }}</h3>
+      <div class="ml-auto flex gap-1" role="tablist" aria-label="グラフの項目">
+        <button
+          v-for="m in METRICS"
+          :key="m.key"
+          type="button"
+          role="tab"
+          class="btn btn-sm"
+          :class="m.key === metricKey ? 'btn-primary' : 'btn-ghost'"
+          :aria-selected="m.key === metricKey"
+          @click="metricKey = m.key"
+        >
+          {{ m.label }}
+        </button>
+      </div>
+    </div>
     <svg
       class="block w-full touch-none"
       :viewBox="`0 0 ${WIDTH} ${HEIGHT}`"
       role="img"
-      aria-label="再生数"
+      aria-label="推移のグラフ"
       @pointermove="handlePointer"
       @pointerdown="handlePointer"
     >
@@ -30,7 +46,7 @@
       </g>
 
       <text
-        v-if="points.length === 0"
+        v-if="series.length === 0"
         :x="PLOT_LEFT + plotWidth / 2"
         :y="PLOT_TOP + PLOT_HEIGHT / 2"
         text-anchor="middle"
@@ -49,11 +65,11 @@
       />
       <!-- 記録した点 (開いた時だけの記録は間が空くので点も描く. 多い時はマウスを乗せた点だけ) -->
       <circle
-        v-for="(point, i) in points"
-        v-show="points.length <= 24 || hoverIndex === i"
+        v-for="(point, i) in series"
+        v-show="series.length <= 24 || hoverIndex === i"
         :key="point.t"
         :cx="x(point.t)"
-        :cy="y(point.views)"
+        :cy="y(point.value)"
         :r="hoverIndex === i ? 4 : 2.5"
         :fill="LINE_COLOR"
         stroke="white"
@@ -91,7 +107,7 @@
       <p v-if="elapsed(hoverPoint.t)" class="text-zinc-500">配信開始から {{ elapsed(hoverPoint.t) }}</p>
       <p class="mt-1 flex items-center gap-1.5 text-zinc-700">
         <span class="inline-block h-0.5 w-3 rounded-full" :style="{ backgroundColor: LINE_COLOR }" />
-        再生数 <strong class="ml-auto text-zinc-950">{{ hoverPoint.views.toLocaleString() }} 回</strong>
+        {{ metric.label }} <strong class="ml-auto text-zinc-950">{{ hoverPoint.value.toLocaleString() }} {{ metric.unit }}</strong>
       </p>
     </div>
 
@@ -104,6 +120,8 @@
               <th class="py-0.5 text-left font-normal">時刻</th>
               <th class="font-normal">配信開始から</th>
               <th class="font-normal">再生数</th>
+              <th class="font-normal">高評価</th>
+              <th class="font-normal">コメント</th>
             </tr>
           </thead>
           <tbody class="text-zinc-700">
@@ -111,6 +129,8 @@
               <td class="py-0.5 text-left">{{ formatTime(point.t) }}</td>
               <td>{{ elapsed(point.t) ?? '-' }}</td>
               <td>{{ point.views.toLocaleString() }}</td>
+              <td>{{ point.likes?.toLocaleString() ?? '-' }}</td>
+              <td>{{ point.commentCount?.toLocaleString() ?? '-' }}</td>
             </tr>
           </tbody>
         </table>
@@ -121,10 +141,10 @@
 
 <script setup lang="ts">
 /**
- * 再生数の記録のグラフ (popup の記録・グラフのタブ).
+ * 再生数・高評価数・コメント数の記録のグラフ (popup の記録・グラフのタブ). 項目はボタンで切り替える.
  *
  * - 同時接続数のグラフとは時間の軸が違う (開いた時の記録は数日おきのこともある) ので別のグラフにする.
- * - 再生数は増えるだけなので、縦軸は 0 からではなく記録の範囲に合わせる (変化が見えるように).
+ * - 再生数・高評価数は増えるだけなので、縦軸は 0 からではなく記録の範囲に合わせる (変化が見えるように).
  */
 import { format, startOfDay } from 'date-fns'
 import { computed, ref } from 'vue'
@@ -135,6 +155,22 @@ const props = defineProps<{
   points: ViewCountPoint[]
   startDate?: Date // 配信開始 (経過時間の表示用)
 }>()
+
+const METRICS = [
+  { key: 'views', label: '再生数', unit: '回' },
+  { key: 'likes', label: '高評価', unit: '件' },
+  { key: 'commentCount', label: 'コメント', unit: '件' },
+] as const
+type MetricKey = (typeof METRICS)[number]['key']
+
+const metricKey = ref<MetricKey>('views')
+const metric = computed(() => METRICS.find(m => m.key === metricKey.value)!)
+
+/** 選んだ項目の記録 (その項目が読めなかった記録は除く). */
+const series = computed(() => {
+  const key = metricKey.value
+  return props.points.flatMap(p => (p[key] === undefined ? [] : [{ t: p.t, value: p[key] as number }]))
+})
 
 // 色 (データ可視化の検証済みパレットの 7 番目. 同接・コメント・スパチャと見分けるため) と、控えめな線・文字の色 (zinc)
 const LINE_COLOR = '#6250d6'
@@ -164,7 +200,7 @@ function niceStep(span: number): number {
 
 /** 縦軸の範囲 (切りのいい値に広げる). */
 const yRange = computed(() => {
-  const values = props.points.length ? props.points.map(p => p.views) : [0]
+  const values = series.value.length ? series.value.map(p => p.value) : [0]
   const lo = Math.min(...values)
   const hi = Math.max(...values)
   const step = niceStep(hi - lo || hi * 0.1 || 1)
@@ -179,7 +215,7 @@ function y(value: number): number {
 }
 const yTicks = computed(() => {
   const { min, max, step } = yRange.value
-  if (props.points.length === 0) return [{ value: min, y: y(min), label: '0' }]
+  if (series.value.length === 0) return [{ value: min, y: y(min), label: '0' }]
   const ticks = []
   for (let v = min; v <= max + step / 2; v += step) ticks.push({ value: v, y: y(v), label: compact.format(v) })
   return ticks
@@ -187,8 +223,8 @@ const yTicks = computed(() => {
 
 /** 横軸 (記録した最初 〜 最後. 1 点だけなら真ん中). */
 const xRange = computed(() => {
-  const start = props.points[0]?.t ?? Date.now()
-  const end = props.points.at(-1)?.t ?? start
+  const start = series.value[0]?.t ?? Date.now()
+  const end = series.value.at(-1)?.t ?? start
   return { start, end }
 })
 function x(t: number): number {
@@ -197,7 +233,7 @@ function x(t: number): number {
   return PLOT_LEFT + ((t - start) / (end - start)) * plotWidth
 }
 
-const linePath = computed(() => props.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.views).toFixed(1)}`).join(''))
+const linePath = computed(() => series.value.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.value).toFixed(1)}`).join(''))
 
 /** 目盛りの文字の幅の目安 ("2026/11/23 21:10" が 10px の文字で 80 くらい). 間引き・はみ出しの判定に使う. */
 const X_LABEL_WIDTH = 96
@@ -233,7 +269,7 @@ const xTicks = computed(() => {
 /// マウスを乗せた時 ///
 
 const hoverIndex = ref<number>()
-const hoverPoint = computed(() => (hoverIndex.value === undefined ? undefined : props.points[hoverIndex.value]))
+const hoverPoint = computed(() => (hoverIndex.value === undefined ? undefined : series.value[hoverIndex.value]))
 
 /** マウスの位置に一番近い点を選ぶ. */
 function handlePointer(event: PointerEvent): void {
@@ -241,8 +277,8 @@ function handlePointer(event: PointerEvent): void {
   const rect = svg.getBoundingClientRect()
   const px = ((event.clientX - rect.left) / rect.width) * WIDTH
   let best = 0
-  props.points.forEach((p, i) => {
-    if (Math.abs(x(p.t) - px) < Math.abs(x(props.points[best].t) - px)) best = i
+  series.value.forEach((p, i) => {
+    if (Math.abs(x(p.t) - px) < Math.abs(x(series.value[best].t) - px)) best = i
   })
   hoverIndex.value = best
 }

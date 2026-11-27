@@ -43,6 +43,11 @@ describe('mergeViewCounts', () => {
     const merged = mergeViewCounts([{ t: 2 * MINUTE, views: 200 }, { t: MINUTE, views: 100 }], [{ t: MINUTE, views: 150 }])
     expect(merged).toEqual([{ t: MINUTE, views: 150 }, { t: 2 * MINUTE, views: 200 }])
   })
+
+  it('高評価数・コメント数は項目ごとに大きい方を残し、無い項目は補う', () => {
+    const merged = mergeViewCounts([{ t: MINUTE, views: 100, likes: 10 }], [{ t: MINUTE, views: 90, likes: 8, commentCount: 3 }])
+    expect(merged).toEqual([{ t: MINUTE, views: 100, likes: 10, commentCount: 3 }])
+  })
 })
 
 describe('TimelineRecorder', () => {
