@@ -37,31 +37,48 @@
     </p>
 
     <main v-if="form" class="grid grid-cols-1 items-start gap-5 min-[1000px]:grid-cols-[7fr_5fr]">
-      <!-- 左: 記録するチャット (チャットフィルターの表・テキストマッチングの追加・テスト) -->
-      <section class="card p-5">
-        <header class="mb-4">
-          <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
-            <i class="mdi mdi-message-text-outline text-zinc-500" />
-            記録するチャット
-          </h2>
-          <p class="text-[13px] text-zinc-500">
-            チャットの種類ごとに記録の仕方を選びます。
-            <strong>保存する</strong>
-            は文字だけ、
-            <strong>画像化する</strong>
-            はチャット欄の見た目のまま画像でも記録します (1 件 10KB ほど)。
-          </p>
-        </header>
-        <ChatFilterTable v-model="form.chatFilters" />
-      </section>
-
-      <!-- 右: 動画の保存 / チャットの保存 / 詳細設定 / データの管理 -->
+      <!-- 左: 記録するチャット (チャットフィルターの表・テキストマッチングの追加・テスト) / 自動でピン止めする動画 -->
       <div class="flex flex-col gap-5">
-        <!-- 動画の保存: 最大保存数・普通の動画を無視するか -->
+        <section class="card p-5">
+          <header class="mb-4">
+            <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+              <i class="mdi mdi-message-text-outline text-zinc-500" />
+              記録するチャット
+            </h2>
+            <p class="text-[13px] text-zinc-500">
+              チャットの種類ごとに記録の仕方を選びます。
+              <strong>保存する</strong>
+              は文字だけ、
+              <strong>画像化する</strong>
+              はチャット欄の見た目のまま画像でも記録します (1 件 10KB ほど)。
+            </p>
+          </header>
+          <ChatFilterTable v-model="form.chatFilters" />
+        </section>
+
+        <!-- 自動でピン止めする動画: 対象の一覧と入力欄 (記録するチャットと同じ作り) -->
+        <section class="card p-5">
+          <header class="mb-4">
+            <h2 class="mb-1 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
+              <i class="mdi mdi-pin-outline text-zinc-500" />
+              自動でピン止めする動画
+            </h2>
+            <p class="text-[13px] text-zinc-500">
+              チャンネル名か動画のタイトルが条件に当てはまる動画を、動画を開いたときに自動でピン止め (削除しない) にします。
+              すでに記録した動画も、開くとピン止めされます。
+            </p>
+          </header>
+          <PinRuleTable v-model="form.autoPinRules" />
+        </section>
+      </div>
+
+      <!-- 右: 動画の記録 / チャットの保存 / 詳細設定 / データの管理 -->
+      <div class="flex flex-col gap-5">
+        <!-- 動画の記録: 最大保存数・普通の動画を無視するか -->
         <section class="card p-5">
           <h2 class="mb-4 flex items-center gap-2 text-[15px] font-bold text-zinc-950">
             <i class="mdi mdi-playlist-play text-zinc-500" />
-            動画の保存
+            動画の記録
           </h2>
           <div class="mb-3">
             <label class="label" for="maxVideoLength">動画の最大保存数</label>
@@ -78,10 +95,6 @@
             <p class="help">
               最近見た動画をこの本数まで残します。超えると古い動画からチャットごと削除されます。({{ MIN_VIDEO_LENGTH }} 以上)
             </p>
-          </div>
-          <div class="mb-3">
-            <span class="label">自動でピン止めする動画</span>
-            <PinRuleList v-model="form.autoPinRules" />
           </div>
           <ToggleSwitch v-model="form.ignoreSimpleVideo">
             チャットが無い動画を無視する
@@ -288,9 +301,8 @@ import { datetimeString, formatByte } from '../lib/util/format'
 import Logger, { LEVELS } from '../loggers/Logger'
 import Config, { type ConfigInterface, MIN_VIDEO_LENGTH } from '../models/Config'
 import Toast from '../plugins/Toast'
-import PinRuleMatcher from '../lib/util/PinRule'
 import ChatFilterTable from './components/ChatFilterTable.vue'
-import PinRuleList from './components/PinRuleList.vue'
+import PinRuleTable from './components/PinRuleTable.vue'
 
 /** 目安箱のリンク先 (.env の VITE_FORM_URL). 無ければボタンを出さない. */
 const FORM_URL = import.meta.env.VITE_FORM_URL || import.meta.env.VUE_APP_FORM_URL || null
@@ -360,12 +372,6 @@ async function handleSave(): Promise<void> {
   } else {
     config.maxVideoLength = Math.floor(maxVideoLength)
   }
-
-  // 空の条件は捨て、正規表現として不正なものは保存しない
-  const rules = form.value.autoPinRules.map(r => ({ ...r, pattern: r.pattern.trim() })).filter(r => r.pattern)
-  const invalid = rules.filter(r => !PinRuleMatcher.isValid(r))
-  if (invalid.length) Toast.warn(`正規表現が正しくない条件は保存しませんでした: ${invalid.map(r => r.pattern).join(', ')}`)
-  config.autoPinRules = rules.filter(r => PinRuleMatcher.isValid(r))
 
   await ConfigStorage.save(config)
   Toast.success('設定を保存しました。開いている YouTube のページを更新してください。')

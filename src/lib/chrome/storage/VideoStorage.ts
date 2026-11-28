@@ -27,11 +27,10 @@ export default class VideoStorage extends BaseStorage {
    * 動画を保存する.
    *
    * - 閲覧日時の降順で保存する.
+   * - pinRules のどれかに当てはまる動画は、自動で削除しない動画にする (記録済みの動画も開いた時に対象になる).
    * - maxLength を超えた古い動画は、そのチャットごと削除する.
    *   自動で削除しない動画 (isProtected) は数えず、削除もしない.
    * @param video video object
-   * - 初めて保存する動画が pinRules のどれかに当てはまれば、自動で削除しない動画にする.
-   *   (2 回目以降は引き継ぐだけ. ユーザーがピン止めを外したら戻さない)
    * @param maxLength 最大保存数
    * @param pinRules 自動でピン止めする条件
    */
@@ -45,9 +44,8 @@ export default class VideoStorage extends BaseStorage {
     if (prev) {
       video.createdAt = prev.createdAt
       video.isProtected = prev.isProtected
-    } else if (PinRuleMatcher.matches(pinRules, video)) {
-      video.isProtected = true
     }
+    if (PinRuleMatcher.matches(pinRules, video)) video.isProtected = true
     video.mergeMaxStats(prev)
 
     video.updatedAt = new Date()

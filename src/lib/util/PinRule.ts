@@ -1,35 +1,31 @@
 import type Video from '../../models/Video'
 
-/** 自動でピン止めする動画の条件 (設定). */
+/**
+ * 自動でピン止めする動画の条件 (設定). チャットフィルターのテキストマッチングと同じ照合のしかた.
+ *
+ * - 既定は「含む」. isExact は完全一致、isRegex は正規表現 (どちらも大文字小文字を区別する).
+ */
 export interface PinRule {
-  target: 'channelName' | 'title' // どこを見るか (チャンネル名 / 動画のタイトル)
-  mode: 'text' | 'regex' // text: 含む (大文字小文字は区別しない), regex: 正規表現 (大文字小文字は区別しない)
-  pattern: string
+  key: string
+  target: 'channelName' | 'title' // 見る場所 (チャンネル名 / 動画のタイトル)
+  match: string
+  isExact: boolean
+  isRegex: boolean
 }
 
 export default class PinRuleMatcher {
-  /** 正規表現として正しいか. (text なら常に true) */
-  public static isValid(rule: PinRule): boolean {
-    if (rule.mode !== 'regex') return true
-    try {
-      new RegExp(rule.pattern, 'i')
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  /** 1 つの条件に当てはまるか. (空のパターン・不正な正規表現は当てはまらない) */
+  /** 1 つの条件に当てはまるか. (空の文字・不正な正規表現は当てはまらない) */
   public static test(rule: PinRule, video: Video): boolean {
-    const pattern = rule.pattern.trim()
     const value = (rule.target === 'channelName' ? video.channelName : video.title) ?? ''
-    if (!pattern || !value) return false
-    if (rule.mode === 'text') return value.toLowerCase().includes(pattern.toLowerCase())
-    try {
-      return new RegExp(pattern, 'i').test(value)
-    } catch {
-      return false
+    if (!rule.match || !value) return false
+    if (rule.isRegex) {
+      try {
+        return new RegExp(rule.match).test(value)
+      } catch {
+        return false
+      }
     }
+    return rule.isExact ? value === rule.match : value.includes(rule.match)
   }
 
   /** どれかの条件に当てはまるか. */
