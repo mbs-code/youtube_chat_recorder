@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { parseConcurrentViewers, parsePlayerResponse } from '../src/lib/parser/PlayerResponseParser'
+import {
+  parseCommentCount,
+  parseCommentCountFromData,
+  parseConcurrentViewers,
+  parseLikeCount,
+  parseLikeCountFromData,
+  parsePlayerResponse,
+} from '../src/lib/parser/PlayerResponseParser'
 import VideoParser from '../src/lib/parser/VideoParser'
 import PageHelper from '../src/lib/util/PageHelper'
 import Video from '../src/models/Video'
@@ -177,5 +184,32 @@ describe('PageHelper.getPageVideoId', () => {
     ['chrome://extensions', undefined],
   ])('%s', (url, expected) => {
     expect(PageHelper.getPageVideoId(url)).toBe(expected)
+  })
+})
+
+describe('高評価数・コメント数', () => {
+  it('表示の文字から数を取り出す', () => {
+    expect(parseLikeCount('他の 1,234 人がこの動画を高評価しています')).toBe(1234)
+    expect(parseLikeCount('like this video along with 5,678 other people')).toBe(5678)
+    expect(parseLikeCount('他 865 人もこの動画を高く評価しました')).toBe(865)
+    expect(parseLikeCount('この動画を高評価')).toBeUndefined()
+    expect(parseLikeCount('1.2万')).toBeUndefined()
+    expect(parseCommentCount('1,234 件のコメント')).toBe(1234)
+    expect(parseCommentCount('2.5万 件のコメント')).toBeUndefined()
+    expect(parseCommentCount(null)).toBeUndefined()
+  })
+
+  it('ページのデータから取り出す (別の動画のデータは無視)', () => {
+    const res = {
+      currentVideoEndpoint: { watchEndpoint: { videoId: 'abc' } },
+      contents: {
+        a: { likeButton: { accessibilityText: '他の 321 人がこの動画を高評価しています' } },
+        b: { commentsHeaderRenderer: { countText: { runs: [{ text: '45' }, { text: ' 件のコメント' }] } } },
+      },
+    }
+    expect(parseLikeCountFromData(res, 'abc')).toBe(321)
+    expect(parseCommentCountFromData(res, 'abc')).toBe(45)
+    expect(parseLikeCountFromData(res, 'other')).toBeUndefined()
+    expect(parseCommentCountFromData(res, 'other')).toBeUndefined()
   })
 })

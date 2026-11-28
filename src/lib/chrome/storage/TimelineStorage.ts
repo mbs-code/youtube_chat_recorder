@@ -1,6 +1,9 @@
 import Logger from '../../../loggers/Logger'
 import { mergeTimeline, mergeViewCounts, toMinute, type TimelinePoint, type ViewCountPoint } from '../../../models/Timeline'
 
+/** 記録する値. */
+export type ViewStats = Pick<ViewCountPoint, 'views' | 'likes' | 'commentCount'>
+
 /**
  * 配信の推移 (1 分ごとの同時接続数・コメント数) と再生数の記録の保存先.
  *
@@ -42,12 +45,15 @@ export default class TimelineStorage {
     })
   }
 
-  /** 再生数を記録する. (同じ分は大きい方を残す) */
-  public static addViews(videoId: string, views: number, at = new Date()): Promise<void> {
-    if (!views) return Promise.resolve()
+  /** 再生数・高評価数・コメント数を記録する. (同じ分は項目ごとに大きい方を残す) */
+  public static addViews(videoId: string, stats: ViewStats, at = new Date()): Promise<void> {
+    if (!stats.views) return Promise.resolve()
     return this.enqueue(async () => {
-      const merged = mergeViewCounts(await this.getViews(videoId), [{ t: toMinute(at), views }])
-      Logger.debug(`> 💾[save] views: ${views} (${merged.length}) (${videoId})`)
+      const point: ViewCountPoint = { t: toMinute(at), views: stats.views }
+      if (stats.likes !== undefined) point.likes = stats.likes
+      if (stats.commentCount !== undefined) point.commentCount = stats.commentCount
+      const merged = mergeViewCounts(await this.getViews(videoId), [point])
+      Logger.debug(`> 💾[save] views: ${stats.views} likes: ${stats.likes ?? '-'} comments: ${stats.commentCount ?? '-'} (${merged.length}) (${videoId})`)
       await chrome.storage.local.set({ [this.viewsKey(videoId)]: merged })
     })
   }

@@ -1,5 +1,6 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import type { ChatFilterConfigInterface } from '../lib/chatFilter/ChatFilterInterface'
+import type { PinRule } from '../lib/util/PinRule'
 import FilenameFormatter from '../lib/util/FilenameFormatter'
 import { type Plain, toDate, toTime } from '../lib/util/serialize'
 import Logger, { type LogLevel } from '../loggers/Logger'
@@ -31,6 +32,9 @@ export interface ConfigInterface {
   // 最大保存video数
   maxVideoLength: number
 
+  // 最近見た動画に初めて追加された時、条件に合う動画を自動でピン止め (削除しない) にする
+  autoPinRules: PinRule[]
+
   // チャットが無い動画を保存するか
   ignoreSimpleVideo: boolean
 
@@ -54,6 +58,7 @@ export default class Config implements ConfigInterface {
   recordStats = true
 
   maxVideoLength = 20
+  autoPinRules: PinRule[] = []
   ignoreSimpleVideo = false
 
   runScript = true
@@ -77,6 +82,7 @@ export default class Config implements ConfigInterface {
   public toPlain(): Plain {
     return {
       ...Object.fromEntries(Object.entries(this)),
+      autoPinRules: this.autoPinRules.map(r => ({ ...r })),
       chatFilters: this.chatFilters.map(cf => ({ ...cf })), // vue の reactive proxy を剥がす
       createdAt: toTime(this.createdAt),
       updatedAt: toTime(this.updatedAt),

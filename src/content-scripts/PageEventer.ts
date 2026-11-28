@@ -1,7 +1,7 @@
 import ChatFilter from '../lib/chatFilter/ChatFilter'
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import VideoStorage from '../lib/chrome/storage/VideoStorage'
-import TimelineStorage from '../lib/chrome/storage/TimelineStorage'
+import TimelineStorage, { type ViewStats } from '../lib/chrome/storage/TimelineStorage'
 import Runtime from '../lib/chrome/Runtime'
 import VideoParser from '../lib/parser/VideoParser'
 import PageHelper from '../lib/util/PageHelper'
@@ -175,12 +175,16 @@ export default class PageEventer {
     }
 
     this.video = video
-    await VideoStorage.save(video, this.config?.maxVideoLength ?? 20)
+    await VideoStorage.save(video, this.config?.maxVideoLength ?? 20, this.config?.autoPinRules ?? [])
 
     if (!this.recordStats || !video.id || generation !== this.generation) return video
 
     // 動画情報を読む前に再生が始まっていたら、ここで再生数を記録する
-    if (this.findMainVideo()?.paused === false) void this.recordViews(video.id, video.viewCount)
+    if (this.findMainVideo()?.paused === false) void this.recordViews(video.id, {
+      views: video.viewCount,
+      likes: videoData.likeCount,
+      commentCount: videoData.commentCount,
+    })
 
     // 開いた時に配信中なら、1 分ごとの推移の記録を始める (開いた時点の同時接続数も入れる)
     if (video.isLiveNow) {
@@ -285,14 +289,16 @@ export default class PageEventer {
     const videoId = video.id
     void PageHelper.requestVideoData(videoId).then((data) => {
       // 遷移の直後は前の動画の情報が返ることがあるので、ID を確かめる
-      if (data?.videoId === videoId && this.video?.id === videoId) return this.recordViews(videoId, data.viewCount ?? 0)
+      if (data?.videoId === videoId && this.video?.id === videoId) {
+        return this.recordViews(videoId, { views: data.viewCount ?? 0, likes: data.likeCount, commentCount: data.commentCount })
+      }
     })
   }
 
   /** 再生数を記録する. (同じ分は 1 つにまとまる) */
-  protected async recordViews(videoId: string, views: number): Promise<void> {
-    Logger.debug(`▶️[views] ${views} (${videoId})`)
-    await TimelineStorage.addViews(videoId, views).catch(err => Logger.error(err))
+  protected async recordViews(videoId: string, stats: ViewStats): Promise<void> {
+    Logger.debug(`▶️[views] ${stats.views} likes: ${stats.likes ?? '-'} comments: ${stats.commentCount ?? '-'} (${videoId})`)
+    await TimelineStorage.addViews(videoId, stats).catch(err => Logger.error(err))
   }
 
   /** 推移・最大同接を記録するか (設定). */

@@ -11,6 +11,8 @@ export default interface VideoData {
   channelId?: string
   lengthSeconds?: number
   viewCount?: number
+  likeCount?: number // 高評価数 (ページのデータ・ボタンの表示から. 読めなければ無い)
+  commentCount?: number // 動画のコメント欄のコメント数 (ページのデータ・表示から. 読めなければ無い)
   concurrentViewers?: number // 配信中の同時接続数 (ページのデータ videoViewCountRenderer から. 開いた時点の値)
   thumbnails: { url: string, width?: number, height?: number }[]
 

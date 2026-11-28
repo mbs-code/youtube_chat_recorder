@@ -42,4 +42,16 @@ describe('VideoStorage', () => {
 
     expect((await VideoStorage.get('a'))?.isProtected).toBe(true)
   })
+
+  it('条件に合う動画は、記録済みのものも開いた時にピン止めする', async () => {
+    const rule = { key: 'k', target: 'title' as const, match: '歌枠', isExact: false, isRegex: false }
+    const titled = (id: string, title: string) => Object.assign(new Video(), { id, title })
+
+    await VideoStorage.save(titled('a', '歌枠 1'), 5)
+    await VideoStorage.save(titled('b', '雑談'), 5, [rule])
+    expect((await VideoStorage.getAll()).map(v => [v.id, v.isProtected])).toEqual([['b', false], ['a', false]])
+
+    await VideoStorage.save(titled('a', '歌枠 1'), 5, [rule])
+    expect((await VideoStorage.getAll()).find(v => v.id === 'a')?.isProtected).toBe(true)
+  })
 })
