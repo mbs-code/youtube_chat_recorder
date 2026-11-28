@@ -79,6 +79,10 @@
               最近見た動画をこの本数まで残します。超えると古い動画からチャットごと削除されます。({{ MIN_VIDEO_LENGTH }} 以上)
             </p>
           </div>
+          <div class="mb-3">
+            <span class="label">自動でピン止めする動画</span>
+            <PinRuleList v-model="form.autoPinRules" />
+          </div>
           <ToggleSwitch v-model="form.ignoreSimpleVideo">
             チャットが無い動画を無視する
             <template #description>ライブ配信ではない普通の動画を、最近見た動画に残しません。</template>
@@ -284,7 +288,9 @@ import { datetimeString, formatByte } from '../lib/util/format'
 import Logger, { LEVELS } from '../loggers/Logger'
 import Config, { type ConfigInterface, MIN_VIDEO_LENGTH } from '../models/Config'
 import Toast from '../plugins/Toast'
+import PinRuleMatcher from '../lib/util/PinRule'
 import ChatFilterTable from './components/ChatFilterTable.vue'
+import PinRuleList from './components/PinRuleList.vue'
 
 /** 目安箱のリンク先 (.env の VITE_FORM_URL). 無ければボタンを出さない. */
 const FORM_URL = import.meta.env.VITE_FORM_URL || import.meta.env.VUE_APP_FORM_URL || null
@@ -326,6 +332,7 @@ async function loadConfig(): Promise<void> {
     complementImage: config.complementImage,
     generateOriginalImage: config.generateOriginalImage,
     maxVideoLength: config.maxVideoLength,
+    autoPinRules: config.autoPinRules.map(r => ({ ...r })),
     ignoreSimpleVideo: config.ignoreSimpleVideo,
     recordStats: config.recordStats,
     runScript: config.runScript,
@@ -353,6 +360,12 @@ async function handleSave(): Promise<void> {
   } else {
     config.maxVideoLength = Math.floor(maxVideoLength)
   }
+
+  // 空の条件は捨て、正規表現として不正なものは保存しない
+  const rules = form.value.autoPinRules.map(r => ({ ...r, pattern: r.pattern.trim() })).filter(r => r.pattern)
+  const invalid = rules.filter(r => !PinRuleMatcher.isValid(r))
+  if (invalid.length) Toast.warn(`正規表現が正しくない条件は保存しませんでした: ${invalid.map(r => r.pattern).join(', ')}`)
+  config.autoPinRules = rules.filter(r => PinRuleMatcher.isValid(r))
 
   await ConfigStorage.save(config)
   Toast.success('設定を保存しました。開いている YouTube のページを更新してください。')

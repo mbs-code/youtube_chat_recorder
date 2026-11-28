@@ -175,7 +175,7 @@ export default class PageEventer {
     }
 
     this.video = video
-    await VideoStorage.save(video, this.config?.maxVideoLength ?? 20)
+    await VideoStorage.save(video, this.config?.maxVideoLength ?? 20, this.config?.autoPinRules ?? [])
 
     if (!this.recordStats || !video.id || generation !== this.generation) return video
 
