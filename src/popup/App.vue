@@ -71,7 +71,7 @@
           <i class="mdi mdi-information-outline" />
           ページを開いている間に、画面に表示された数字・チャットをもとに数えています。開いていない間の分はありません。
         </p>
-        <VideoStats :video="selectedVideo" :chats="chats" />
+        <VideoStats :video="selectedVideo" :chats="chats" :view-counts="viewCounts" />
         <template v-if="recordStats">
           <!-- 同接・コメント・スパチャのグラフは配信 (ライブ・アーカイブ) だけ -->
           <TimelineChart
@@ -81,13 +81,7 @@
             :start-date="selectedVideo.startDate"
             :end-date="selectedVideo.endDate"
           />
-          <ViewCountChart
-            v-for="metric in VIEW_METRICS"
-            :key="metric"
-            :points="viewCounts"
-            :metric="metric"
-            :start-date="selectedVideo.startDate"
-          />
+          <ViewCountPanel :points="viewCounts" :start-date="selectedVideo.startDate" />
         </template>
       </section>
 
@@ -208,9 +202,8 @@ import ChatList from './components/ChatList.vue'
 import VideoDropdown from './components/VideoDropdown.vue'
 import VideoStats from './components/VideoStats.vue'
 import TimelineChart from './components/TimelineChart.vue'
-import ViewCountChart from './components/ViewCountChart.vue'
+import ViewCountPanel from './components/ViewCountPanel.vue'
 
-const VIEW_METRICS = ['views', 'likes', 'commentCount'] as const
 import FilterDropdown from './components/FilterDropdown.vue'
 import type { TimelinePoint, ViewCountPoint } from '../models/Timeline'
 

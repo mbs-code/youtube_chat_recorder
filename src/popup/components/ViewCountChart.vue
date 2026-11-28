@@ -1,7 +1,9 @@
 <template>
-  <!-- 再生数の記録: 動画を開くたび (配信中は 1 分ごと) に記録した値を線でつなぐ. 時刻は記録した間隔のまま (数日にまたがることもある) -->
-  <section class="card relative px-3 py-2.5" @mouseleave="hoverIndex = undefined">
-    <h3 class="text-xs font-bold text-zinc-700">{{ metric.label }}</h3>
+  <!-- 再生数・高評価・コメント数のどれか 1 項目の推移. 3 つ並べて使い、横軸 (時間) とマウスの位置を連動させる -->
+  <div class="relative" @mouseleave="hoverT = undefined">
+    <h3 class="flex items-center gap-1.5 text-xs font-bold text-zinc-700">
+      {{ metric.label }}
+    </h3>
     <svg
       class="block w-full touch-none"
       :viewBox="`0 0 ${WIDTH} ${HEIGHT}`"
@@ -42,22 +44,22 @@
       <path
         :d="linePath"
         fill="none"
-        :stroke="LINE_COLOR"
+        :stroke="metric.color"
         stroke-width="2"
         stroke-linejoin="round"
         stroke-linecap="round"
       />
-      <!-- 記録した点 (開いた時だけの記録は間が空くので点も描く. 多い時はマウスを乗せた点だけ) -->
+      <!-- 記録した点 (多い時はマウスを乗せた点だけ) -->
       <circle
-        v-for="(point, i) in series"
-        v-show="series.length <= 24 || hoverIndex === i"
+        v-for="point in series"
+        v-show="series.length <= 24 || hoverT === point.t"
         :key="point.t"
         :cx="x(point.t)"
         :cy="y(point.value)"
-        :r="hoverIndex === i ? 4 : 2.5"
-        :fill="LINE_COLOR"
+        :r="hoverT === point.t ? 4 : 2.5"
+        :fill="metric.color"
         stroke="white"
-        :stroke-width="hoverIndex === i ? 2 : 1"
+        :stroke-width="hoverT === point.t ? 2 : 1"
       />
 
       <text
@@ -71,9 +73,9 @@
       >{{ tick.label }}</text>
 
       <line
-        v-if="hoverPoint"
-        :x1="x(hoverPoint.t)"
-        :x2="x(hoverPoint.t)"
+        v-if="hoverT !== undefined"
+        :x1="x(hoverT)"
+        :x2="x(hoverT)"
         :y1="PLOT_TOP"
         :y2="plotBottom"
         :stroke="AXIS_COLOR"
@@ -83,77 +85,52 @@
     </svg>
 
     <div
-      v-if="hoverPoint"
+      v-if="hoverT !== undefined"
       class="pointer-events-none absolute top-2 z-10 min-w-36 rounded-md border border-zinc-200 bg-white px-2.5 py-1.5 text-xs shadow-md"
       :style="tooltipStyle"
     >
-      <p class="font-bold text-zinc-950">{{ formatTime(hoverPoint.t) }}</p>
-      <p v-if="elapsed(hoverPoint.t)" class="text-zinc-500">配信開始から {{ elapsed(hoverPoint.t) }}</p>
+      <p class="font-bold text-zinc-950">{{ formatTime(hoverT) }}</p>
+      <p v-if="elapsed(hoverT)" class="text-zinc-500">配信開始から {{ elapsed(hoverT) }}</p>
       <p class="mt-1 flex items-center gap-1.5 text-zinc-700">
-        <span class="inline-block h-0.5 w-3 rounded-full" :style="{ backgroundColor: LINE_COLOR }" />
-        {{ metric.label }} <strong class="ml-auto text-zinc-950">{{ hoverPoint.value.toLocaleString() }} {{ metric.unit }}</strong>
+        <span class="inline-block h-0.5 w-3 rounded-full" :style="{ backgroundColor: metric.color }" />
+        {{ metric.label }}
+        <strong class="ml-auto text-zinc-950">
+          {{ hoverValue === undefined ? '-' : `${hoverValue.toLocaleString()} ${metric.unit}` }}
+        </strong>
       </p>
     </div>
-
-    <details v-if="series.length" class="mt-1.5 text-xs">
-      <summary class="cursor-pointer text-zinc-500 select-none">表で見る</summary>
-      <div class="mt-1 max-h-48 overflow-y-auto">
-        <table class="w-full text-right tabular-nums">
-          <thead class="sticky top-0 bg-white text-zinc-500">
-            <tr>
-              <th class="py-0.5 text-left font-normal">時刻</th>
-              <th class="font-normal">配信開始から</th>
-              <th class="font-normal">{{ metric.label }}</th>
-            </tr>
-          </thead>
-          <tbody class="text-zinc-700">
-            <tr v-for="point in series" :key="point.t" class="border-t border-zinc-100">
-              <td class="py-0.5 text-left">{{ formatTime(point.t) }}</td>
-              <td>{{ elapsed(point.t) ?? '-' }}</td>
-              <td>{{ point.value.toLocaleString() }}</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </details>
-  </section>
+  </div>
 </template>
 
 <script setup lang="ts">
 /**
- * 再生数・高評価数・コメント数の記録のグラフ (popup の記録・グラフのタブ). 項目はボタンで切り替える.
+ * 再生数・高評価数・コメント数の記録のグラフ (popup の記録・グラフのタブ). 項目ごとに 1 つ描き、ViewCountPanel が 3 つを 1 枚のカードに並べる.
  *
  * - 同時接続数のグラフとは時間の軸が違う (開いた時の記録は数日おきのこともある) ので別のグラフにする.
- * - 再生数・高評価数は増えるだけなので、縦軸は 0 からではなく記録の範囲に合わせる (変化が見えるように).
+ * - 3 つは連動する: 横軸は全項目の記録の範囲に揃え、マウスを乗せた時刻 (hoverT) は親で共有する.
+ * - 縦軸は増えるだけの値なので、0 からではなく記録の範囲に合わせる (変化が見えるように).
  */
 import { format, startOfDay } from 'date-fns'
-import { computed, ref } from 'vue'
+import { computed } from 'vue'
 import { hmsString } from '../../lib/util/format'
-import type { ViewCountPoint } from '../../models/Timeline'
+import type { ViewCountPoint, ViewMetric } from '../../models/Timeline'
 
 const props = defineProps<{
-  points: ViewCountPoint[]
-  metric: MetricKey // 描く項目
+  points: ViewCountPoint[] // 全項目の記録 (横軸を揃えるため、項目が読めなかった記録も渡す)
+  metric: ViewMetric // 描く項目
   startDate?: Date // 配信開始 (経過時間の表示用)
 }>()
 
-const METRICS = {
-  views: { label: '再生数', unit: '回' },
-  likes: { label: '高評価', unit: '件' },
-  commentCount: { label: 'コメント', unit: '件' },
-} as const
-type MetricKey = keyof typeof METRICS
-
-const metric = computed(() => METRICS[props.metric])
+/** マウスを乗せている記録の時刻 (3 つのグラフで共有する). */
+const hoverT = defineModel<number>('hoverT')
 
 /** 選んだ項目の記録 (その項目が読めなかった記録は除く). */
 const series = computed(() => {
-  const key = props.metric
+  const key = props.metric.key
   return props.points.flatMap(p => (p[key] === undefined ? [] : [{ t: p.t, value: p[key] as number }]))
 })
 
-// 色 (データ可視化の検証済みパレットの 7 番目. 同接・コメント・スパチャと見分けるため) と、控えめな線・文字の色 (zinc)
-const LINE_COLOR = '#6250d6'
+// 控えめな線・文字の色 (zinc)
 const GRID_COLOR = '#f4f4f5' // zinc-100
 const AXIS_COLOR = '#d4d4d8' // zinc-300
 const MUTED_TEXT = '#71717a' // zinc-500
@@ -167,6 +144,18 @@ const X_AXIS_HEIGHT = 16
 const plotBottom = PLOT_TOP + PLOT_HEIGHT
 const HEIGHT = plotBottom + X_AXIS_HEIGHT
 const plotWidth = WIDTH - PLOT_LEFT - PLOT_RIGHT
+
+/** 横軸 (記録した最初 〜 最後. 1 点だけなら真ん中). */
+const xRange = computed(() => {
+  const start = props.points[0]?.t ?? Date.now()
+  const end = props.points.at(-1)?.t ?? start
+  return { start, end }
+})
+function x(t: number): number {
+  const { start, end } = xRange.value
+  if (end === start) return PLOT_LEFT + plotWidth / 2
+  return PLOT_LEFT + ((t - start) / (end - start)) * plotWidth
+}
 
 const compact = new Intl.NumberFormat('ja-JP', { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -200,18 +189,6 @@ const yTicks = computed(() => {
   for (let v = min; v <= max + step / 2; v += step) ticks.push({ value: v, y: y(v), label: compact.format(v) })
   return ticks
 })
-
-/** 横軸 (記録した最初 〜 最後. 1 点だけなら真ん中). */
-const xRange = computed(() => {
-  const start = series.value[0]?.t ?? Date.now()
-  const end = series.value.at(-1)?.t ?? start
-  return { start, end }
-})
-function x(t: number): number {
-  const { start, end } = xRange.value
-  if (end === start) return PLOT_LEFT + plotWidth / 2
-  return PLOT_LEFT + ((t - start) / (end - start)) * plotWidth
-}
 
 const linePath = computed(() => series.value.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.value).toFixed(1)}`).join(''))
 
@@ -248,24 +225,25 @@ const xTicks = computed(() => {
 
 /// マウスを乗せた時 ///
 
-const hoverIndex = ref<number>()
-const hoverPoint = computed(() => (hoverIndex.value === undefined ? undefined : series.value[hoverIndex.value]))
+/** マウスを乗せた時刻のこの項目の値 (読めていなければ無い). */
+const hoverValue = computed(() => props.points.find(p => p.t === hoverT.value)?.[props.metric.key])
 
-/** マウスの位置に一番近い点を選ぶ. */
+/** マウスの位置に一番近い記録を選ぶ (全項目の記録から選ぶので、3 つのグラフで同じ時刻になる). */
 function handlePointer(event: PointerEvent): void {
+  if (props.points.length === 0) return
   const svg = event.currentTarget as SVGSVGElement
   const rect = svg.getBoundingClientRect()
   const px = ((event.clientX - rect.left) / rect.width) * WIDTH
-  let best = 0
-  series.value.forEach((p, i) => {
-    if (Math.abs(x(p.t) - px) < Math.abs(x(series.value[best].t) - px)) best = i
-  })
-  hoverIndex.value = best
+  let best = props.points[0].t
+  for (const p of props.points) {
+    if (Math.abs(x(p.t) - px) < Math.abs(x(best) - px)) best = p.t
+  }
+  hoverT.value = best
 }
 
 const tooltipStyle = computed(() => {
-  if (!hoverPoint.value) return {}
-  const ratio = x(hoverPoint.value.t) / WIDTH
+  if (hoverT.value === undefined) return {}
+  const ratio = x(hoverT.value) / WIDTH
   return ratio > 0.55 ? { right: `${(1 - ratio) * 100 + 3}%` } : { left: `${ratio * 100 + 3}%` }
 })
 

@@ -95,6 +95,14 @@ export interface ViewCountPoint {
   commentCount?: number // 動画のコメント欄のコメント数 (配信のチャット欄とは別)
 }
 
+/** 再生数の記録のグラフで描く項目. */
+export interface ViewMetric {
+  key: 'views' | 'likes' | 'commentCount'
+  label: string
+  unit: string
+  color: string // 線の色
+}
+
 function maxOptional(a?: number, b?: number): number | undefined {
   return a === undefined ? b : b === undefined ? a : Math.max(a, b)
 }
