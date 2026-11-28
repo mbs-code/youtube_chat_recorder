@@ -30,6 +30,11 @@ export default class Runtime {
     await chrome.tabs.create({ url: chrome.runtime.getURL('readme/index.html') })
   }
 
+  /** v2 になった時のお知らせページを新しいタブで開く. */
+  public static async openWelcomePage(): Promise<void> {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('welcome/index.html') })
+  }
+
   ///
 
   /**

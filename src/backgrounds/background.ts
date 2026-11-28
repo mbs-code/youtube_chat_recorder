@@ -6,6 +6,7 @@
  */
 import ConfigStorage from '../lib/chrome/storage/ConfigStorage'
 import { type BackgroundMessage, type IconState, isBackgroundMessage, listenMessages } from '../lib/chrome/messages'
+import Runtime from '../lib/chrome/Runtime'
 import Logger from '../loggers/Logger'
 
 const ICONS: Record<IconState, string> = {
@@ -37,5 +38,12 @@ async function handleMessage(message: BackgroundMessage, sender: chrome.runtime.
 }
 
 listenMessages(isBackgroundMessage, handleMessage)
+
+// 拡張機能が更新された時に「v2 になりました」のページを開く (Service Worker 起動時に登録する必要がある)
+chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === 'update') {
+    Runtime.openWelcomePage().catch(err => Logger.error(err))
+  }
+})
 
 applyConfig().catch(err => Logger.error(err))

@@ -80,3 +80,75 @@ export function parseConcurrentViewers(watchResponse: unknown, videoId: string):
   }
   return undefined
 }
+
+/** 表示の文字から数だけ取り出す ("1,234" → 1234). 万・K などの省略表記は桁が分からないので無視する. */
+function parseCount(text: string): number | undefined {
+  const match = /\d[\d,]*(?:\.\d+)?/.exec(text)
+  if (!match) return undefined
+  const rest = text.slice(match.index + match[0].length)
+  if (/^\s?[万千億KMB]/i.test(rest)) return undefined
+  return Number(match[0].replace(/,/g, ''))
+}
+
+/** JSON を深さ優先で調べ、条件に合う値を最初に返す. (調べる個数に上限を付ける) */
+function findDeep<T>(root: unknown, pick: (key: string, value: unknown) => T | undefined, maxNodes = 20000): T | undefined {
+  const stack: unknown[] = [root]
+  let visited = 0
+  while (stack.length && visited++ < maxNodes) {
+    const node = stack.pop() as any
+    if (!node || typeof node !== 'object') continue
+    for (const key of Object.keys(node)) {
+      const found = pick(key, node[key])
+      if (found !== undefined) return found
+      if (node[key] && typeof node[key] === 'object') stack.push(node[key])
+    }
+  }
+  return undefined
+}
+
+/**
+ * 高評価の表示 ("他の 1,234 人がこの動画を高評価しています" / "like this video along with 1,234 other people") から数を取り出す.
+ * 数が無い ("この動画を高評価") なら undefined.
+ */
+export function parseLikeCount(text?: string | null): number | undefined {
+  if (!text || !/高評価|高く評価|like this video/i.test(text)) return undefined
+  return parseCount(text)
+}
+
+/** コメント数の表示 ("1,234 件のコメント" / "1,234 Comments") から数を取り出す. */
+export function parseCommentCount(text?: string | null): number | undefined {
+  return text ? parseCount(text) : undefined
+}
+
+/**
+ * 動画ページのデータから高評価数を取り出す.
+ * (like ボタンの viewModel の accessibilityText / title に "他の 〇 人がこの動画を高評価しています" がある)
+ */
+export function parseLikeCountFromData(watchResponse: unknown, videoId: string): number | undefined {
+  const res = watchResponse as any
+  if (res?.currentVideoEndpoint?.watchEndpoint?.videoId !== videoId) return undefined
+  return findDeep(res?.contents, (key, value) => {
+    return (key === 'accessibilityText' || key === 'title') && typeof value === 'string' ? parseLikeCount(value) : undefined
+  })
+}
+
+/**
+ * 動画ページのデータからコメント数を取り出す.
+ * (commentsHeaderRenderer の countText.runs[0].text や、コメント欄の engagementPanel の contextualInfo.runs[0].text)
+ */
+export function parseCommentCountFromData(watchResponse: unknown, videoId: string): number | undefined {
+  const res = watchResponse as any
+  if (res?.currentVideoEndpoint?.watchEndpoint?.videoId !== videoId) return undefined
+  const fromRuns = (runs: any): number | undefined =>
+    Array.isArray(runs) ? parseCommentCount(runs.map((r: any) => r?.text ?? '').join('')) : undefined
+  for (const root of [res?.contents, res?.engagementPanels]) {
+    const found = findDeep(root, (key, value) => {
+      const v = value as any
+      if (key === 'commentsHeaderRenderer') return fromRuns(v?.countText?.runs) ?? parseCommentCount(v?.countText?.simpleText)
+      if (key === 'contextualInfo') return fromRuns(v?.runs)
+      return undefined
+    })
+    if (found !== undefined) return found
+  }
+  return undefined
+}

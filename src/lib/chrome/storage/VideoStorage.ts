@@ -1,3 +1,4 @@
+import PinRuleMatcher, { type PinRule } from '../../util/PinRule'
 import Logger from '../../../loggers/Logger'
 import Video from '../../../models/Video'
 import BaseStorage from './BaseStorage'
@@ -26,12 +27,14 @@ export default class VideoStorage extends BaseStorage {
    * 動画を保存する.
    *
    * - 閲覧日時の降順で保存する.
+   * - pinRules のどれかに当てはまる動画は、自動で削除しない動画にする (記録済みの動画も開いた時に対象になる).
    * - maxLength を超えた古い動画は、そのチャットごと削除する.
    *   自動で削除しない動画 (isProtected) は数えず、削除もしない.
    * @param video video object
    * @param maxLength 最大保存数
+   * @param pinRules 自動でピン止めする条件
    */
-  public static async save(video: Video, maxLength: number): Promise<void> {
+  public static async save(video: Video, maxLength: number, pinRules: PinRule[] = []): Promise<void> {
     const dbs = await this.getAll()
     const oldLength = dbs.length
 
@@ -42,6 +45,7 @@ export default class VideoStorage extends BaseStorage {
       video.createdAt = prev.createdAt
       video.isProtected = prev.isProtected
     }
+    if (PinRuleMatcher.matches(pinRules, video)) video.isProtected = true
     video.mergeMaxStats(prev)
 
     video.updatedAt = new Date()

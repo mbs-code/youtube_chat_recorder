@@ -83,13 +83,28 @@ export class TimelineBuffer {
 }
 
 /**
- * 再生数の記録. (`@views:<動画ID>` に時刻の昇順で保存する)
+ * 再生数・高評価数・コメント数の記録. (`@views:<動画ID>` に時刻の昇順で保存する)
  *
- * - 動画が再生されるたびに記録する (ほかの推移とは別). 同じ分は大きい方を残す.
+ * - 動画が再生されるたびに記録する (ほかの推移とは別). 同じ分は項目ごとに大きい方を残す.
+ * - likes / commentCount は後から足した項目なので、無い (読めなかった) こともある.
  */
 export interface ViewCountPoint {
   t: number // 分の先頭の時刻 (epoch msec)
   views: number
+  likes?: number // 高評価数
+  commentCount?: number // 動画のコメント欄のコメント数 (配信のチャット欄とは別)
+}
+
+/** 再生数の記録のグラフで描く項目. */
+export interface ViewMetric {
+  key: 'views' | 'likes' | 'commentCount'
+  label: string
+  unit: string
+  color: string // 線の色
+}
+
+function maxOptional(a?: number, b?: number): number | undefined {
+  return a === undefined ? b : b === undefined ? a : Math.max(a, b)
 }
 
 /** 再生数の記録を足し合わせる. (時刻の昇順で返す) */
@@ -97,7 +112,12 @@ export function mergeViewCounts(base: ViewCountPoint[], add: ViewCountPoint[]): 
   const byMinute = new Map<number, ViewCountPoint>()
   for (const point of [...base, ...add]) {
     const prev = byMinute.get(point.t)
-    byMinute.set(point.t, { t: point.t, views: Math.max(prev?.views ?? 0, point.views) })
+    const merged: ViewCountPoint = { t: point.t, views: Math.max(prev?.views ?? 0, point.views) }
+    const likes = maxOptional(prev?.likes, point.likes)
+    const commentCount = maxOptional(prev?.commentCount, point.commentCount)
+    if (likes !== undefined) merged.likes = likes
+    if (commentCount !== undefined) merged.commentCount = commentCount
+    byMinute.set(point.t, merged)
   }
   return [...byMinute.values()].sort((a, b) => a.t - b.t)
 }

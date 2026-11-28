@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Youtube Chat Recorder v2</title>
+  <style>
+    :root { --bg: #fff; --text: #222; --muted: #666; --line: #ddd; --link: #1a56c4; }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #1b1b1d; --text: #e6e6e6; --muted: #9a9a9a; --line: #3a3a3d; --link: #8ab4f8; }
+    }
+    body {
+      max-width: 640px; margin: 0 auto; padding: 40px 16px 64px; background: var(--bg); color: var(--text);
+      font: 15px/1.9 system-ui, "Hiragino Sans", "Yu Gothic UI", Meiryo, sans-serif;
+    }
+    h1 { margin: 0 0 24px; font-size: 22px; font-weight: 700; }
+    h2 { margin: 36px 0 8px; padding-bottom: 4px; border-bottom: 1px solid var(--line); font-size: 16px; }
+    p { margin: 0 0 12px; }
+    ul { margin: 0 0 12px; padding-left: 1.4em; }
+    a { color: var(--link); }
+    .muted { color: var(--muted); font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Youtube Chat Recorder v2 になりました</h1>
+
+  <p>
+    お待たせしました。YouTube の画面が変わってチャットを記録できなくなっていたのを直して、
+    ついでにいろいろ機能を足したので v2 としてリリースします。
+  </p>
+  <p>今までに記録したチャットや設定は、そのまま使えます。</p>
+
+  <h2>直したところ</h2>
+  <ul>
+    <li>YouTube の変更でチャットが記録されなくなっていたのを直しました。</li>
+    <li>新しい Chrome の仕組み (Manifest V3) に合わせて作り直しました。</li>
+  </ul>
+
+  <h2>記録できるチャットが増えました</h2>
+  <ul>
+    <li>トップチャット (名前の横の 👑#1)</li>
+    <li>スーパーチャットへの返信</li>
+    <li>メンバー歴 (「メンバー歴 11 か月」) のお知らせ</li>
+    <li>メンバーシップ ギフトを贈ったお知らせ</li>
+    <li>ギフト (星など)</li>
+  </ul>
+
+  <h2>記録したチャットの見返し方</h2>
+  <ul>
+    <li>CSV で書き出せます。Excel などで集計できます。</li>
+    <li>名前や本文で検索したり、種類で絞り込んだり、古い順・新しい順を切り替えたりできます。</li>
+    <li>画像は、チャット欄そのままの見た目のほかに、この拡張機能独自のデザインでも作れます。</li>
+  </ul>
+
+  <h2>配信の記録とグラフ</h2>
+  <ul>
+    <li>最大同時接続数とスーパーチャットの合計が見られます。</li>
+    <li>同時接続数・コメント数・スーパーチャットの推移がグラフになります。</li>
+    <li>再生数・高評価・コメント数の推移もグラフになります。</li>
+  </ul>
+  <p class="muted">ページを開いている間に画面に出ていた数字を記録しているので、開いていなかった間の分はありません。設定でオフにもできます。</p>
+
+  <h2>動画のピン止め</h2>
+  <ul>
+    <li>動画をピン止めすると、古くなっても自動では消えません。</li>
+    <li>設定の「自動でピン止めする動画」にチャンネル名やタイトルを登録しておくと、その動画を開いたときに自動でピン止めされます。</li>
+  </ul>
+
+  <h2>そのほか</h2>
+  <ul>
+    <li>ポップアップと設定画面の見た目を新しくしました。</li>
+    <li>使い方のページを、初めての人にも分かるように書き直しました。</li>
+  </ul>
+
+  <p style="margin-top: 36px">
+    <a href="../readme/index.html">使い方</a> ・ <a href="../options/options.html">設定</a>
+  </p>
+  <p class="muted">設定を変えたら、開いている YouTube のページを更新 (F5) してください。</p>
+</body>
+</html>

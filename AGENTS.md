@@ -33,7 +33,7 @@ YouTube のライブ配信・アーカイブのチャット欄を監視し、設
 ```
 src/
   manifest.json              MV3 マニフェスト (version はビルド時に package.json から入る)
-  backgrounds/background.ts  Service Worker。タブごとのアイコン/バッジ更新のみ。状態を持たない
+  backgrounds/background.ts  Service Worker。タブごとのアイコン/バッジ更新と、更新された時の「v2 になりました」ページ (public/welcome/index.html, 静的な 1 枚 HTML) を開く。状態を持たない
   content-scripts/
     page-bridge.ts           MAIN world。ページの playerResponse から動画情報を取り出して返すだけ
     content-script.ts        isolated world のエントリ
